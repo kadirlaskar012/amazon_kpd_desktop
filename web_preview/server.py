@@ -20,6 +20,10 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from app.storage.project_storage import ProjectStorage
 from app.core.pdf_exporter import KDPPdfExporter
 from app.core.cover_exporter import KDPCoverExporter
+from app.generators.sudoku_generator import SudokuGenerator
+from app.generators.tic_tac_toe_generator import TicTacToeGenerator
+from app.generators.maze_generator import MazeGenerator
+from app.generators.word_search_generator import WordSearchGenerator
 
 # Ensure UTF-8 output encoding for Windows consoles
 if hasattr(sys.stdout, "reconfigure"):
@@ -337,6 +341,51 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({"status": "uploaded", "asset_path": str(assets_dir / filename)}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/generators/sudoku":
+            count = int(req_data.get("count", 10))
+            difficulty = req_data.get("difficulty", "medium")
+            puzzles = SudokuGenerator.generate_bulk(count=count, difficulty=difficulty)
+            
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "count": len(puzzles), "puzzles": puzzles}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/generators/tic_tac_toe":
+            total_games = int(req_data.get("total_games", 20))
+            games_per_page = int(req_data.get("games_per_page", 4))
+            grid_size = int(req_data.get("grid_size", 3))
+            pages = TicTacToeGenerator.generate_bulk(total_games=total_games, games_per_page=games_per_page, grid_size=grid_size)
+            
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "total_games": total_games, "pages": pages}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/generators/maze":
+            width = int(req_data.get("width", 15))
+            height = int(req_data.get("height", 20))
+            maze = MazeGenerator.generate_maze(width=width, height=height)
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "maze": maze}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/generators/word_search":
+            words = req_data.get("words", ["APPLE", "BANANA", "ORANGE", "MANGO", "GRAPES", "BERRY"])
+            grid_size = int(req_data.get("grid_size", 12))
+            ws = WordSearchGenerator.generate_puzzle(words=words, grid_size=grid_size)
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "word_search": ws}).encode("utf-8"))
             return
 
         self.send_response(404)

@@ -592,8 +592,71 @@
         </div>
         <div class="modal-body">
           <div class="form-row">
+            <label>Book Type / Category</label>
+            <select id="modal-book-type" class="form-control" onchange="onBookTypeChange()">
+              <option value="coloring_book">🎨 Coloring Book (Drawing + Reference + Outline Title)</option>
+              <option value="sudoku">🔢 Sudoku Puzzle Book (9x9 with Auto Solutions)</option>
+              <option value="tic_tac_toe">⭕ Tic-Tac-Toe Game Book (Multi-Game Printable Pages)</option>
+              <option value="maze">🌀 Maze Book (Labyrinth with Solution Path)</option>
+              <option value="word_search">🔤 Word Search Book (Vocabulary Puzzle)</option>
+              <option value="activity_book">🧩 Activity Book (Worksheets & Games)</option>
+              <option value="tracing_book">✍️ Tracing Book (Handwriting Readiness)</option>
+              <option value="dot_to_dot">🔢 Dot-to-Dot Book (Connect the Dots)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
             <label>Project / Book Name</label>
             <input type="text" id="modal-project-name" class="form-control" value="My Jungle Coloring Book" oninput="updateModalPathPreview()">
+          </div>
+
+          <!-- Dynamic Sudoku Options (Shown when Sudoku is selected) -->
+          <div id="modal-sudoku-options" style="display: none; background: rgba(59, 130, 246, 0.08); padding: 12px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2); margin-bottom: 12px;">
+            <div class="form-row-dual">
+              <div>
+                <label>Difficulty</label>
+                <select id="modal-sudoku-difficulty" class="form-control">
+                  <option value="easy">Easy (38-42 clues)</option>
+                  <option value="medium" selected>Medium (30-34 clues)</option>
+                  <option value="hard">Hard (26-29 clues)</option>
+                  <option value="expert">Expert (22-25 clues)</option>
+                </select>
+              </div>
+              <div>
+                <label>Puzzles Per Page</label>
+                <select id="modal-sudoku-per-page" class="form-control">
+                  <option value="1" selected>1 Puzzle / Page (Large Print)</option>
+                  <option value="2">2 Puzzles / Page</option>
+                  <option value="4">4 Puzzles / Page (2x2)</option>
+                </select>
+              </div>
+            </div>
+            <label class="checkbox-label" style="margin-top: 8px;">
+              <input type="checkbox" id="modal-sudoku-solutions" checked>
+              <span>Include Automatic Solution Section at end of book</span>
+            </label>
+          </div>
+
+          <!-- Dynamic Tic-Tac-Toe Options (Shown when Tic-Tac-Toe is selected) -->
+          <div id="modal-ttt-options" style="display: none; background: rgba(168, 85, 247, 0.08); padding: 12px; border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.2); margin-bottom: 12px;">
+            <div class="form-row-dual">
+              <div>
+                <label>Games Per Page</label>
+                <select id="modal-ttt-per-page" class="form-control">
+                  <option value="4" selected>4 Games / Page (2x2 Grid)</option>
+                  <option value="2">2 Games / Page (Stacked)</option>
+                  <option value="1">1 Giant Game / Page</option>
+                  <option value="6">6 Games / Page (Compact)</option>
+                </select>
+              </div>
+              <div>
+                <label>Grid Size</label>
+                <select id="modal-ttt-grid-size" class="form-control">
+                  <option value="3" selected>3 x 3 Classic</option>
+                  <option value="4">4 x 4 Advanced</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <!-- Project Directory / Save Location Picker -->
@@ -622,18 +685,19 @@
             <div>
               <label>KDP Trim Preset</label>
               <select id="modal-trim-preset" class="form-control">
-                <option value="8.5x11">8.5 x 11 in (Standard Coloring)</option>
+                <option value="8.5x11">8.5 x 11 in (Standard)</option>
                 <option value="8x10">8 x 10 in (Activity Book)</option>
                 <option value="8.5x8.5">8.5 x 8.5 in (Square Book)</option>
-                <option value="6x9">6 x 9 in (Trade)</option>
+                <option value="6x9">6 x 9 in (Puzzles / Sudoku)</option>
               </select>
             </div>
             <div>
-              <label>Initial Pages to Create</label>
+              <label id="modal-count-label">Initial Pages / Puzzles</label>
               <select id="modal-page-count" class="form-control">
-                <option value="10">10 Standard Pages</option>
-                <option value="25">25 Pages (KDP Paperback)</option>
+                <option value="10">10 Pages / Items</option>
+                <option value="25">25 Pages (KDP Standard)</option>
                 <option value="50">50 Pages</option>
+                <option value="100">100 Puzzles (Bulk)</option>
               </select>
             </div>
           </div>

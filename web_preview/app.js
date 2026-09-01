@@ -1581,7 +1581,46 @@ function browseProjectFolder() {
   }
 }
 
-function submitCreateProject() {
+function onBookTypeChange() {
+  const typeSelect = document.getElementById("modal-book-type");
+  const bType = typeSelect ? typeSelect.value : "coloring_book";
+  const nameInput = document.getElementById("modal-project-name");
+  const trimSelect = document.getElementById("modal-trim-preset");
+  const countLabel = document.getElementById("modal-count-label");
+
+  const sudokuOpts = document.getElementById("modal-sudoku-options");
+  const tttOpts = document.getElementById("modal-ttt-options");
+
+  if (sudokuOpts) sudokuOpts.style.display = (bType === "sudoku") ? "block" : "none";
+  if (tttOpts) tttOpts.style.display = (bType === "tic_tac_toe") ? "block" : "none";
+
+  if (bType === "sudoku") {
+    if (nameInput) nameInput.value = "Sudoku Master Puzzles";
+    if (trimSelect) trimSelect.value = "6x9";
+    if (countLabel) countLabel.innerText = "Total Sudoku Puzzles";
+  } else if (bType === "tic_tac_toe") {
+    if (nameInput) nameInput.value = "Tic-Tac-Toe Game Book";
+    if (trimSelect) trimSelect.value = "8.5x11";
+    if (countLabel) countLabel.innerText = "Total Games to Generate";
+  } else if (bType === "maze") {
+    if (nameInput) nameInput.value = "Ultimate Maze Adventures";
+    if (trimSelect) trimSelect.value = "8.5x11";
+    if (countLabel) countLabel.innerText = "Total Mazes to Generate";
+  } else if (bType === "word_search") {
+    if (nameInput) nameInput.value = "Word Search Explorer";
+    if (trimSelect) trimSelect.value = "8.5x11";
+    if (countLabel) countLabel.innerText = "Total Word Search Puzzles";
+  } else {
+    if (nameInput) nameInput.value = "My Jungle Coloring Book";
+    if (trimSelect) trimSelect.value = "8.5x11";
+    if (countLabel) countLabel.innerText = "Initial Pages / Drawings";
+  }
+  updateModalPathPreview();
+}
+
+async function submitCreateProject() {
+  const typeSelect = document.getElementById("modal-book-type");
+  const bType = typeSelect ? typeSelect.value : "coloring_book";
   const nameInput = document.getElementById("modal-project-name");
   const rootInput = document.getElementById("modal-project-root");
   const countSelect = document.getElementById("modal-page-count");
@@ -1594,26 +1633,108 @@ function submitCreateProject() {
   const projectDir = `${rootDir.replace(/[\/\\]+$/, "")}\\${folderName}`;
   const count = parseInt(countSelect ? countSelect.value : "10");
 
-  const pagesList = [];
+  let pagesList = [];
 
-  for (let i = 0; i < count; i++) {
-    const contentNum = i + 1;
-    pagesList.push({
-      page_number: contentNum,
-      page_type: "content",
-      title: `Page ${contentNum}`,
-      layout: "kdp_top_ref",
-      elements: [
-        { id: `elem_ref_${contentNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${contentNum}`, image_src: null },
-        { id: `elem_title_${contentNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${contentNum}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
-        { id: `elem_main_${contentNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${contentNum}`, image_src: null },
-        { id: `elem_frame_${contentNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
-      ]
-    });
+  if (bType === "sudoku") {
+    const diffSelect = document.getElementById("modal-sudoku-difficulty");
+    const perPageSelect = document.getElementById("modal-sudoku-per-page");
+    const diff = diffSelect ? diffSelect.value : "medium";
+    const perPage = parseInt(perPageSelect ? perPageSelect.value : "1");
+
+    try {
+      const resp = await fetch("/api/generators/sudoku", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: count, difficulty: diff })
+      });
+      const data = await resp.json();
+      const puzzles = data.puzzles || [];
+
+      let currentIdx = 0;
+      let pageNum = 1;
+      while (currentIdx < puzzles.length) {
+        const chunk = puzzles.slice(currentIdx, currentIdx + perPage);
+        const pTitle = chunk.length > 1 ? `Sudoku ${chunk[0].id.replace("sudoku_", "#")} - ${chunk[chunk.length - 1].id.replace("sudoku_", "#")}` : `Sudoku ${chunk[0].id.replace("sudoku_", "#")}`;
+        
+        const elems = [
+          { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
+          { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ];
+
+        pagesList.push({
+          page_number: pageNum,
+          page_type: "content",
+          title: pTitle,
+          layout: "sudoku",
+          puzzles: chunk,
+          elements: elems
+        });
+        currentIdx += perPage;
+        pageNum++;
+      }
+    } catch (e) {
+      console.error("Error generating Sudoku puzzles:", e);
+    }
+  } else if (bType === "tic_tac_toe") {
+    const perPageSelect = document.getElementById("modal-ttt-per-page");
+    const gridSelect = document.getElementById("modal-ttt-grid-size");
+    const perPage = parseInt(perPageSelect ? perPageSelect.value : "4");
+    const gridSize = parseInt(gridSelect ? gridSelect.value : "3");
+
+    try {
+      const resp = await fetch("/api/generators/tic_tac_toe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ total_games: count, games_per_page: perPage, grid_size: gridSize })
+      });
+      const data = await resp.json();
+      const tttPages = data.pages || [];
+
+      tttPages.forEach((pData, idx) => {
+        const pageNum = idx + 1;
+        const firstG = pData.games[0].game_number;
+        const lastG = pData.games[pData.games.length - 1].game_number;
+        const pTitle = firstG !== lastG ? `Games #${firstG} - #${lastG}` : `Game #${firstG}`;
+
+        pagesList.push({
+          page_number: pageNum,
+          page_type: "content",
+          title: pTitle,
+          layout: "tic_tac_toe",
+          games: pData.games,
+          elements: [
+            { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: "TIC-TAC-TOE", font_size: 26, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      });
+    } catch (e) {
+      console.error("Error generating Tic-Tac-Toe games:", e);
+    }
+  }
+
+  // Default / Fallback: Standard Coloring Book layout
+  if (pagesList.length === 0) {
+    for (let i = 0; i < count; i++) {
+      const contentNum = i + 1;
+      pagesList.push({
+        page_number: contentNum,
+        page_type: "content",
+        title: `Page ${contentNum}`,
+        layout: "kdp_top_ref",
+        elements: [
+          { id: `elem_ref_${contentNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${contentNum}`, image_src: null },
+          { id: `elem_title_${contentNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${contentNum}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+          { id: `elem_main_${contentNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${contentNum}`, image_src: null },
+          { id: `elem_frame_${contentNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    }
   }
 
   const newProjPayload = {
     name: projName,
+    book_type: bType,
     folder_name: folderName,
     project_dir: projectDir,
     root_path: rootDir,

@@ -408,6 +408,117 @@ class KDPPdfExporter:
                     c.setLineWidth(1.5)
                     c.roundRect(x, y, w, h, radius=6, fill=0, stroke=1)
 
+            # 3. If page has Sudoku Puzzles attached, render vector Sudoku grids
+            puzzles = page.get("puzzles", [])
+            if puzzles:
+                num_p = len(puzzles)
+                p = puzzles[0]
+                p_id_str = p.get("id", "sudoku_1").replace("sudoku_", "#")
+                
+                # Draw Crisp Centered Title
+                c.setFont("Helvetica-Bold", 18)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 55 - bleed_pt, f"SUDOKU PUZZLE {p_id_str}")
+
+                # Difficulty Subtitle
+                diff_text = f"Difficulty: {p.get('difficulty', 'Medium')}"
+                c.setFont("Helvetica", 10.5)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, page_h - 75 - bleed_pt, diff_text)
+
+                grid = p.get("puzzle_grid", [])
+                grid_sz = min(trim_w - 90, trim_h - 170)
+                gx = (page_w - grid_sz) / 2.0
+                gy = page_h - 110 - bleed_pt - grid_sz
+
+                # Draw 9x9 Sudoku Grid
+                cell_sz = grid_sz / 9.0
+                for r in range(9):
+                    for col in range(9):
+                        cx = gx + (col * cell_sz)
+                        cy = gy + ((8 - r) * cell_sz)
+                        c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                        c.setLineWidth(0.5)
+                        c.rect(cx, cy, cell_sz, cell_sz, fill=0, stroke=1)
+
+                        val = grid[r][col] if r < len(grid) and col < len(grid[r]) else 0
+                        if val != 0:
+                            c.setFont("Helvetica-Bold", cell_sz * 0.55)
+                            c.setFillColor(colors.HexColor("#0f172a"))
+                            c.drawCentredString(cx + (cell_sz / 2.0), cy + (cell_sz / 2.0) - (cell_sz * 0.18), str(val))
+
+                # Thick 3x3 block borders
+                c.setStrokeColor(colors.HexColor("#0f172a"))
+                c.setLineWidth(2.0)
+                for b_row in range(3):
+                    for b_col in range(3):
+                        bx = gx + (b_col * cell_sz * 3)
+                        by = gy + (b_row * cell_sz * 3)
+                        c.rect(bx, by, cell_sz * 3, cell_sz * 3, fill=0, stroke=1)
+
+            # 4. If page has Tic-Tac-Toe games attached, render vector game grids
+            games = page.get("games", [])
+            if games:
+                c.setFont("Helvetica-Bold", 18)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 55 - bleed_pt, "TIC-TAC-TOE")
+
+                cols = 2 if len(games) >= 2 else 1
+                rows = 2 if len(games) >= 3 else (len(games) if len(games) <= 2 else 1)
+                
+                margin_x = 40 + bleed_pt
+                margin_y = 75 + bleed_pt
+                spacing = 16.0
+                
+                avail_w = page_w - (margin_x * 2) - ((cols - 1) * spacing)
+                avail_h = page_h - margin_y - 45 - bleed_pt - ((rows - 1) * spacing)
+                
+                card_w = avail_w / cols
+                card_h = avail_h / rows
+
+                for idx, g in enumerate(games[:cols * rows]):
+                    r = idx // cols
+                    col = idx % cols
+                    
+                    gx = margin_x + (col * (card_w + spacing))
+                    gy = page_h - margin_y - ((r + 1) * card_h) - (r * spacing)
+
+                    # Draw Card Frame
+                    c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                    c.setLineWidth(1.0)
+                    c.roundRect(gx, gy, card_w, card_h, radius=8, fill=0, stroke=1)
+
+                    # Header
+                    c.setFont("Helvetica-Bold", 11)
+                    c.setFillColor(colors.HexColor("#0f172a"))
+                    c.drawString(gx + 12, gy + card_h - 20, g.get("title", f"Game #{idx+1:03d}"))
+
+                    # Player Tags
+                    c.setFont("Helvetica", 8)
+                    c.setFillColor(colors.HexColor("#475569"))
+                    c.drawString(gx + 12, gy + card_h - 36, g.get("player_x_label", "Player X: ________"))
+                    c.drawString(gx + 12, gy + card_h - 50, g.get("player_o_label", "Player O: ________"))
+
+                    # 3x3 Grid
+                    grid_box_sz = min(card_w * 0.65, card_h * 0.52)
+                    grid_x = gx + (card_w - grid_box_sz) / 2.0
+                    grid_y = gy + 28
+                    cell_s = grid_box_sz / 3.0
+
+                    c.setStrokeColor(colors.HexColor("#0f172a"))
+                    c.setLineWidth(1.8)
+                    # Vertical lines
+                    c.line(grid_x + cell_s, grid_y, grid_x + cell_s, grid_y + grid_box_sz)
+                    c.line(grid_x + (cell_s * 2), grid_y, grid_x + (cell_s * 2), grid_y + grid_box_sz)
+                    # Horizontal lines
+                    c.line(grid_x, grid_y + cell_s, grid_x + grid_box_sz, grid_y + cell_s)
+                    c.line(grid_x, grid_y + (cell_s * 2), grid_x + grid_box_sz, grid_y + (cell_s * 2))
+
+                    # Winner box
+                    c.setFont("Helvetica-Bold", 7.5)
+                    c.setFillColor(colors.HexColor("#334155"))
+                    c.drawCentredString(gx + (card_w / 2.0), gy + 12, g.get("winner_label", "Winner: [ X ]  [ O ]  [ Tie ]"))
+
             c.showPage()
 
             # Insert Single-Sided Blank Back Page (Verso)

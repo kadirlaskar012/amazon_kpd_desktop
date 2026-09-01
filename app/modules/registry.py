@@ -5,6 +5,8 @@ ModuleRegistry discovers, registers, and provides access to all available Book M
 from typing import Dict, List, Optional
 from app.modules.base_module import BookModule
 from app.modules.coloring_book.module import ColoringBookModule
+from app.modules.sudoku.module import SudokuBookModule
+from app.modules.tic_tac_toe.module import TicTacToeBookModule
 from app.core.document_model import BookType
 from app.core.template_model import TemplateModel
 
@@ -52,25 +54,14 @@ class ModuleRegistry:
         return cls._instance
 
     def _register_default_modules(self) -> None:
-        # V1 Active Module: Coloring Book
+        # V1 Active Module 1: Coloring Book
         self.register_module(ColoringBookModule())
 
-        # 2. Sudoku Book
-        self.register_module(
-            PlaceholderBookModule(
-                BookType.SUDOKU,
-                "Sudoku Book",
-                "Generate 9x9 Sudoku puzzles (Easy, Medium, Hard, Expert) with automatic solution pages.",
-            )
-        )
-        # 3. Tic-Tac-Toe Book
-        self.register_module(
-            PlaceholderBookModule(
-                BookType.TIC_TAC_TOE,
-                "Tic-Tac-Toe Book",
-                "Printable 3x3 game pages with custom headers, scores, player tags, and multiple grids per page.",
-            )
-        )
+        # V1 Active Module 2: Sudoku Book
+        self.register_module(SudokuBookModule())
+
+        # V1 Active Module 3: Tic-Tac-Toe Book
+        self.register_module(TicTacToeBookModule())
         # 4. Activity Book
         self.register_module(
             PlaceholderBookModule(
