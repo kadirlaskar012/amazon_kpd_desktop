@@ -57,6 +57,7 @@
           <span id="nav-project-name">My Jungle Coloring Book</span>
         </div>
 
+        <button class="btn btn-outline btn-sm" onclick="openAiHubModal()" title="AI Amazon KDP Niche Finder, Titles, 7 Keywords & SEO Assistant" style="background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2)); border-color: rgba(99,102,241,0.5); font-weight: 700;">🤖 AI KDP Hub</button>
         <button class="btn btn-outline btn-sm" onclick="openShortcutsModal()" title="Keyboard Shortcuts Reference">⌨️ Keys</button>
         <button class="btn btn-primary btn-sm" id="btn-save-project" onclick="saveProject(true)">💾 Save (Ctrl+S)</button>
         <button class="btn btn-warning btn-sm" id="btn-cover-gen" onclick="openCoverModal()" title="Generate Amazon KDP Full Wrap Cover PDF">🎨 Cover PDF</button>
@@ -77,6 +78,7 @@
             <div class="hero-buttons">
               <button class="btn btn-lg btn-primary" id="dash-new-btn" onclick="openNewProjectModal()">✨ Create New Project</button>
               <button class="btn btn-lg btn-outline" id="dash-open-btn" onclick="openExistingFolderModal()">📂 Open Existing Project</button>
+              <button class="btn btn-lg btn-outline" id="dash-ai-btn" onclick="openAiHubModal()" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15)); border-color: #6366f1; font-weight: 700;">🤖 AI Niche & Keywords</button>
             </div>
           </div>
           <div class="hero-stats">
@@ -637,14 +639,17 @@
           <div class="form-row">
             <label>Book Type / Category</label>
             <select id="modal-book-type" class="form-control" onchange="onBookTypeChange()">
-              <option value="coloring_book">🎨 Coloring Book (Drawing + Reference + Outline Title)</option>
+              <option value="coloring_book">🎨 Coloring Book (Drawing + Color Reference + Outline Title)</option>
+              <option value="dot_to_dot">🔢 Dot-to-Dot Book (Connect the Dots 1-50 with Guide)</option>
+              <option value="tracing">✏️ Alphabet & Number Tracing Book (Handwriting & Words)</option>
+              <option value="scissor_skills">✂️ Scissor Skills & Cut-Paste Activity Book</option>
+              <option value="shadow_matching">👥 Shadow & Pair Matching Visual Brain Game</option>
+              <option value="ispy">🔍 I-SPY & How Many? Counting Activity Book</option>
+              <option value="grid_drawing">📐 Grid Drawing & Learn-to-Draw Step-by-Step</option>
+              <option value="maze">🌀 Maze Puzzle Book (Labyrinths + Solution Keys)</option>
               <option value="sudoku">🔢 Sudoku Puzzle Book (9x9 with Auto Solutions)</option>
+              <option value="word_search">🔤 Word Search Book (Vocabulary Puzzle + Word Bank)</option>
               <option value="tic_tac_toe">⭕ Tic-Tac-Toe Game Book (Multi-Game Printable Pages)</option>
-              <option value="maze">🌀 Maze Book (Labyrinth with Solution Path)</option>
-              <option value="word_search">🔤 Word Search Book (Vocabulary Puzzle)</option>
-              <option value="activity_book">🧩 Activity Book (Worksheets & Games)</option>
-              <option value="tracing_book">✍️ Tracing Book (Handwriting Readiness)</option>
-              <option value="dot_to_dot">🔢 Dot-to-Dot Book (Connect the Dots)</option>
             </select>
           </div>
 
@@ -1246,6 +1251,197 @@
 
         <div class="proc-footer-note">
           🔒 Screen interaction is locked during processing to ensure 100% data integrity.
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: AI KDP RESEARCH & METADATA HUB -->
+    <div class="modal-overlay" id="ai-kdp-hub-modal">
+      <div class="modal-card" style="width: 860px; max-height: 90vh; border-color: rgba(99, 102, 241, 0.4);">
+        <div class="modal-header" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">🤖</span>
+            <div>
+              <h3 style="color: #ffffff; margin: 0;">AI Amazon KDP Research & Keywords Studio</h3>
+              <p style="font-size: 11px; color: var(--text-secondary); margin: 2px 0 0 0;">
+                Discover high-demand niches, bestselling titles, 7 Amazon backend keywords & HTML descriptions.
+              </p>
+            </div>
+          </div>
+          <button class="close-btn" onclick="closeModal('ai-kdp-hub-modal')">✕</button>
+        </div>
+
+        <!-- AI Studio Navigation Tabs -->
+        <div class="ai-hub-tabs">
+          <button class="ai-tab-btn active" id="ai-tab-btn-niches" onclick="switchAiTab('niches')">🔥 Trending KDP Niches</button>
+          <button class="ai-tab-btn" id="ai-tab-btn-metadata" onclick="switchAiTab('metadata')">🎯 7 Keywords & SEO Metadata</button>
+          <button class="ai-tab-btn" id="ai-tab-btn-settings" onclick="switchAiTab('settings')">🔑 Gemini AI Settings</button>
+        </div>
+
+        <div class="modal-body" style="padding: 18px 22px; overflow-y: auto; max-height: calc(90vh - 160px);">
+          
+          <!-- AI TAB 1: TRENDING NICHES -->
+          <div class="ai-sub-panel" id="ai-panel-niches" style="display: block;">
+            <div style="display: flex; gap: 12px; align-items: flex-end; margin-bottom: 18px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 160px;">
+                <label style="font-size: 11px; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 4px;">TARGET AGE GROUP</label>
+                <select id="ai-niche-age-select" class="form-control">
+                  <option value="Ages 2-4">Toddlers (Ages 2-4)</option>
+                  <option value="Ages 3-5">Preschool (Ages 3-5)</option>
+                  <option value="Ages 4-8" selected>Kindergarten / Early Elementary (Ages 4-8)</option>
+                  <option value="Ages 6-10">Kids (Ages 6-10)</option>
+                </select>
+              </div>
+              <div style="flex: 1; min-width: 160px;">
+                <label style="font-size: 11px; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 4px;">BOOK TYPE</label>
+                <select id="ai-niche-type-select" class="form-control">
+                  <option value="all">All Bestselling Activity Books</option>
+                  <option value="coloring_book">Coloring Books</option>
+                  <option value="dot_to_dot">Dot-to-Dot Connect Puzzles</option>
+                  <option value="tracing">Letter & Number Tracing Books</option>
+                  <option value="scissor_skills">Scissor Skills & Cut-and-Paste</option>
+                  <option value="shadow_matching">Shadow Matching Games</option>
+                  <option value="ispy">I-SPY Counting Books</option>
+                  <option value="grid_drawing">Grid Drawing Books</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" onclick="fetchTrendingNiches()" id="btn-fetch-niches" style="height: 38px; padding: 0 18px; font-weight: 700;">
+                ✨ Find Trending Niches
+              </button>
+            </div>
+
+            <!-- Niches Card Container -->
+            <div class="ai-niches-grid" id="ai-niches-container">
+              <!-- Rendered dynamically by renderNichesList() -->
+            </div>
+          </div>
+
+          <!-- AI TAB 2: 7 KEYWORDS & METADATA GENERATOR -->
+          <div class="ai-sub-panel" id="ai-panel-metadata" style="display: none;">
+            <div style="background: var(--bg-subtle, rgba(255,255,255,0.03)); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+              <div class="form-row-dual">
+                <div>
+                  <label style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; display: block;">BOOK THEME / TOPIC</label>
+                  <input type="text" id="ai-meta-topic" class="form-control" placeholder="e.g. Safari Jungle Animals, Unicorns & Fairies, Monster Trucks" value="Cute Safari Animals">
+                </div>
+                <div>
+                  <label style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; display: block;">BOOK TYPE</label>
+                  <select id="ai-meta-book-type" class="form-control">
+                    <option value="coloring_book">🎨 Coloring Book</option>
+                    <option value="dot_to_dot">🔢 Dot-to-Dot Puzzle Book</option>
+                    <option value="tracing">✏️ Tracing & Handwriting Book</option>
+                    <option value="scissor_skills">✂️ Scissor Skills & Cut-Paste</option>
+                    <option value="shadow_matching">👥 Shadow Matching Brain Game</option>
+                    <option value="ispy">🔍 I-SPY & Counting Book</option>
+                    <option value="grid_drawing">📐 Grid Drawing Book</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row-dual" style="margin-top: 10px;">
+                <div>
+                  <label style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; display: block;">TARGET AUDIENCE</label>
+                  <select id="ai-meta-age" class="form-control">
+                    <option value="Ages 2-4">Toddlers (Ages 2-4)</option>
+                    <option value="Ages 3-5">Preschoolers (Ages 3-5)</option>
+                    <option value="Ages 4-8" selected>Kids (Ages 4-8)</option>
+                    <option value="Ages 6-10">Older Kids (Ages 6-10)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; display: block;">AUTHOR / PEN NAME</label>
+                  <input type="text" id="ai-meta-author" class="form-control" placeholder="e.g. Creative Kids Press" value="Creative Kids Studio">
+                </div>
+              </div>
+              <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
+                <button class="btn btn-primary" onclick="generateAiMetadata()" id="btn-generate-ai-meta" style="font-weight: 700; padding: 8px 20px;">
+                  🚀 Generate 7 Keywords, Title & Description
+                </button>
+              </div>
+            </div>
+
+            <!-- Output Results Section -->
+            <div id="ai-meta-output-box" style="display: none;">
+              <!-- Generated Title & Subtitle Card -->
+              <div class="ai-result-box" style="margin-bottom: 16px;">
+                <div class="ai-box-header">
+                  <span>📌 Amazon Bestseller Title & Subtitle</span>
+                  <button class="btn btn-sm btn-outline" onclick="copyAiField('ai-res-full-title')">📋 Copy Title</button>
+                </div>
+                <div style="padding: 12px 14px;">
+                  <div style="font-size: 15px; font-weight: 800; color: #6366f1; margin-bottom: 4px;" id="ai-res-title">My First Safari Animals Coloring Book</div>
+                  <div style="font-size: 12.5px; color: var(--text-main); line-height: 1.4;" id="ai-res-subtitle">50+ Fun & Easy Pages for Toddlers Ages 2-4</div>
+                </div>
+              </div>
+
+              <!-- 7 Backend Keywords Card -->
+              <div class="ai-result-box" style="margin-bottom: 16px;">
+                <div class="ai-box-header">
+                  <span>🎯 7 Amazon KDP Backend Keywords (&lt;50 chars each)</span>
+                  <button class="btn btn-sm btn-outline" onclick="copyAllKeywords()">📋 Copy All 7 Keywords</button>
+                </div>
+                <div style="padding: 12px 14px;">
+                  <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                    💡 Amazon KDP Rule: Do not repeat words already in your Title. Paste these into your 7 Amazon KDP keyword slots:
+                  </p>
+                  <div class="keywords-pill-grid" id="ai-res-keywords-grid">
+                    <!-- Rendered dynamically -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Amazon Categories Card -->
+              <div class="ai-result-box" style="margin-bottom: 16px;">
+                <div class="ai-box-header">
+                  <span>📂 Recommended Amazon KDP Categories</span>
+                </div>
+                <div style="padding: 12px 14px;" id="ai-res-categories-box">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+
+              <!-- HTML Sales Description Card -->
+              <div class="ai-result-box">
+                <div class="ai-box-header">
+                  <span>📝 Formatted Amazon KDP HTML Sales Description</span>
+                  <button class="btn btn-sm btn-outline" onclick="copyAiField('ai-res-html-raw')">📋 Copy HTML</button>
+                </div>
+                <div style="padding: 14px;">
+                  <div class="ai-html-preview" id="ai-res-html-preview"></div>
+                  <textarea id="ai-res-html-raw" style="display: none;"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI TAB 3: GEMINI API KEY SETTINGS -->
+          <div class="ai-sub-panel" id="ai-panel-settings" style="display: none;">
+            <div style="background: var(--bg-subtle, rgba(255,255,255,0.03)); border: 1px solid var(--border); border-radius: 10px; padding: 20px;">
+              <h4 style="margin: 0 0 8px 0; color: var(--text-main);">🔑 Google Gemini AI API Configuration</h4>
+              <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
+                Enter your free <strong>Google Gemini API Key</strong> to unlock real-time live AI suggestions directly from Google Gemini 1.5. If left empty, the studio automatically uses our high-performing built-in heuristic publishing database.
+              </p>
+              
+              <div class="form-row">
+                <label style="font-size: 11.5px; font-weight: 700; color: var(--text-main); margin-bottom: 6px; display: block;">GEMINI API KEY</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="password" id="ai-gemini-api-key-input" class="form-control" placeholder="AIzaSy...">
+                  <button class="btn btn-primary" onclick="saveGeminiApiKey()" style="white-space: nowrap;">💾 Save Key</button>
+                </div>
+              </div>
+
+              <div id="ai-key-status-box" style="margin-top: 14px; font-size: 12px; color: var(--text-muted);">
+                Status: <span id="ai-key-status-pill" style="font-weight: 700; color: #10b981;">✓ Using Built-in Intelligence Database</span>
+              </div>
+              
+              <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-muted);">
+                💡 Don't have a Gemini API key? You can get one for free at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #6366f1; text-decoration: underline;">Google AI Studio</a>.
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end;">
+          <button class="btn btn-outline" onclick="closeModal('ai-kdp-hub-modal')">Close</button>
         </div>
       </div>
     </div>

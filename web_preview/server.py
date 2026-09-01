@@ -26,6 +26,12 @@ from app.generators.tic_tac_toe_generator import TicTacToeGenerator
 from app.generators.maze_generator import MazeGenerator
 from app.generators.word_search_generator import WordSearchGenerator
 from app.generators.dot_to_dot_generator import DotToDotGenerator
+from app.generators.tracing_generator import TracingGenerator
+from app.generators.scissor_skills_generator import ScissorSkillsGenerator
+from app.generators.shadow_matching_generator import ShadowMatchingGenerator
+from app.generators.ispy_counting_generator import ISpyCountingGenerator
+from app.generators.grid_drawing_generator import GridDrawingGenerator
+from app.generators.ai_kdp_assistant import AIKDPAssistant
 
 # Ensure UTF-8 output encoding for Windows consoles
 if hasattr(sys.stdout, "reconfigure"):
@@ -488,6 +494,101 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(err)}).encode("utf-8"))
                 return
+
+        # ==========================================
+        # AI KDP Research & Metadata Assistant Endpoints
+        # ==========================================
+        elif req_path == "/api/ai/save_key":
+            key = req_data.get("api_key", "")
+            ai = AIKDPAssistant()
+            saved = ai.save_api_key(key)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success" if saved else "error"}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/ai/niche_ideas":
+            target_age = req_data.get("target_age", "Ages 4-8")
+            book_category = req_data.get("category", "all")
+            ai = AIKDPAssistant()
+            niches = ai.get_trending_niche_ideas(target_age=target_age, book_category=book_category)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "niches": niches}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/ai/generate_metadata":
+            topic = req_data.get("topic", "Jungle Animals")
+            book_type = req_data.get("book_type", "coloring_book")
+            target_age = req_data.get("target_age", "Ages 4-8")
+            author = req_data.get("author", "Creative Kids Studio")
+            ai = AIKDPAssistant()
+            meta = ai.generate_kdp_metadata(topic_or_niche=topic, book_type=book_type, target_age=target_age, author_name=author)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "metadata": meta}).encode("utf-8"))
+            return
+
+        # ==========================================
+        # 5 New Activity Book Generator Endpoints
+        # ==========================================
+        elif req_path == "/api/generators/tracing":
+            char = req_data.get("char", "A")
+            repeat = int(req_data.get("repeat", 5))
+            word = req_data.get("word", "APPLE")
+            res = TracingGenerator.generate_letter_tracing_page(letter_or_number=char, repeat_count=repeat, include_word=word)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "tracing": res}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/generators/scissor_skills":
+            pattern = req_data.get("pattern", "zigzag")
+            lines = int(req_data.get("lines", 5))
+            title = req_data.get("title", "Cutting Practice")
+            res = ScissorSkillsGenerator.generate_cutting_practice_page(pattern_type=pattern, line_count=lines, title=title)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "scissor_skills": res}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/generators/shadow_matching":
+            theme = req_data.get("theme", "jungle_animals")
+            pairs = int(req_data.get("pairs", 4))
+            title = req_data.get("title", "Shadow Matching Activity")
+            res = ShadowMatchingGenerator.generate_shadow_matching_page(theme=theme, pair_count=pairs, title=title)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "shadow_matching": res}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/generators/ispy":
+            theme = req_data.get("theme", "jungle")
+            title = req_data.get("title", "I Spy & Count Animals!")
+            res = ISpyCountingGenerator.generate_ispy_page(theme=theme, title=title)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "ispy": res}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/generators/grid_drawing":
+            size = int(req_data.get("grid_size", 4))
+            title = req_data.get("title", "Learn to Draw: Grid Copy")
+            animal = req_data.get("animal_name", "Lion")
+            ref_src = req_data.get("image_src")
+            res = GridDrawingGenerator.generate_grid_drawing_page(grid_size=size, title=title, animal_name=animal, reference_image_src=ref_src)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "grid_drawing": res}).encode("utf-8"))
+            return
 
         self.send_response(404)
         self.end_headers()

@@ -696,6 +696,250 @@ class KDPPdfExporter:
                         c.setFillColor(colors.HexColor("#1e293b"))
                         c.drawCentredString(lbl_x, lbl_y, str(num))
 
+            # 8. If page has Tracing data, render 3-line penmanship guidelines & letters
+            tracing_data = page.get("tracing")
+            if tracing_data:
+                target_char = tracing_data.get("target_char", "A")
+                target_lower = tracing_data.get("target_lower", "a")
+                sample_word = tracing_data.get("sample_word", "APPLE")
+                
+                c.setFont("Helvetica-Bold", 18)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 45 - bleed_pt, f"LETTER TRACING: {target_char} {target_lower}")
+
+                c.setFont("Helvetica", 10)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, page_h - 62 - bleed_pt, f"Trace the letters and practice writing the word '{sample_word}'")
+
+                lines = tracing_data.get("lines", [])
+                start_y = page_h - 110 - bleed_pt
+                row_h = 75.0
+                guideline_w = page_w - 80
+
+                for r_idx, row in enumerate(lines[:6]):
+                    gy = start_y - (r_idx * row_h)
+                    
+                    # Top line (Solid)
+                    c.setStrokeColor(colors.HexColor("#0f172a"))
+                    c.setLineWidth(1.2)
+                    c.line(40, gy + 36, 40 + guideline_w, gy + 36)
+
+                    # Mid line (Dashed)
+                    c.setStrokeColor(colors.HexColor("#94a3b8"))
+                    c.setLineWidth(0.8)
+                    c.setDash(4, 3)
+                    c.line(40, gy + 18, 40 + guideline_w, gy + 18)
+                    c.setDash()
+
+                    # Base line (Solid)
+                    c.setStrokeColor(colors.HexColor("#0f172a"))
+                    c.setLineWidth(1.2)
+                    c.line(40, gy, 40 + guideline_w, gy)
+
+                    # Render sample letters
+                    r_type = row.get("type", "uppercase_trace")
+                    if r_type == "headline":
+                        c.setFont("Helvetica-Bold", 32)
+                        c.setFillColor(colors.HexColor("#0f172a"))
+                        c.drawString(60, gy + 4, f"{target_char}  {target_lower}")
+                        c.setFont("Helvetica-Bold", 18)
+                        c.drawString(200, gy + 8, f"➔  {sample_word}")
+                    elif r_type == "uppercase_trace":
+                        c.setFont("Helvetica", 28)
+                        c.setFillColor(colors.HexColor("#cbd5e1"))
+                        for slot in range(5):
+                            c.drawString(60 + (slot * 80), gy + 4, target_char)
+                    elif r_type == "lowercase_trace":
+                        c.setFont("Helvetica", 26)
+                        c.setFillColor(colors.HexColor("#cbd5e1"))
+                        for slot in range(5):
+                            c.drawString(60 + (slot * 80), gy + 4, target_lower)
+                    elif r_type == "word_trace":
+                        c.setFont("Helvetica", 20)
+                        c.setFillColor(colors.HexColor("#cbd5e1"))
+                        for slot in range(2):
+                            c.drawString(60 + (slot * 180), gy + 4, sample_word)
+
+            # 9. If page has Scissor Skills cutting data, render cutting lines & cut-paste boxes
+            scissor_data = page.get("scissor_skills")
+            if scissor_data:
+                stype = scissor_data.get("type", "scissor_cutting")
+                title_txt = scissor_data.get("title", "Scissor Cutting Practice")
+
+                c.setFont("Helvetica-Bold", 18)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 45 - bleed_pt, title_txt.upper())
+
+                c.setFont("Helvetica", 9.5)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, page_h - 65 - bleed_pt, scissor_data.get("instructions", "Carefully cut along the dotted lines!"))
+
+                if stype == "scissor_cutting":
+                    lines = scissor_data.get("lines", [])
+                    for l in lines:
+                        ly = page_h - 80 - bleed_pt - (l.get("index", 1) * 85)
+                        pattern = l.get("pattern", "zigzag")
+
+                        # Draw Scissor Text Icon
+                        c.setFont("Helvetica-Bold", 16)
+                        c.setFillColor(colors.HexColor("#0f172a"))
+                        c.drawString(38, ly - 4, "✂")
+
+                        # Draw Target Star Icon
+                        c.drawString(page_w - 55, ly - 4, "★")
+
+                        # Draw Dotted Cut Path
+                        c.setStrokeColor(colors.HexColor("#0f172a"))
+                        c.setLineWidth(1.5)
+                        c.setDash(6, 4)
+                        if pattern == "zigzag":
+                            p = c.beginPath()
+                            p.moveTo(65, ly)
+                            step_x = 30.0
+                            for step in range(12):
+                                sx = 65 + (step * step_x)
+                                sy = ly + (18 if step % 2 == 1 else -18)
+                                p.lineTo(sx, sy)
+                            p.lineTo(page_w - 65, ly)
+                            c.drawPath(p, fill=0, stroke=1)
+                        elif pattern == "wavy":
+                            p = c.beginPath()
+                            p.moveTo(65, ly)
+                            step_x = 40.0
+                            for step in range(9):
+                                sx = 65 + (step * step_x)
+                                sy = ly + (14 if step % 2 == 1 else -14)
+                                p.curveTo(sx - 15, sy, sx + 15, sy, sx + step_x, ly)
+                            p.lineTo(page_w - 65, ly)
+                            c.drawPath(p, fill=0, stroke=1)
+                        else:  # Straight
+                            c.line(65, ly, page_w - 65, ly)
+                        c.setDash()
+
+            # 10. If page has Shadow Matching data, render pairs matching lines
+            shadow_data = page.get("shadow_matching")
+            if shadow_data:
+                c.setFont("Helvetica-Bold", 18)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 45 - bleed_pt, shadow_data.get("title", "SHADOW MATCHING").upper())
+
+                c.setFont("Helvetica", 10)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, page_h - 65 - bleed_pt, shadow_data.get("instructions", "Draw a line to connect each item with its shadow!"))
+
+                left_items = shadow_data.get("left_items", [])
+                right_shadows = shadow_data.get("right_shadows", [])
+
+                for idx, item in enumerate(left_items):
+                    iy = page_h - 130 - bleed_pt - (idx * 115)
+                    # Left Item Box
+                    c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                    c.setLineWidth(1.0)
+                    c.roundRect(45, iy, 140, 95, radius=8, fill=0, stroke=1)
+                    c.setFont("Helvetica-Bold", 12)
+                    c.setFillColor(colors.HexColor("#0f172a"))
+                    c.drawCentredString(115, iy + 40, item.get("name", "Animal"))
+
+                    # Left Connect Node
+                    c.setFillColor(colors.HexColor("#0f172a"))
+                    c.circle(195, iy + 47, 4, fill=1, stroke=0)
+
+                for idx, item in enumerate(right_shadows):
+                    iy = page_h - 130 - bleed_pt - (idx * 115)
+                    # Right Shadow Box
+                    c.setStrokeColor(colors.HexColor("#0f172a"))
+                    c.setFillColor(colors.HexColor("#1e293b"))
+                    c.roundRect(page_w - 185, iy, 140, 95, radius=8, fill=1, stroke=1)
+                    c.setFont("Helvetica-Bold", 12)
+                    c.setFillColor(colors.HexColor("#ffffff"))
+                    c.drawCentredString(page_w - 115, iy + 40, "SHADOW")
+
+                    # Right Connect Node
+                    c.setFillColor(colors.HexColor("#0f172a"))
+                    c.circle(page_w - 195, iy + 47, 4, fill=1, stroke=0)
+
+            # 11. If page has I-SPY Counting data, render frame & checklist boxes
+            ispy_data = page.get("ispy")
+            if ispy_data:
+                c.setFont("Helvetica-Bold", 18)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 45 - bleed_pt, ispy_data.get("title", "I SPY & COUNT").upper())
+
+                c.setFont("Helvetica", 9.5)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, page_h - 65 - bleed_pt, ispy_data.get("instructions", "Find, count, and write the numbers in the boxes!"))
+
+                # Main Search Area Border
+                c.setStrokeColor(colors.HexColor("#0f172a"))
+                c.setLineWidth(1.5)
+                c.roundRect(40, 160 + bleed_pt, page_w - 80, page_h - 240 - (bleed_pt * 2), radius=10, fill=0, stroke=1)
+
+                # Render Scattered Items Text
+                scattered = ispy_data.get("scattered_objects", [])
+                for obj in scattered:
+                    ox = 45 + (obj.get("x", 50) * 0.95)
+                    oy = 170 + bleed_pt + (obj.get("y", 100) * 0.85)
+                    c.setFont("Helvetica-Bold", 14)
+                    c.setFillColor(colors.HexColor("#0f172a"))
+                    c.drawCentredString(ox, oy, obj.get("name", "Item"))
+
+                # Bottom Checklist Boxes
+                checklist = ispy_data.get("checklist", [])
+                ch_w = (page_w - 80) / max(1, len(checklist))
+                for c_idx, ch in enumerate(checklist):
+                    cx = 40 + (c_idx * ch_w)
+                    cy = 80 + bleed_pt
+                    c.setFont("Helvetica-Bold", 11)
+                    c.setFillColor(colors.HexColor("#0f172a"))
+                    c.drawString(cx + 8, cy + 30, ch.get("name", "Item"))
+                    c.setStrokeColor(colors.HexColor("#0f172a"))
+                    c.setLineWidth(1.5)
+                    c.rect(cx + 8, cy, 40, 24, fill=0, stroke=1)
+
+            # 12. If page has Grid Drawing data, render 2-grid (reference + empty copy)
+            grid_data = page.get("grid_drawing")
+            if grid_data:
+                dim = grid_data.get("grid_dimension", 4)
+                c.setFont("Helvetica-Bold", 18)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 45 - bleed_pt, grid_data.get("title", "LEARN TO DRAW: GRID COPY").upper())
+
+                c.setFont("Helvetica", 10)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, page_h - 65 - bleed_pt, grid_data.get("instructions", "Copy the drawing square-by-square into the empty grid!"))
+
+                grid_px = 190.0
+                cell_s = grid_px / dim
+                gy = page_h - 110 - bleed_pt - grid_px
+
+                # Left Grid (Reference)
+                gx1 = 45.0
+                c.setFont("Helvetica-Bold", 12)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(gx1 + (grid_px / 2.0), gy + grid_px + 10, "1. REFERENCE GRID")
+                c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                c.setLineWidth(0.8)
+                for r in range(dim + 1):
+                    c.line(gx1, gy + (r * cell_s), gx1 + grid_px, gy + (r * cell_s))
+                    c.line(gx1 + (r * cell_s), gy, gx1 + (r * cell_s), gy + grid_px)
+                c.setStrokeColor(colors.HexColor("#0f172a"))
+                c.setLineWidth(1.5)
+                c.rect(gx1, gy, grid_px, grid_px, fill=0, stroke=1)
+
+                # Right Grid (Empty Drawing Box)
+                gx2 = page_w - 45.0 - grid_px
+                c.setFont("Helvetica-Bold", 12)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(gx2 + (grid_px / 2.0), gy + grid_px + 10, "2. YOUR DRAWING GRID")
+                c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                c.setLineWidth(0.8)
+                for r in range(dim + 1):
+                    c.line(gx2, gy + (r * cell_s), gx2 + grid_px, gy + (r * cell_s))
+                    c.line(gx2 + (r * cell_s), gy, gx2 + (r * cell_s), gy + grid_px)
+                c.setStrokeColor(colors.HexColor("#0f172a"))
+                c.setLineWidth(1.5)
+                c.rect(gx2, gy, grid_px, grid_px, fill=0, stroke=1)
+
             c.showPage()
 
             # Insert Single-Sided Blank Back Page (Verso)
@@ -704,3 +948,4 @@ class KDPPdfExporter:
 
         c.save()
         return output_path
+

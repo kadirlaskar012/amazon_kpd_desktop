@@ -1815,6 +1815,26 @@ function onBookTypeChange() {
     if (nameInput) nameInput.value = "Dot-to-Dot Animal Adventures";
     if (trimSelect) trimSelect.value = "8.5x11";
     if (countLabel) countLabel.innerText = "Total Dot Puzzles to Generate";
+  } else if (bType === "tracing") {
+    if (nameInput) nameInput.value = "Letter & Number Tracing Workbook";
+    if (trimSelect) trimSelect.value = "8.5x11";
+    if (countLabel) countLabel.innerText = "Total Letters / Worksheets";
+  } else if (bType === "scissor_skills") {
+    if (nameInput) nameInput.value = "Scissor Skills Cutting & Paste Activity";
+    if (trimSelect) trimSelect.value = "8.5x11";
+    if (countLabel) countLabel.innerText = "Total Cutting Pages";
+  } else if (bType === "shadow_matching") {
+    if (nameInput) nameInput.value = "Shadow Matching Visual Brain Games";
+    if (trimSelect) trimSelect.value = "8.5x11";
+    if (countLabel) countLabel.innerText = "Total Matching Puzzles";
+  } else if (bType === "ispy") {
+    if (nameInput) nameInput.value = "I-SPY & Count Activity Book";
+    if (trimSelect) trimSelect.value = "8.5x11";
+    if (countLabel) countLabel.innerText = "Total Search & Count Pages";
+  } else if (bType === "grid_drawing") {
+    if (nameInput) nameInput.value = "Learn to Draw: Grid Copy Book";
+    if (trimSelect) trimSelect.value = "8.5x11";
+    if (countLabel) countLabel.innerText = "Total Grid Drawing Lessons";
   } else {
     if (nameInput) nameInput.value = "My Jungle Coloring Book";
     if (trimSelect) trimSelect.value = "8.5x11";
@@ -2007,6 +2027,158 @@ async function submitCreateProject() {
       }
     } catch (e) {
       console.error("Error generating Dot-to-Dot presets:", e);
+    }
+  } else if (bType === "tracing") {
+    const letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
+    const sampleWords = { "A": "APPLE", "B": "BALL", "C": "CAT", "D": "DOG", "E": "ELEPHANT", "F": "FISH", "G": "GIRAFFE", "H": "HORSE" };
+    try {
+      for (let i = 0; i < count; i++) {
+        const pageNum = i + 1;
+        const char = letters[i % letters.length];
+        const word = sampleWords[char] || `${char}NIMAL`;
+        const resp = await fetch("/api/generators/tracing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ char: char, repeat: 5, word: word })
+        });
+        const data = await resp.json();
+        const trData = data.tracing || {};
+        const pTitle = `Letter Tracing: ${char}`;
+
+        pagesList.push({
+          page_number: pageNum,
+          page_type: "content",
+          title: pTitle,
+          layout: "tracing",
+          tracing: trData,
+          elements: [
+            { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      }
+    } catch (e) {
+      console.error("Error generating Tracing pages:", e);
+    }
+  } else if (bType === "scissor_skills") {
+    const patterns = ["straight", "zigzag", "wavy", "curved", "castle"];
+    try {
+      for (let i = 0; i < count; i++) {
+        const pageNum = i + 1;
+        const pat = patterns[i % patterns.length];
+        const pTitle = `Scissor Cutting: ${pat.toUpperCase()}`;
+        const resp = await fetch("/api/generators/scissor_skills", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pattern: pat, lines: 5, title: pTitle })
+        });
+        const data = await resp.json();
+        const scData = data.scissor_skills || {};
+
+        pagesList.push({
+          page_number: pageNum,
+          page_type: "content",
+          title: pTitle,
+          layout: "scissor_skills",
+          scissor_skills: scData,
+          elements: [
+            { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      }
+    } catch (e) {
+      console.error("Error generating Scissor Skills pages:", e);
+    }
+  } else if (bType === "shadow_matching") {
+    const themes = ["jungle_animals", "vehicles", "farm_animals"];
+    try {
+      for (let i = 0; i < count; i++) {
+        const pageNum = i + 1;
+        const thm = themes[i % themes.length];
+        const pTitle = `Shadow Match #${pageNum}`;
+        const resp = await fetch("/api/generators/shadow_matching", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ theme: thm, pairs: 4, title: pTitle })
+        });
+        const data = await resp.json();
+        const smData = data.shadow_matching || {};
+
+        pagesList.push({
+          page_number: pageNum,
+          page_type: "content",
+          title: pTitle,
+          layout: "shadow_matching",
+          shadow_matching: smData,
+          elements: [
+            { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      }
+    } catch (e) {
+      console.error("Error generating Shadow Matching pages:", e);
+    }
+  } else if (bType === "ispy") {
+    const ispyThemes = ["jungle", "space", "sweet_treats"];
+    try {
+      for (let i = 0; i < count; i++) {
+        const pageNum = i + 1;
+        const thm = ispyThemes[i % ispyThemes.length];
+        const pTitle = `I-Spy & Count Animals #${pageNum}`;
+        const resp = await fetch("/api/generators/ispy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ theme: thm, title: pTitle })
+        });
+        const data = await resp.json();
+        const ispyData = data.ispy || {};
+
+        pagesList.push({
+          page_number: pageNum,
+          page_type: "content",
+          title: pTitle,
+          layout: "ispy",
+          ispy: ispyData,
+          elements: [
+            { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      }
+    } catch (e) {
+      console.error("Error generating I-SPY pages:", e);
+    }
+  } else if (bType === "grid_drawing") {
+    const animals = ["Lion", "Elephant", "Monkey", "Giraffe", "Tiger", "Zebra", "Panda", "Bear"];
+    try {
+      for (let i = 0; i < count; i++) {
+        const pageNum = i + 1;
+        const anm = animals[i % animals.length];
+        const pTitle = `How to Draw: ${anm}`;
+        const resp = await fetch("/api/generators/grid_drawing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ grid_size: 4, title: pTitle, animal_name: anm })
+        });
+        const data = await resp.json();
+        const gdData = data.grid_drawing || {};
+
+        pagesList.push({
+          page_number: pageNum,
+          page_type: "content",
+          title: pTitle,
+          layout: "grid_drawing",
+          grid_drawing: gdData,
+          elements: [
+            { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      }
+    } catch (e) {
+      console.error("Error generating Grid Drawing pages:", e);
     }
   }
 
@@ -4242,6 +4414,125 @@ async function addNewPage() {
     } catch (e) {
       console.error(e);
     }
+  } else if (bType === "tracing") {
+    recordHistoryState("Add Tracing Page");
+    const letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
+    const char = letters[(newPageNum - 1) % letters.length];
+    try {
+      const resp = await fetch("/api/generators/tracing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ char: char, repeat: 5, word: `${char}NIMAL` })
+      });
+      const data = await resp.json();
+      currentProject.pages.push({
+        page_number: newPageNum,
+        page_type: "content",
+        title: `Letter Tracing: ${char}`,
+        layout: "tracing",
+        tracing: data.tracing || {},
+        elements: [
+          { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: `LETTER TRACING: ${char}`, font_size: 22, color: "#0f172a", is_outline: false },
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  } else if (bType === "scissor_skills") {
+    recordHistoryState("Add Cutting Page");
+    const patterns = ["straight", "zigzag", "wavy", "curved", "castle"];
+    const pat = patterns[(newPageNum - 1) % patterns.length];
+    try {
+      const resp = await fetch("/api/generators/scissor_skills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pattern: pat, lines: 5, title: `Cutting: ${pat.toUpperCase()}` })
+      });
+      const data = await resp.json();
+      currentProject.pages.push({
+        page_number: newPageNum,
+        page_type: "content",
+        title: `Cutting: ${pat.toUpperCase()}`,
+        layout: "scissor_skills",
+        scissor_skills: data.scissor_skills || {},
+        elements: [
+          { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: `SCISSOR CUTTING: ${pat.toUpperCase()}`, font_size: 22, color: "#0f172a", is_outline: false },
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  } else if (bType === "shadow_matching") {
+    recordHistoryState("Add Shadow Match Page");
+    try {
+      const resp = await fetch("/api/generators/shadow_matching", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme: "jungle_animals", pairs: 4, title: `Shadow Match #${newPageNum}` })
+      });
+      const data = await resp.json();
+      currentProject.pages.push({
+        page_number: newPageNum,
+        page_type: "content",
+        title: `Shadow Match #${newPageNum}`,
+        layout: "shadow_matching",
+        shadow_matching: data.shadow_matching || {},
+        elements: [
+          { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: `SHADOW MATCH #${newPageNum}`, font_size: 22, color: "#0f172a", is_outline: false },
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  } else if (bType === "ispy") {
+    recordHistoryState("Add I-SPY Page");
+    try {
+      const resp = await fetch("/api/generators/ispy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme: "jungle", title: `I-Spy & Count Animals #${newPageNum}` })
+      });
+      const data = await resp.json();
+      currentProject.pages.push({
+        page_number: newPageNum,
+        page_type: "content",
+        title: `I-Spy & Count #${newPageNum}`,
+        layout: "ispy",
+        ispy: data.ispy || {},
+        elements: [
+          { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: `I-SPY & COUNT ANIMALS`, font_size: 22, color: "#0f172a", is_outline: false },
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  } else if (bType === "grid_drawing") {
+    recordHistoryState("Add Grid Drawing Page");
+    try {
+      const resp = await fetch("/api/generators/grid_drawing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grid_size: 4, title: `How to Draw #${newPageNum}` })
+      });
+      const data = await resp.json();
+      currentProject.pages.push({
+        page_number: newPageNum,
+        page_type: "content",
+        title: `Grid Draw #${newPageNum}`,
+        layout: "grid_drawing",
+        grid_drawing: data.grid_drawing || {},
+        elements: [
+          { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: `LEARN TO DRAW: GRID COPY`, font_size: 22, color: "#0f172a", is_outline: false },
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    } catch (e) {
+      console.error(e);
+    }
   } else {
     // Coloring Book
     recordHistoryState("Add Drawing Page");
@@ -5224,3 +5515,298 @@ function executeCoverPdfExport(openInBrowser = true) {
     showToast(`⚠️ Cover PDF Export error: ${err.message}`, "danger");
   });
 }
+
+// ==========================================
+// AI Amazon KDP Research & Keywords Hub Engine
+// ==========================================
+function openAiHubModal() {
+  const modal = document.getElementById("ai-kdp-hub-modal");
+  if (!modal) return;
+  modal.classList.add("active");
+  checkGeminiApiKeyStatus();
+  fetchTrendingNiches();
+}
+
+function switchAiTab(tabKey) {
+  document.querySelectorAll(".ai-tab-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.id === `ai-tab-btn-${tabKey}`);
+  });
+  document.querySelectorAll(".ai-sub-panel").forEach(panel => {
+    panel.style.display = (panel.id === `ai-panel-${tabKey}`) ? "block" : "none";
+  });
+}
+
+function fetchTrendingNiches() {
+  const btn = document.getElementById("btn-fetch-niches");
+  const ageSelect = document.getElementById("ai-niche-age-select");
+  const typeSelect = document.getElementById("ai-niche-type-select");
+  const container = document.getElementById("ai-niches-container");
+
+  const targetAge = ageSelect ? ageSelect.value : "Ages 4-8";
+  const category = typeSelect ? typeSelect.value : "all";
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Finding Niches...";
+  }
+
+  if (container) {
+    container.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px; color: var(--text-muted);">
+        <div class="spinner-dot" style="width: 24px; height: 24px; margin: 0 auto 12px auto; display: block;"></div>
+        Analyzing Amazon KDP Search Trends & Bestselling Categories...
+      </div>
+    `;
+  }
+
+  fetch("/api/ai/niche_ideas", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target_age: targetAge, category: category })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "✨ Find Trending Niches";
+    }
+    const niches = data.niches || [];
+    renderNichesList(niches);
+  })
+  .catch(err => {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "✨ Find Trending Niches";
+    }
+    showToast(`⚠️ AI Niche Research Error: ${err.message}`, "danger");
+  });
+}
+
+function renderNichesList(niches) {
+  const container = document.getElementById("ai-niches-container");
+  if (!container) return;
+
+  if (!niches || niches.length === 0) {
+    container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 30px; color: var(--text-muted);">No niches returned.</div>`;
+    return;
+  }
+
+  let html = "";
+  niches.forEach(n => {
+    const nicheDataJson = encodeURIComponent(JSON.stringify(n));
+    html += `
+      <div class="niche-card">
+        <div>
+          <div class="niche-header">
+            <div class="niche-name">${n.niche_name}</div>
+            <div class="niche-score-badge">Demand: ${n.demand_score}/100</div>
+          </div>
+          <div class="niche-stats-row">
+            <span>👶 ${n.target_age}</span>
+            <span>📊 ${n.competition_level} Comp.</span>
+            <span>🔍 ${n.estimated_monthly_searches}</span>
+          </div>
+          <div class="niche-hook">
+            💡 <strong>Why it sells:</strong> ${n.hook_selling_point}
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.3;">
+            📖 <strong>Sample Title:</strong> "${n.sample_title}"
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button class="btn btn-outline btn-sm" style="flex: 1;" onclick="useNicheForMetadata('${nicheDataJson}')">🎯 Gen Metadata</button>
+          <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="createProjectFromNiche('${nicheDataJson}')">⚡ Create Book</button>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function useNicheForMetadata(nicheJsonStr) {
+  try {
+    const n = JSON.parse(decodeURIComponent(nicheJsonStr));
+    switchAiTab("metadata");
+    const topicInput = document.getElementById("ai-meta-topic");
+    const typeSelect = document.getElementById("ai-meta-book-type");
+    const ageSelect = document.getElementById("ai-meta-age");
+
+    if (topicInput) topicInput.value = n.niche_name;
+    if (typeSelect && n.book_type) typeSelect.value = n.book_type;
+    if (ageSelect && n.target_age) ageSelect.value = n.target_age;
+
+    generateAiMetadata();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function createProjectFromNiche(nicheJsonStr) {
+  try {
+    const n = JSON.parse(decodeURIComponent(nicheJsonStr));
+    closeModal("ai-kdp-hub-modal");
+    openNewProjectModal();
+
+    const nameInput = document.getElementById("modal-project-name");
+    const typeSelect = document.getElementById("modal-book-type");
+
+    if (nameInput) nameInput.value = n.niche_name;
+    if (typeSelect && n.book_type) {
+      typeSelect.value = n.book_type;
+      onBookTypeChange();
+    }
+    showToast(`⚡ Loaded "${n.niche_name}" into New Project Wizard!`, "success");
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function generateAiMetadata() {
+  const btn = document.getElementById("btn-generate-ai-meta");
+  const topic = document.getElementById("ai-meta-topic")?.value || "Cute Safari Animals";
+  const bookType = document.getElementById("ai-meta-book-type")?.value || "coloring_book";
+  const targetAge = document.getElementById("ai-meta-age")?.value || "Ages 4-8";
+  const author = document.getElementById("ai-meta-author")?.value || "Creative Kids Studio";
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Generating AI Metadata...";
+  }
+
+  fetch("/api/ai/generate_metadata", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      topic: topic,
+      book_type: bookType,
+      target_age: targetAge,
+      author: author
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "🚀 Generate 7 Keywords, Title & Description";
+    }
+    const meta = data.metadata || {};
+    renderAiMetadata(meta);
+  })
+  .catch(err => {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "🚀 Generate 7 Keywords, Title & Description";
+    }
+    showToast(`⚠️ AI Metadata Error: ${err.message}`, "danger");
+  });
+}
+
+let lastGeneratedKeywords = [];
+
+function renderAiMetadata(meta) {
+  const outputBox = document.getElementById("ai-meta-output-box");
+  if (!outputBox) return;
+
+  outputBox.style.display = "block";
+
+  const titleEl = document.getElementById("ai-res-title");
+  const subtitleEl = document.getElementById("ai-res-subtitle");
+  const kwGrid = document.getElementById("ai-res-keywords-grid");
+  const catsBox = document.getElementById("ai-res-categories-box");
+  const htmlPrev = document.getElementById("ai-res-html-preview");
+  const htmlRaw = document.getElementById("ai-res-html-raw");
+
+  if (titleEl) titleEl.innerText = meta.title || "My Book Title";
+  if (subtitleEl) subtitleEl.innerText = meta.subtitle || "Subtitle";
+
+  lastGeneratedKeywords = meta.backend_keywords || [];
+  if (kwGrid) {
+    kwGrid.innerHTML = lastGeneratedKeywords.map((kw, idx) => `
+      <div class="kw-pill">
+        <span>#${idx + 1}</span>
+        <strong>${kw}</strong>
+        <button class="btn btn-xs btn-outline" style="padding: 1px 4px; font-size: 9px;" onclick="navigator.clipboard.writeText('${kw.replace(/'/g, "\\'")}'); showToast('Copied keyword #${idx + 1}!', 'success');">📋</button>
+      </div>
+    `).join("");
+  }
+
+  if (catsBox) {
+    const cats = meta.recommended_categories || [];
+    catsBox.innerHTML = cats.map(c => `
+      <div class="category-pill">🏷️ ${c}</div>
+    `).join("");
+  }
+
+  if (htmlPrev) htmlPrev.innerHTML = meta.html_description || "";
+  if (htmlRaw) htmlRaw.value = meta.html_description || "";
+
+  showToast("🎉 High-Converting Amazon Metadata & 7 Keywords Generated!", "success");
+}
+
+function copyAiField(fieldId) {
+  const raw = document.getElementById(fieldId);
+  if (fieldId === "ai-res-full-title") {
+    const t = document.getElementById("ai-res-title")?.innerText || "";
+    const s = document.getElementById("ai-res-subtitle")?.innerText || "";
+    navigator.clipboard.writeText(`${t}: ${s}`);
+    showToast("📋 Copied Title & Subtitle to clipboard!", "success");
+    return;
+  }
+  if (raw) {
+    navigator.clipboard.writeText(raw.value || raw.innerText);
+    showToast("📋 Copied HTML Description to clipboard!", "success");
+  }
+}
+
+function copyAllKeywords() {
+  if (!lastGeneratedKeywords || lastGeneratedKeywords.length === 0) {
+    showToast("No keywords generated yet!", "warning");
+    return;
+  }
+  const text = lastGeneratedKeywords.join("\n");
+  navigator.clipboard.writeText(text);
+  showToast("📋 Copied all 7 Amazon Backend Keywords to clipboard!", "success");
+}
+
+function checkGeminiApiKeyStatus() {
+  fetch("/api/ai/get_key")
+    .then(r => r.json())
+    .then(data => {
+      const pill = document.getElementById("ai-key-status-pill");
+      const input = document.getElementById("ai-gemini-api-key-input");
+      if (pill) {
+        if (data.has_key) {
+          pill.innerText = `✓ Connected to Live Google Gemini API (${data.key_preview})`;
+          pill.style.color = "#10b981";
+        } else {
+          pill.innerText = "✓ Using Built-in Intelligence Database";
+          pill.style.color = "#6366f1";
+        }
+      }
+    })
+    .catch(() => {});
+}
+
+function saveGeminiApiKey() {
+  const input = document.getElementById("ai-gemini-api-key-input");
+  const key = input ? input.value.trim() : "";
+  fetch("/api/ai/save_key", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ api_key: key })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.status === "success") {
+      showToast("💾 Gemini API Key Saved Successfully!", "success");
+      checkGeminiApiKeyStatus();
+    } else {
+      showToast("⚠️ Failed to save API Key", "danger");
+    }
+  })
+  .catch(err => {
+    showToast(`⚠️ Save Key Error: ${err.message}`, "danger");
+  });
+}
+
