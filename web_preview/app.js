@@ -706,11 +706,14 @@ function openExportPdfModal() {
   if (belongsBox) belongsBox.style.display = isColoring ? "flex" : "none";
   if (colorTestBox) colorTestBox.style.display = isColoring ? "flex" : "none";
 
+  const singleSidedOpt = document.getElementById("exp-opt-single-sided");
   if (!isColoring) {
+    if (singleSidedOpt) singleSidedOpt.checked = false;
     if (document.getElementById("exp-fm-contents")) document.getElementById("exp-fm-contents").checked = false;
     if (document.getElementById("exp-fm-belongs")) document.getElementById("exp-fm-belongs").checked = false;
     if (document.getElementById("exp-fm-color-test")) document.getElementById("exp-fm-color-test").checked = false;
   } else {
+    if (singleSidedOpt) singleSidedOpt.checked = true;
     if (document.getElementById("exp-fm-contents")) document.getElementById("exp-fm-contents").checked = true;
     if (document.getElementById("exp-fm-belongs")) document.getElementById("exp-fm-belongs").checked = true;
     if (document.getElementById("exp-fm-color-test")) document.getElementById("exp-fm-color-test").checked = true;
@@ -733,7 +736,9 @@ function updateExportModalPreview() {
   const countLabel = document.getElementById("exp-grid-count");
   if (!container) return;
 
-  const singleSided = document.getElementById("exp-opt-single-sided") ? document.getElementById("exp-opt-single-sided").checked : true;
+  const bType = currentProject.book_type || "coloring_book";
+  const isColoring = (bType === "coloring_book");
+  const singleSided = document.getElementById("exp-opt-single-sided") ? document.getElementById("exp-opt-single-sided").checked : isColoring;
   const blankNote = document.getElementById("exp-opt-blank-note") ? document.getElementById("exp-opt-blank-note").checked : false;
 
   const incDisclaimer = document.getElementById("exp-fm-disclaimer") ? document.getElementById("exp-fm-disclaimer").checked : true;
@@ -762,10 +767,11 @@ function updateExportModalPreview() {
 
   contentPages.forEach((p, idx) => {
     const drawPageNum = fmCount + 1 + (idx * (singleSided ? 2 : 1));
+    const labelType = bType === "sudoku" ? "Puzzle" : (bType === "maze" ? "Maze" : (bType === "word_search" ? "Word Search" : "Page"));
     exportPages.push({
       ...p,
       doc_page_number: drawPageNum,
-      badge: `Page ${drawPageNum} • Drawing ${idx + 1}`
+      badge: `Page ${drawPageNum} • ${labelType} ${idx + 1}`
     });
 
     if (singleSided) {
@@ -777,6 +783,41 @@ function updateExportModalPreview() {
       });
     }
   });
+
+  // If Sudoku Book, append Solutions Section to the Export preview
+  const allSudokus = [];
+  contentPages.forEach((cp, p_idx) => {
+    const pNum = fmCount + 1 + p_idx;
+    (cp.puzzles || []).forEach(pz => {
+      allSudokus.push({ puzzle: pz, origPage: pNum });
+    });
+  });
+
+  if (allSudokus.length > 0) {
+    // 1. Solution Divider Page
+    const divPageNum = exportPages.length + 1;
+    exportPages.push({
+      page_type: "solution_divider",
+      title: "Solutions Section Divider",
+      doc_page_number: divPageNum,
+      badge: `Page ${divPageNum} • Solutions Divider`
+    });
+
+    // 2. 4-in-1 Solution Pages
+    const SOLS_PER_PAGE = 4;
+    for (let c_idx = 0; c_idx < allSudokus.length; c_idx += SOLS_PER_PAGE) {
+      const chunk = allSudokus.slice(c_idx, c_idx + SOLS_PER_PAGE);
+      const solPageNum = exportPages.length + 1;
+      const firstNum = c_idx + 1;
+      const lastNum = Math.min(allSudokus.length, c_idx + chunk.length);
+      exportPages.push({
+        page_type: "sudoku_solutions",
+        title: `Solutions: #${firstNum} - #${lastNum}`,
+        doc_page_number: solPageNum,
+        badge: `Page ${solPageNum} • Solutions (4-in-1)`
+      });
+    }
+  }
 
   let html = "";
   exportPages.forEach((p, idx) => {
@@ -812,6 +853,16 @@ function updateExportModalPreview() {
         thumbImg = `<span style="font-size:24px;">🏷️</span>`;
       } else if (isColorTest) {
         thumbImg = `<span style="font-size:24px;">🧪</span>`;
+      } else if (p.page_type === "solution_divider") {
+        thumbImg = `<span style="font-size:24px;">🏆</span>`;
+      } else if (p.page_type === "sudoku_solutions" || p.puzzles) {
+        thumbImg = `<span style="font-size:24px;">🧩</span>`;
+      } else if (p.maze) {
+        thumbImg = `<span style="font-size:24px;">🌀</span>`;
+      } else if (p.word_search) {
+        thumbImg = `<span style="font-size:24px;">🔤</span>`;
+      } else if (p.games) {
+        thumbImg = `<span style="font-size:24px;">⭕</span>`;
       } else {
         thumbImg = `<span style="font-size:24px;">🎨</span>`;
       }
@@ -4262,6 +4313,8 @@ async function addNewPage() {
     showToast("⚡ Generating new 9x9 Sudoku puzzle...", "info");
 
     try {
+      const totalPuzzlesSoFar = currentProject.pages.reduce((acc, pg) => acc + (pg.puzzles ? pg.puzzles.length : 0), 0);
+      const nextNum = totalPuzzlesSoFar + 1;
       const resp = await fetch("/api/generators/sudoku", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -4269,7 +4322,10 @@ async function addNewPage() {
       });
       const data = await resp.json();
       const p = (data.puzzles && data.puzzles[0]) ? data.puzzles[0] : null;
-      const pIdStr = p ? p.id.replace("sudoku_", "#") : `#${newPageNum.toString().padStart(4, '0')}`;
+      if (p) {
+        p.id = `sudoku_${nextNum.toString().padStart(4, '0')}`;
+      }
+      const pIdStr = p ? p.id.replace("sudoku_", "#") : `#${nextNum.toString().padStart(4, '0')}`;
       const pTitle = `Sudoku ${pIdStr}`;
 
       currentProject.pages.push({
@@ -4277,7 +4333,7 @@ async function addNewPage() {
         page_type: "content",
         title: pTitle,
         layout: "sudoku",
-        puzzles: [p],
+        puzzles: p ? [p] : [],
         elements: [
           { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
           { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }

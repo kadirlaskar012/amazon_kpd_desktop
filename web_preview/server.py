@@ -142,11 +142,17 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 with open(pdf_file, "rb") as f:
                     shutil.copyfileobj(f, self.wfile)
-                return
-            else:
-                self.send_response(404)
-                self.end_headers()
-                return
+        elif req_path == "/api/ai/get_key":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            ai_inst = AIKDPAssistant()
+            saved_key = ai_inst.get_api_key()
+            self.wfile.write(json.dumps({
+                "has_key": bool(saved_key),
+                "key_preview": f"...{saved_key[-4:]}" if saved_key and len(saved_key) > 4 else ""
+            }).encode("utf-8"))
+            return
 
         return super().do_GET()
 

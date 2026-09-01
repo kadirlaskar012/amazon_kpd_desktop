@@ -400,14 +400,22 @@ class KDPPdfExporter:
                             c.drawCentredString(x + (w / 2.0), y + (h / 2.0) - 4, txt_label)
 
                 elif elem_type == "title":
+                    # If this is a specialized activity page (sudoku, maze, etc.), skip redundant canvas title to prevent overlap
+                    is_special_page = bool(
+                        page.get("puzzles") or page.get("games") or page.get("maze") or 
+                        page.get("word_search") or page.get("tracing") or page.get("scissor_skills") or 
+                        page.get("shadow_matching") or page.get("ispy") or page.get("grid_drawing") or
+                        page.get("dot_to_dot")
+                    )
+                    if is_special_page:
+                        continue
+
                     text = elem.get("text", "")
                     if text:
                         raw_size = float(elem.get("font_size", 38))
-                        # Clean font sizing
                         font_size = raw_size * scale_y * 0.95
                         alignment = elem.get("alignment", "center")
                         is_outline = elem.get("is_outline", True)
-                        
                         text_y = y + (h / 2.0) - (font_size / 3.0)
 
                         if is_outline:
@@ -424,7 +432,7 @@ class KDPPdfExporter:
                             else:
                                 c.drawCentredString(x + (w / 2.0), text_y, text)
 
-                            c._code.append("0 Tr\n")  # Reset immediately to avoid affecting other text
+                            c._code.append("0 Tr\n")
                         else:
                             c.setFont("Helvetica-Bold", font_size)
                             c.setFillColor(colors.HexColor(elem.get("color", "#111827")))
@@ -436,6 +444,14 @@ class KDPPdfExporter:
                                 c.drawCentredString(x + (w / 2.0), text_y, text)
 
                 elif elem_type == "border":
+                    is_special_page = bool(
+                        page.get("puzzles") or page.get("games") or page.get("maze") or 
+                        page.get("word_search") or page.get("tracing") or page.get("scissor_skills") or 
+                        page.get("shadow_matching") or page.get("ispy") or page.get("grid_drawing") or
+                        page.get("dot_to_dot")
+                    )
+                    if is_special_page:
+                        continue
                     c.setStrokeColor(colors.HexColor("#111827"))
                     c.setLineWidth(1.5)
                     c.roundRect(x, y, w, h, radius=6, fill=0, stroke=1)
@@ -445,23 +461,23 @@ class KDPPdfExporter:
             if puzzles:
                 num_p = len(puzzles)
                 p = puzzles[0]
-                p_id_str = p.get("id", "sudoku_1").replace("sudoku_", "#")
+                p_id_str = p.get("id", f"sudoku_{page_idx + 1}").replace("sudoku_", "#")
                 
-                # Draw Crisp Centered Title
-                c.setFont("Helvetica-Bold", 18)
+                # Single clean crisp Centered Title
+                c.setFont("Helvetica-Bold", 20)
                 c.setFillColor(colors.HexColor("#0f172a"))
-                c.drawCentredString(page_w / 2.0, page_h - 55 - bleed_pt, f"SUDOKU PUZZLE {p_id_str}")
+                c.drawCentredString(page_w / 2.0, page_h - 48 - bleed_pt, f"SUDOKU PUZZLE {p_id_str}")
 
                 # Difficulty Subtitle
                 diff_text = f"Difficulty: {p.get('difficulty', 'Medium')}"
                 c.setFont("Helvetica", 10.5)
                 c.setFillColor(colors.HexColor("#64748b"))
-                c.drawCentredString(page_w / 2.0, page_h - 75 - bleed_pt, diff_text)
+                c.drawCentredString(page_w / 2.0, page_h - 68 - bleed_pt, diff_text)
 
                 grid = p.get("puzzle_grid", [])
-                grid_sz = min(trim_w - 90, trim_h - 170)
+                grid_sz = min(trim_w - 90, trim_h - 160)
                 gx = (page_w - grid_sz) / 2.0
-                gy = page_h - 110 - bleed_pt - grid_sz
+                gy = page_h - 95 - bleed_pt - grid_sz
 
                 # Draw 9x9 Sudoku Grid
                 cell_sz = grid_sz / 9.0
@@ -470,7 +486,7 @@ class KDPPdfExporter:
                         cx = gx + (col * cell_sz)
                         cy = gy + ((8 - r) * cell_sz)
                         c.setStrokeColor(colors.HexColor("#cbd5e1"))
-                        c.setLineWidth(0.5)
+                        c.setLineWidth(0.6)
                         c.rect(cx, cy, cell_sz, cell_sz, fill=0, stroke=1)
 
                         val = grid[r][col] if r < len(grid) and col < len(grid[r]) else 0
@@ -945,6 +961,106 @@ class KDPPdfExporter:
             # Insert Single-Sided Blank Back Page (Verso)
             if single_sided:
                 render_blank_page()
+
+        # =========================================================================
+        # 4. SUDOKU AUTOMATIC SOLUTIONS SECTION (DIVIDER + 2x2 MULTI-GRID SOLUTION PAGES)
+        # =========================================================================
+        all_sudoku_puzzles = []
+        for p_idx, cp in enumerate(content_pages):
+            p_num = fm_count + 1 + p_idx
+            for pz in cp.get("puzzles", []):
+                all_sudoku_puzzles.append({
+                    "puzzle": pz,
+                    "page_num": p_num
+                })
+
+        if all_sudoku_puzzles:
+            # 1. Interval Divider / Title Page (e.g. Page 11 after 10 puzzle pages)
+            c.setStrokeColor(colors.HexColor("#0f172a"))
+            c.setLineWidth(2.0)
+            c.roundRect(35 + bleed_pt, 35 + bleed_pt, page_w - 70 - (bleed_pt * 2), page_h - 70 - (bleed_pt * 2), radius=12, fill=0, stroke=1)
+            c.setLineWidth(0.8)
+            c.roundRect(42 + bleed_pt, 42 + bleed_pt, page_w - 84 - (bleed_pt * 2), page_h - 84 - (bleed_pt * 2), radius=8, fill=0, stroke=1)
+
+            c.setFont("Helvetica-Bold", 32)
+            c.setFillColor(colors.HexColor("#0f172a"))
+            c.drawCentredString(page_w / 2.0, page_h / 2.0 + 40, "PUZZLE SOLUTIONS")
+
+            c.setFont("Helvetica", 14)
+            c.setFillColor(colors.HexColor("#475569"))
+            first_id = all_sudoku_puzzles[0]["puzzle"].get("id", "sudoku_1").replace("sudoku_", "#")
+            last_id = all_sudoku_puzzles[-1]["puzzle"].get("id", f"sudoku_{len(all_sudoku_puzzles)}").replace("sudoku_", "#")
+            c.drawCentredString(page_w / 2.0, page_h / 2.0, f"Answers for Puzzles {first_id} to {last_id}")
+
+            c.setFont("Helvetica-Oblique", 11)
+            c.setFillColor(colors.HexColor("#94a3b8"))
+            c.drawCentredString(page_w / 2.0, page_h / 2.0 - 30, "Check your work and verify your answers below!")
+
+            c.showPage()
+            if single_sided:
+                render_blank_page()
+
+            # 2. Multi-Grid Solution Pages (4 per page in 2x2 grid)
+            SOLS_PER_PAGE = 4
+            for chunk_start in range(0, len(all_sudoku_puzzles), SOLS_PER_PAGE):
+                chunk = all_sudoku_puzzles[chunk_start:chunk_start + SOLS_PER_PAGE]
+                
+                # Header
+                ch_first = chunk[0]["puzzle"].get("id", "").replace("sudoku_", "#")
+                ch_last = chunk[-1]["puzzle"].get("id", "").replace("sudoku_", "#")
+                c.setFont("Helvetica-Bold", 16)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 45 - bleed_pt, f"SOLUTIONS: {ch_first} - {ch_last}")
+
+                margin_x = 40 + bleed_pt
+                margin_top = 70 + bleed_pt
+                grid_sz = (page_w - (margin_x * 2) - 30) / 2.0
+
+                for idx, item in enumerate(chunk):
+                    pz = item["puzzle"]
+                    orig_page = item["page_num"]
+                    p_id = pz.get("id", f"sudoku_{chunk_start + idx + 1}").replace("sudoku_", "#")
+
+                    col = idx % 2
+                    row = idx // 2
+
+                    gx = margin_x + (col * (grid_sz + 30))
+                    gy = page_h - margin_top - ((row + 1) * (grid_sz + 45)) + 20
+
+                    # Draw 9x9 Solution Board
+                    sol_grid = pz.get("solution_grid", [])
+                    cell_sz = grid_sz / 9.0
+                    for r in range(9):
+                        for c_idx in range(9):
+                            cx = gx + (c_idx * cell_sz)
+                            cy = gy + ((8 - r) * cell_sz)
+                            c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                            c.setLineWidth(0.4)
+                            c.rect(cx, cy, cell_sz, cell_sz, fill=0, stroke=1)
+
+                            val = sol_grid[r][c_idx] if r < len(sol_grid) and c_idx < len(sol_grid[r]) else 0
+                            if val != 0:
+                                c.setFont("Helvetica-Bold", cell_sz * 0.55)
+                                c.setFillColor(colors.HexColor("#0f172a"))
+                                c.drawCentredString(cx + (cell_sz / 2.0), cy + (cell_sz / 2.0) - (cell_sz * 0.18), str(val))
+
+                    # Thick 3x3 block borders
+                    c.setStrokeColor(colors.HexColor("#0f172a"))
+                    c.setLineWidth(1.4)
+                    for b_row in range(3):
+                        for b_col in range(3):
+                            bx = gx + (b_col * cell_sz * 3)
+                            by = gy + (b_row * cell_sz * 3)
+                            c.rect(bx, by, cell_sz * 3, cell_sz * 3, fill=0, stroke=1)
+
+                    # Clear Solution Label underneath with Page Number cross-reference
+                    c.setFont("Helvetica-Bold", 10.5)
+                    c.setFillColor(colors.HexColor("#0f172a"))
+                    c.drawCentredString(gx + (grid_sz / 2.0), gy - 16, f"Puzzle {p_id} (Page {orig_page}) Solution")
+
+                c.showPage()
+                if single_sided:
+                    render_blank_page()
 
         c.save()
         return output_path

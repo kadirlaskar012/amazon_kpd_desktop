@@ -92,3 +92,52 @@ def test_dot_to_dot_generator_from_image():
     assert "x" in res["dots"][0] and "y" in res["dots"][0]
     assert "label_x" in res["dots"][0] and "label_y" in res["dots"][0]
 
+
+def test_sudoku_book_pdf_export_with_solutions_section(tmp_path):
+    from pathlib import Path
+    from app.core.pdf_exporter import KDPPdfExporter
+    import os
+
+    # Generate 10 Sudoku puzzles
+    puzzles = SudokuGenerator.generate_bulk(count=10, difficulty="easy")
+    
+    pages = []
+    for idx, pz in enumerate(puzzles):
+        p_num = idx + 1
+        pages.append({
+            "page_number": p_num,
+            "page_type": "content",
+            "title": f"Sudoku #{p_num:04d}",
+            "layout": "sudoku",
+            "puzzles": [pz],
+            "elements": [
+                {"id": f"elem_title_{p_num}", "type": "title", "x": 35, "y": 30, "w": 440, "h": 40, "text": f"SUDOKU #{p_num:04d}", "font_size": 24, "color": "#0f172a", "is_outline": False}
+            ]
+        })
+
+    mock_project = {
+        "name": "Sudoku Master 10 Puzzles",
+        "book_type": "sudoku",
+        "author": "Puzzle King",
+        "settings": {
+            "trim_width_pt": 612.0,
+            "trim_height_pt": 792.0,
+            "has_bleed": True,
+            "bleed_pt": 9.0,
+            "single_sided": False
+        },
+        "front_matter_options": {
+            "include_disclaimer": True,
+            "include_contents": False,
+            "include_belongs": False,
+            "include_color_test": False
+        },
+        "pages": pages
+    }
+
+    out_file = Path(tmp_path / "sudoku_10_with_solutions.pdf")
+    res_path = KDPPdfExporter.generate_pdf(mock_project, out_file, include_front_matter=True, single_sided=False)
+    assert os.path.exists(str(res_path))
+    assert os.path.getsize(str(res_path)) > 5000
+
+
