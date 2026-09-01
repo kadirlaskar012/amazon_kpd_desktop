@@ -1,5 +1,5 @@
 /**
- * KDP Book Production Studio - Complete Application Engine with PDF Export, Spread Preview & Context-Aware Header
+ * KDP Book Production Studio - Complete Application Engine with Automatic Front Matter System (Disclaimer & Synchronized Contents), PDF Export & Spread Preview
  */
 
 let defaultRootLocation = "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects";
@@ -24,49 +24,73 @@ let currentProject = {
     },
     target_dpi: 300,
   },
+  front_matter_config: {
+    auto_front_matter: true,
+    create_disclaimer: true,
+    create_contents: true,
+    auto_sync_contents: true,
+    contents_style: "numbered",  // numbered, bullet, plain
+    show_page_numbers: true,
+    publisher_name: "KDP Creative Publishing",
+    isbn: "978-X-XXXXX-XXX-X"
+  },
   media: [],
   pages: [
     {
       page_number: 1,
-      title: "Page 1",
-      layout: "top_ref",
+      page_type: "front_matter_disclaimer",
+      title: "Disclaimer & Copyright",
+      layout: "disclaimer_standard",
       elements: [
-        { id: "elem_ref_1", type: "ref_image", x: 180, y: 35, w: 150, h: 100, text: "Click to select Reference Image", image_src: null },
-        { id: "elem_main_1", type: "main_image", x: 45, y: 150, w: 420, h: 420, text: "Click to select Drawing Image", image_src: null },
-        { id: "elem_title_1", type: "title", x: 45, y: 585, w: 420, h: 40, text: "PAGE 1", font_size: 26, color: "#111827", font_family: "Plus Jakarta Sans" },
-        { id: "elem_frame_1", type: "border", x: 30, y: 25, w: 450, h: 610 },
+        { id: "elem_disc_frame", type: "border", x: 35, y: 30, w: 440, h: 600 },
+        { id: "elem_disc_title", type: "title", x: 45, y: 65, w: 420, h: 40, text: "MY JUNGLE COLORING BOOK", font_size: 24, color: "#0f172a" },
+        { id: "elem_disc_sub", type: "title", x: 45, y: 110, w: 420, h: 25, text: "First Edition • Premium KDP Edition", font_size: 13, color: "#475569" },
+        { id: "elem_disc_copy", type: "title", x: 45, y: 180, w: 420, h: 25, text: "Copyright © 2026 by Creative Kids Studio", font_size: 14, color: "#1e293b" },
+        { id: "elem_disc_rights", type: "title", x: 45, y: 210, w: 420, h: 20, text: "All rights reserved.", font_size: 12, color: "#475569" },
+        { id: "elem_disc_p1", type: "title", x: 45, y: 260, w: 420, h: 20, text: "No part of this publication may be reproduced, distributed, or transmitted in any form", font_size: 10, color: "#64748b" },
+        { id: "elem_disc_p2", type: "title", x: 45, y: 285, w: 420, h: 20, text: "or by any means, including photocopying, recording, or other electronic methods,", font_size: 10, color: "#64748b" },
+        { id: "elem_disc_p3", type: "title", x: 45, y: 310, w: 420, h: 20, text: "without the prior written permission of the author and publisher.", font_size: 10, color: "#64748b" },
+        { id: "elem_disc_pub", type: "title", x: 45, y: 400, w: 420, h: 20, text: "Published by: KDP Creative Publishing", font_size: 11, color: "#334155" },
+        { id: "elem_disc_isbn", type: "title", x: 45, y: 430, w: 420, h: 20, text: "ISBN-13: 978-X-XXXXX-XXX-X", font_size: 11, color: "#334155" },
+        { id: "elem_disc_contact", type: "title", x: 45, y: 480, w: 420, h: 20, text: "Visit us: www.kdpbooks.com • support@kdpbooks.com", font_size: 10, color: "#64748b" },
+        { id: "elem_disc_kdp", type: "title", x: 45, y: 550, w: 420, h: 20, text: "Printed for Amazon KDP Distribution • First Printing", font_size: 9, color: "#94a3b8" }
       ]
     },
     {
       page_number: 2,
-      title: "Page 2",
-      layout: "top_ref",
+      page_type: "front_matter_contents",
+      title: "Table of Contents",
+      layout: "contents_standard",
       elements: [
-        { id: "elem_ref_2", type: "ref_image", x: 180, y: 35, w: 150, h: 100, text: "Click to select Reference Image", image_src: null },
-        { id: "elem_main_2", type: "main_image", x: 45, y: 150, w: 420, h: 420, text: "Click to select Drawing Image", image_src: null },
-        { id: "elem_title_2", type: "title", x: 45, y: 585, w: 420, h: 40, text: "PAGE 2", font_size: 26, color: "#111827", font_family: "Plus Jakarta Sans" },
-        { id: "elem_frame_2", type: "border", x: 30, y: 25, w: 450, h: 610 },
+        { id: "elem_cnt_frame", type: "border", x: 35, y: 30, w: 440, h: 600 },
+        { id: "elem_cnt_head", type: "title", x: 45, y: 55, w: 420, h: 35, text: "TABLE OF CONTENTS", font_size: 22, color: "#0f172a" },
+        { id: "elem_cnt_sub", type: "title", x: 45, y: 90, w: 420, h: 20, text: "Explore all the illustrations and coloring pages in this book", font_size: 11, color: "#64748b" },
+        { id: "elem_cnt_item_1", type: "title", x: 65, y: 140, w: 380, h: 24, text: "1. Playful Lion ........................ Page 3", font_size: 12, color: "#1e293b" },
+        { id: "elem_cnt_item_2", type: "title", x: 65, y: 168, w: 380, h: 24, text: "2. Gentle Elephant .................... Page 4", font_size: 12, color: "#1e293b" }
       ]
     },
     {
       page_number: 3,
-      title: "Page 3",
-      layout: "full_page",
+      page_type: "content",
+      title: "Playful Lion",
+      layout: "top_ref",
       elements: [
-        { id: "elem_main_3", type: "main_image", x: 35, y: 50, w: 440, h: 520, text: "Click to select Full Page Drawing", image_src: null },
-        { id: "elem_title_3", type: "title", x: 45, y: 585, w: 420, h: 40, text: "PAGE 3", font_size: 26, color: "#111827", font_family: "Plus Jakarta Sans" },
-        { id: "elem_frame_3", type: "border", x: 30, y: 25, w: 450, h: 610 },
+        { id: "elem_ref_1", type: "ref_image", x: 180, y: 35, w: 150, h: 100, text: "Playful Lion Reference", image_src: null },
+        { id: "elem_main_1", type: "main_image", x: 45, y: 150, w: 420, h: 420, text: "Playful Lion Drawing", image_src: null },
+        { id: "elem_title_1", type: "title", x: 45, y: 585, w: 420, h: 40, text: "PLAYFUL LION", font_size: 26, color: "#111827", font_family: "Plus Jakarta Sans" },
+        { id: "elem_frame_1", type: "border", x: 30, y: 25, w: 450, h: 610 },
       ]
     },
     {
       page_number: 4,
-      title: "Page 4",
-      layout: "side_by_side",
+      page_type: "content",
+      title: "Gentle Elephant",
+      layout: "top_ref",
       elements: [
-        { id: "elem_title_4", type: "title", x: 45, y: 45, w: 420, h: 40, text: "PAGE 4", font_size: 26, color: "#111827", font_family: "Plus Jakarta Sans" },
-        { id: "elem_ref_4", type: "ref_image", x: 35, y: 100, w: 210, h: 510, text: "Click to select Reference", image_src: null },
-        { id: "elem_main_4", type: "main_image", x: 265, y: 100, w: 210, h: 510, text: "Click to select Drawing", image_src: null },
-        { id: "elem_frame_4", type: "border", x: 30, y: 25, w: 450, h: 610 },
+        { id: "elem_ref_2", type: "ref_image", x: 180, y: 35, w: 150, h: 100, text: "Gentle Elephant Reference", image_src: null },
+        { id: "elem_main_2", type: "main_image", x: 45, y: 150, w: 420, h: 420, text: "Gentle Elephant Drawing", image_src: null },
+        { id: "elem_title_2", type: "title", x: 45, y: 585, w: 420, h: 40, text: "GENTLE ELEPHANT", font_size: 26, color: "#111827", font_family: "Plus Jakarta Sans" },
+        { id: "elem_frame_2", type: "border", x: 30, y: 25, w: 450, h: 610 },
       ]
     }
   ]
@@ -104,40 +128,258 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================
-// Sequential Auto-Renumbering Engine
+// Title Resolver & Cleaner
+// ==========================================
+function resolveCleanPageTitle(page, idx = 1) {
+  if (!page) return `Page ${idx}`;
+
+  // 1. Check explicit title if not generic 'Page N'
+  if (page.title && page.title.trim() && !/^Page\s*\d+$/i.test(page.title.trim())) {
+    return cleanTitleString(page.title.trim());
+  }
+
+  // 2. Check title element on canvas
+  if (page.elements && Array.isArray(page.elements)) {
+    const titleElem = page.elements.find(e => e.type === "title");
+    if (titleElem && titleElem.text && !/^PAGE\s*\d+$/i.test(titleElem.text.trim())) {
+      return cleanTitleString(titleElem.text.trim());
+    }
+
+    // 3. Check image element filename or label
+    const imgElem = page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && (e.text || e.fileName));
+    if (imgElem) {
+      const candidate = imgElem.fileName || imgElem.text;
+      if (candidate && !candidate.toLowerCase().includes("click to select")) {
+        return cleanFileName(candidate);
+      }
+    }
+  }
+
+  return `Page ${page.page_number || idx}`;
+}
+
+function cleanTitleString(str) {
+  return str.replace(/_/g, " ").replace(/-/g, " ").replace(/\s+/g, " ").trim()
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function cleanFileName(filename) {
+  let name = filename.replace(/\.[^/.]+$/, "");
+  name = name.replace(/^(page\s*[\-_]*)?\d+[\s_\.\-]+/i, "");
+  name = name.replace(/[\-_](coloring[\-_]?page|lineart|drawing|illustration|vector|bw|art)$/i, "");
+  name = name.replace(/[_\-]+/g, " ").trim();
+  return name.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ==========================================
+// Sequential Auto-Renumbering & Contents Sync
 // ==========================================
 function renumberPages() {
   if (!currentProject.pages || !Array.isArray(currentProject.pages)) return;
 
+  let contentPageCounter = 1;
+
   currentProject.pages.forEach((page, idx) => {
-    const oldNum = page.page_number;
-    const newNum = idx + 1;
-    page.page_number = newNum;
+    const newDocNum = idx + 1;
+    page.page_number = newDocNum;
 
-    // Check if title was default "Page X" (or matches generic page number pattern)
-    if (!page.title || /^Page\s*\d+$/i.test(page.title.trim()) || page.title.trim() === `Page ${oldNum}`) {
-      page.title = `Page ${newNum}`;
-    }
-
-    // Renumber canvas title elements if they match "PAGE <num>" pattern
-    if (page.elements && Array.isArray(page.elements)) {
-      page.elements.forEach(elem => {
-        if (elem.type === "title") {
-          const txt = (elem.text || "").trim();
-          if (/^PAGE\s*\d+$/i.test(txt) || txt === `PAGE ${oldNum}` || txt === `PAGE` || txt === "") {
-            elem.text = `PAGE ${newNum}`;
+    if (page.page_type === "front_matter_disclaimer") {
+      page.title = "Disclaimer & Copyright";
+    } else if (page.page_type === "front_matter_contents") {
+      page.title = "Table of Contents";
+    } else {
+      page.page_type = "content";
+      // Auto-update default titles
+      if (!page.title || /^Page\s*\d+$/i.test(page.title.trim())) {
+        page.title = `Page ${contentPageCounter}`;
+      }
+      if (page.elements && Array.isArray(page.elements)) {
+        page.elements.forEach(elem => {
+          if (elem.type === "title") {
+            const txt = (elem.text || "").trim();
+            if (/^PAGE\s*\d+$/i.test(txt) || txt === "PAGE" || txt === "") {
+              elem.text = `PAGE ${contentPageCounter}`;
+            }
           }
-        }
-      });
+        });
+      }
+      contentPageCounter++;
     }
   });
+
+  // Auto-sync Contents page if enabled
+  syncContentsPage();
+}
+
+function syncContentsPage() {
+  const cfg = currentProject.front_matter_config || {};
+  if (cfg.auto_sync_contents === false) return; // Respect user manual mode
+
+  const contentsPage = currentProject.pages.find(p => p.page_type === "front_matter_contents" || p.layout === "contents_standard");
+  if (!contentsPage || contentsPage.is_locked) return;
+
+  const contentPages = currentProject.pages.filter(p => p.page_type !== "front_matter_disclaimer" && p.page_type !== "front_matter_contents");
+  
+  const elements = [
+    { id: "elem_cnt_frame", type: "border", x: 35, y: 30, w: 440, h: 600 },
+    { id: "elem_cnt_head", type: "title", x: 45, y: 55, w: 420, h: 35, text: cfg.contents_heading || "TABLE OF CONTENTS", font_size: 22, color: "#0f172a" },
+    { id: "elem_cnt_sub", type: "title", x: 45, y: 90, w: 420, h: 20, text: "Explore all the illustrations and coloring pages in this book", font_size: 11, color: "#64748b" }
+  ];
+
+  const startY = 135;
+  const rowHeight = 26;
+  const maxRows = 15;
+
+  if (contentPages.length <= maxRows) {
+    contentPages.forEach((p, idx) => {
+      const resolvedTitle = resolveCleanPageTitle(p, idx + 1);
+      const prefix = cfg.contents_style === "bullet" ? "• " : (cfg.contents_style === "plain" ? "" : `${idx + 1}. `);
+      const line = `${prefix}${resolvedTitle} .................................... Page ${p.page_number}`;
+      elements.push({
+        id: `elem_cnt_item_${idx + 1}`,
+        type: "title",
+        x: 60,
+        y: startY + (idx * rowHeight),
+        w: 390,
+        h: 22,
+        text: line,
+        font_size: 11,
+        color: "#1e293b"
+      });
+    });
+  } else {
+    // Dual column layout
+    const col1 = contentPages.slice(0, maxRows);
+    const col2 = contentPages.slice(maxRows, maxRows * 2);
+
+    col1.forEach((p, idx) => {
+      const resolvedTitle = resolveCleanPageTitle(p, idx + 1);
+      const line = `${idx + 1}. ${resolvedTitle} (p.${p.page_number})`;
+      elements.push({
+        id: `elem_cnt_c1_${idx + 1}`,
+        type: "title",
+        x: 45,
+        y: startY + (idx * rowHeight),
+        w: 205,
+        h: 22,
+        text: line,
+        font_size: 10,
+        color: "#1e293b"
+      });
+    });
+
+    col2.forEach((p, idx) => {
+      const trueIdx = idx + maxRows;
+      const resolvedTitle = resolveCleanPageTitle(p, trueIdx + 1);
+      const line = `${trueIdx + 1}. ${resolvedTitle} (p.${p.page_number})`;
+      elements.push({
+        id: `elem_cnt_c2_${trueIdx + 1}`,
+        type: "title",
+        x: 260,
+        y: startY + (idx * rowHeight),
+        w: 205,
+        h: 22,
+        text: line,
+        font_size: 10,
+        color: "#1e293b"
+      });
+    });
+  }
+
+  contentsPage.elements = elements;
+}
+
+// ==========================================
+// Front Matter Regeneration Engine
+// ==========================================
+function regenerateFrontMatterPages() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    return;
+  }
+
+  const projName = currentProject.name || "Untitled Book";
+  const authorName = currentProject.author || "Creative Kids Studio";
+  const year = new Date().getFullYear();
+
+  // Filter out existing front matter
+  const contentPages = currentProject.pages.filter(p => p.page_type !== "front_matter_disclaimer" && p.page_type !== "front_matter_contents");
+
+  const disclaimerPage = {
+    page_number: 1,
+    page_type: "front_matter_disclaimer",
+    title: "Disclaimer & Copyright",
+    layout: "disclaimer_standard",
+    elements: [
+      { id: "elem_disc_frame", type: "border", x: 35, y: 30, w: 440, h: 600 },
+      { id: "elem_disc_title", type: "title", x: 45, y: 65, w: 420, h: 40, text: projName.toUpperCase(), font_size: 24, color: "#0f172a" },
+      { id: "elem_disc_sub", type: "title", x: 45, y: 110, w: 420, h: 25, text: "First Edition • Premium KDP Edition", font_size: 13, color: "#475569" },
+      { id: "elem_disc_copy", type: "title", x: 45, y: 180, w: 420, h: 25, text: `Copyright © ${year} by ${authorName}`, font_size: 14, color: "#1e293b" },
+      { id: "elem_disc_rights", type: "title", x: 45, y: 210, w: 420, h: 20, text: "All rights reserved.", font_size: 12, color: "#475569" },
+      { id: "elem_disc_p1", type: "title", x: 45, y: 260, w: 420, h: 20, text: "No part of this publication may be reproduced, distributed, or transmitted in any form", font_size: 10, color: "#64748b" },
+      { id: "elem_disc_p2", type: "title", x: 45, y: 285, w: 420, h: 20, text: "or by any means, including photocopying, recording, or other electronic methods,", font_size: 10, color: "#64748b" },
+      { id: "elem_disc_p3", type: "title", x: 45, y: 310, w: 420, h: 20, text: "without the prior written permission of the author and publisher.", font_size: 10, color: "#64748b" },
+      { id: "elem_disc_pub", type: "title", x: 45, y: 400, w: 420, h: 20, text: "Published by: KDP Creative Publishing", font_size: 11, color: "#334155" },
+      { id: "elem_disc_isbn", type: "title", x: 45, y: 430, w: 420, h: 20, text: "ISBN-13: 978-X-XXXXX-XXX-X", font_size: 11, color: "#334155" },
+      { id: "elem_disc_contact", type: "title", x: 45, y: 480, w: 420, h: 20, text: "Visit us: www.kdpbooks.com • support@kdpbooks.com", font_size: 10, color: "#64748b" },
+      { id: "elem_disc_kdp", type: "title", x: 45, y: 550, w: 420, h: 20, text: "Printed for Amazon KDP Distribution • First Printing", font_size: 9, color: "#94a3b8" }
+    ]
+  };
+
+  const contentsPage = {
+    page_number: 2,
+    page_type: "front_matter_contents",
+    title: "Table of Contents",
+    layout: "contents_standard",
+    elements: [
+      { id: "elem_cnt_frame", type: "border", x: 35, y: 30, w: 440, h: 600 },
+      { id: "elem_cnt_head", type: "title", x: 45, y: 55, w: 420, h: 35, text: "TABLE OF CONTENTS", font_size: 22, color: "#0f172a" },
+      { id: "elem_cnt_sub", type: "title", x: 45, y: 90, w: 420, h: 20, text: "Explore all the illustrations and coloring pages in this book", font_size: 11, color: "#64748b" }
+    ]
+  };
+
+  currentProject.pages = [disclaimerPage, contentsPage, ...contentPages];
+  renumberPages();
+  syncActiveProjectUI();
+  selectPage(0);
+  switchTab("canvas");
+  markProjectDirty();
+  showToast("⚡ Inserted & Synchronized Front Matter Pages (Disclaimer + Contents)!", "success");
+}
+
+function forceSyncContents() {
+  syncContentsPage();
+  loadPageIntoCanvas(currentPageIndex);
+  renderTimeline();
+  markProjectDirty();
+  showToast("🔄 Synchronized Table of Contents!", "success");
+}
+
+function onFrontMatterConfigChange() {
+  if (!currentProject.front_matter_config) currentProject.front_matter_config = {};
+  
+  const autoFm = document.getElementById("setting-auto-front-matter");
+  const autoSync = document.getElementById("setting-auto-sync-contents");
+  const styleSelect = document.getElementById("setting-contents-style");
+  const authorInput = document.getElementById("setting-author-name");
+  const pubInput = document.getElementById("setting-publisher-name");
+  const isbnInput = document.getElementById("setting-isbn");
+
+  if (autoFm) currentProject.front_matter_config.auto_front_matter = autoFm.checked;
+  if (autoSync) currentProject.front_matter_config.auto_sync_contents = autoSync.checked;
+  if (styleSelect) currentProject.front_matter_config.contents_style = styleSelect.value;
+  if (authorInput && authorInput.value.trim()) currentProject.author = authorInput.value.trim();
+  if (pubInput && pubInput.value.trim()) currentProject.front_matter_config.publisher_name = pubInput.value.trim();
+  if (isbnInput && isbnInput.value.trim()) currentProject.front_matter_config.isbn = isbnInput.value.trim();
+
+  syncContentsPage();
+  markProjectDirty();
 }
 
 // ==========================================
 // Robust Initial Project Loader & Tab Memory
 // ==========================================
 function loadInitialProject() {
-  // 1. Instant recovery from local cache
   try {
     const cachedData = localStorage.getItem("kdp_active_project_data") || localStorage.getItem("kdp_autosave_current_project");
     if (cachedData) {
@@ -155,11 +397,9 @@ function loadInitialProject() {
   loadPageIntoCanvas(currentPageIndex);
   renderTimeline();
 
-  // 2. Restore active tab (e.g. Canvas Editor stays active on refresh!)
   const savedTab = localStorage.getItem("kdp_active_tab") || "canvas";
   switchTab(savedTab);
 
-  // 3. Sync from backend disk if active path is stored
   const activePath = localStorage.getItem("kdp_active_project_path") || currentProject.project_dir;
   if (activePath) {
     fetch(`/api/projects/load?path=${encodeURIComponent(activePath)}`)
@@ -212,7 +452,6 @@ function saveProject(isManual = false) {
 
   currentProject.updated_at = new Date().toISOString();
   
-  // 1. Persist to LocalStorage for zero-loss reload
   try {
     localStorage.setItem("kdp_active_project_path", currentProject.project_dir);
     localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
@@ -224,7 +463,6 @@ function saveProject(isManual = false) {
     console.warn("LocalStorage save error:", e);
   }
 
-  // 2. Persist to Physical Disk (project.json)
   fetch("/api/projects/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -286,7 +524,6 @@ function renderSpreadPreview() {
     return;
   }
 
-  // Each spread shows 2 facing pages (Left: even or index, Right: odd or index+1)
   const leftIdx = currentSpreadIndex * 2;
   const rightIdx = leftIdx + 1;
 
@@ -319,7 +556,7 @@ function renderSpreadPreview() {
 
     return `
       <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
-        <div class="spread-page-header">Page ${page.page_number}</div>
+        <div class="spread-page-header">Page ${page.page_number} • ${page.page_type === 'front_matter_disclaimer' ? 'Disclaimer' : (page.page_type === 'front_matter_contents' ? 'Contents' : 'Interior')}</div>
         <div class="spread-inner-content">
           ${refEl ? `<div style="font-size:10px;color:#64748b;font-weight:700;">Ref: ${refEl.text || 'Reference'}</div>` : ''}
           ${imgContent}
@@ -479,7 +716,6 @@ function setupGlobalKeyboardShortcuts() {
     const activeTagName = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
     const isInputActive = activeTagName === "input" || activeTagName === "textarea" || activeTagName === "select";
 
-    // 1. Enter Key Handler
     if (e.key === "Enter") {
       const renameModal = document.getElementById("rename-modal");
       if (renameModal && renameModal.classList.contains("active")) {
@@ -514,14 +750,12 @@ function setupGlobalKeyboardShortcuts() {
       }
     }
 
-    // 2. Ctrl + S -> Manual Save
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
       e.preventDefault();
       saveProject(true);
       return;
     }
 
-    // 3. Ctrl + D -> Duplicate Element or Page
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {
       e.preventDefault();
       if (activeElementId) {
@@ -532,7 +766,6 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    // 4. F2 -> Rename Title Element or Page
     if (e.key === "F2") {
       e.preventDefault();
       const activeElem = getActiveElement();
@@ -544,7 +777,6 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    // 5. Escape -> Close Modals or Deselect Element
     if (e.key === "Escape") {
       const openModal = document.querySelector(".modal-overlay.active");
       if (openModal) {
@@ -555,7 +787,6 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    // 6. Delete / Backspace -> Delete Element or Page
     if (e.key === "Delete" || e.key === "Backspace") {
       if (isInputActive) return;
 
@@ -570,7 +801,6 @@ function setupGlobalKeyboardShortcuts() {
 
     if (isInputActive) return;
 
-    // 7. Arrow Keys -> Nudge Element
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
       const elem = getActiveElement();
       if (elem) {
@@ -589,7 +819,6 @@ function setupGlobalKeyboardShortcuts() {
       }
     }
 
-    // 8. [ and ] -> Previous / Next Page
     if (e.key === "[" || e.key === "PageUp") {
       e.preventDefault();
       if (currentPageIndex > 0) {
@@ -607,7 +836,6 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    // 9. Hotkeys: G (Guides), S (Snap), T (Text), B (Border)
     if (e.key.toLowerCase() === "g") {
       toggleGuides();
     } else if (e.key.toLowerCase() === "s" && !e.ctrlKey) {
@@ -669,6 +897,7 @@ function submitRenameModal() {
       page.title = val;
       const titleElem = page.elements.find(e => e.type === "title");
       if (titleElem) titleElem.text = val.toUpperCase();
+      renumberPages();
       renderTimeline();
       loadPageIntoCanvas(currentPageIndex);
       showToast(`✏️ Renamed page to "${val}"!`, "success");
@@ -796,7 +1025,6 @@ function switchTab(tabId) {
   if (targetBtn) targetBtn.classList.add("active");
   if (targetPanel) targetPanel.classList.add("active");
 
-  // Top Actions (Project Pill, Save, Keys, PDF Export) should ONLY be visible in Canvas Editor
   const headerCanvasActions = document.getElementById("header-canvas-actions");
   if (headerCanvasActions) {
     headerCanvasActions.style.display = (tabId === "canvas") ? "flex" : "none";
@@ -838,7 +1066,7 @@ function syncActiveProjectUI() {
   document.getElementById("active-proj-path").innerText = `📁 ${currentProject.project_dir}`;
   document.getElementById("active-proj-meta").innerHTML = `
     <span>Pages: ${currentProject.pages.length}</span> • 
-    <span>Media Items: ${currentProject.media ? currentProject.media.length : 0}</span> • 
+    <span>Author: ${currentProject.author || 'Creative Author'}</span> • 
     <span>Trim: 8.5x11 in</span>
   `;
 
@@ -851,6 +1079,20 @@ function syncActiveProjectUI() {
   const lockBtn = document.getElementById("active-lock-toggle-btn");
   if (lockBtn) {
     lockBtn.innerText = lockBtnText;
+  }
+
+  // Sync Settings Inputs
+  const authorInput = document.getElementById("setting-author-name");
+  if (authorInput) authorInput.value = currentProject.author || "Creative Kids Studio";
+  
+  const pubInput = document.getElementById("setting-publisher-name");
+  if (pubInput && currentProject.front_matter_config) {
+    pubInput.value = currentProject.front_matter_config.publisher_name || "KDP Creative Publishing";
+  }
+
+  const isbnInput = document.getElementById("setting-isbn");
+  if (isbnInput && currentProject.front_matter_config) {
+    isbnInput.value = currentProject.front_matter_config.isbn || "978-X-XXXXX-XXX-X";
   }
 
   document.getElementById("stat-page-count").innerText = currentProject.pages.length;
@@ -913,6 +1155,7 @@ function submitCreateProject() {
   const rootInput = document.getElementById("modal-project-root");
   const countSelect = document.getElementById("modal-page-count");
   const hasBleed = document.getElementById("modal-has-bleed").checked;
+  const autoFrontMatter = document.getElementById("modal-auto-front-matter") ? document.getElementById("modal-auto-front-matter").checked : true;
 
   const projName = (nameInput ? nameInput.value.trim() : "") || "My New KDP Book";
   const rootDir = (rootInput ? rootInput.value.trim() : "") || defaultRootLocation;
@@ -920,17 +1163,59 @@ function submitCreateProject() {
   const projectDir = `${rootDir.replace(/[\/\\]+$/, "")}\\${folderName}`;
   const count = parseInt(countSelect ? countSelect.value : "10");
 
-  const initialPages = [];
+  const pagesList = [];
+
+  // 1. Insert Front Matter if enabled
+  if (autoFrontMatter) {
+    pagesList.push({
+      page_number: 1,
+      page_type: "front_matter_disclaimer",
+      title: "Disclaimer & Copyright",
+      layout: "disclaimer_standard",
+      elements: [
+        { id: "elem_disc_frame", type: "border", x: 35, y: 30, w: 440, h: 600 },
+        { id: "elem_disc_title", type: "title", x: 45, y: 65, w: 420, h: 40, text: projName.toUpperCase(), font_size: 24, color: "#0f172a" },
+        { id: "elem_disc_sub", type: "title", x: 45, y: 110, w: 420, h: 25, text: "First Edition • Premium KDP Edition", font_size: 13, color: "#475569" },
+        { id: "elem_disc_copy", type: "title", x: 45, y: 180, w: 420, h: 25, text: `Copyright © ${new Date().getFullYear()} by Creative Kids Studio`, font_size: 14, color: "#1e293b" },
+        { id: "elem_disc_rights", type: "title", x: 45, y: 210, w: 420, h: 20, text: "All rights reserved.", font_size: 12, color: "#475569" },
+        { id: "elem_disc_p1", type: "title", x: 45, y: 260, w: 420, h: 20, text: "No part of this publication may be reproduced, distributed, or transmitted in any form", font_size: 10, color: "#64748b" },
+        { id: "elem_disc_p2", type: "title", x: 45, y: 285, w: 420, h: 20, text: "or by any means, including photocopying, recording, or other electronic methods,", font_size: 10, color: "#64748b" },
+        { id: "elem_disc_p3", type: "title", x: 45, y: 310, w: 420, h: 20, text: "without the prior written permission of the author and publisher.", font_size: 10, color: "#64748b" },
+        { id: "elem_disc_pub", type: "title", x: 45, y: 400, w: 420, h: 20, text: "Published by: KDP Creative Publishing", font_size: 11, color: "#334155" },
+        { id: "elem_disc_isbn", type: "title", x: 45, y: 430, w: 420, h: 20, text: "ISBN-13: 978-X-XXXXX-XXX-X", font_size: 11, color: "#334155" },
+        { id: "elem_disc_contact", type: "title", x: 45, y: 480, w: 420, h: 20, text: "Visit us: www.kdpbooks.com • support@kdpbooks.com", font_size: 10, color: "#64748b" },
+        { id: "elem_disc_kdp", type: "title", x: 45, y: 550, w: 420, h: 20, text: "Printed for Amazon KDP Distribution • First Printing", font_size: 9, color: "#94a3b8" }
+      ]
+    });
+
+    pagesList.push({
+      page_number: 2,
+      page_type: "front_matter_contents",
+      title: "Table of Contents",
+      layout: "contents_standard",
+      elements: [
+        { id: "elem_cnt_frame", type: "border", x: 35, y: 30, w: 440, h: 600 },
+        { id: "elem_cnt_head", type: "title", x: 45, y: 55, w: 420, h: 35, text: "TABLE OF CONTENTS", font_size: 22, color: "#0f172a" },
+        { id: "elem_cnt_sub", type: "title", x: 45, y: 90, w: 420, h: 20, text: "Explore all the illustrations and coloring pages in this book", font_size: 11, color: "#64748b" }
+      ]
+    });
+  }
+
+  // 2. Add Content Pages
+  const startNum = pagesList.length + 1;
   for (let i = 0; i < count; i++) {
-    initialPages.push({
-      page_number: i + 1,
-      title: `Page ${i + 1}`,
+    const docPageNum = startNum + i;
+    const contentNum = i + 1;
+    pagesList.push({
+      page_number: docPageNum,
+      page_type: "content",
+      title: `Page ${contentNum}`,
       layout: "top_ref",
       elements: [
-        { id: `elem_ref_${i + 1}`, type: "ref_image", x: 180, y: 35, w: 150, h: 100, text: "Click to select Reference Image", image_src: null },
-        { id: `elem_main_${i + 1}`, type: "main_image", x: 45, y: 150, w: 420, h: 420, text: "Click to select Drawing Image", image_src: null },
-        { id: `elem_title_${i + 1}`, type: "title", x: 45, y: 585, w: 420, h: 40, text: `PAGE ${i + 1}`, font_size: 26, color: "#111827", font_family: "Plus Jakarta Sans" },
-        { id: `elem_frame_${i + 1}`, type: "border", x: 30, y: 25, w: 450, h: 610 },
+        { id: `elem_ref_${docPageNum}`, type: "ref_image", x: 180, y: 35, w: 150, h: 100, text: "Click to select Reference Image", image_src: null },
+        { id: `elem_main_${docPageNum}`, type: "main_image", x: 45, y: 150, w: 420, h: 420, text: "Click to select Drawing Image", image_src: null },
+        { id: `elem_title_${docPageNum}`, type: "title", x: 45, y: 585, w: 420, h: 40, text: `PAGE ${contentNum}`, font_size: 26, color: "#111827", font_family: "Plus Jakarta Sans" },
+        { id: `elem_frame_${docPageNum}`, type: "border", x: 30, y: 25, w: 450, h: 610 },
       ]
     });
   }
@@ -940,7 +1225,7 @@ function submitCreateProject() {
     folder_name: folderName,
     project_dir: projectDir,
     root_path: rootDir,
-    author: "Creative Author",
+    author: "Creative Kids Studio",
     is_locked: false,
     created_at: new Date().toISOString(),
     settings: {
@@ -951,8 +1236,18 @@ function submitCreateProject() {
       margins: { top_pt: 27.0, bottom_pt: 27.0, inside_pt: 36.0, outside_pt: 27.0 },
       target_dpi: 300,
     },
+    front_matter_config: {
+      auto_front_matter: autoFrontMatter,
+      create_disclaimer: autoFrontMatter,
+      create_contents: autoFrontMatter,
+      auto_sync_contents: true,
+      contents_style: "numbered",
+      show_page_numbers: true,
+      publisher_name: "KDP Creative Publishing",
+      isbn: "978-X-XXXXX-XXX-X"
+    },
     media: [],
-    pages: initialPages
+    pages: pagesList
   };
 
   fetch("/api/projects/create", {
@@ -983,7 +1278,7 @@ function finishProjectSetup(proj) {
   fetchRecentProjects();
   switchTab("canvas");
 
-  showToast(`✨ Created Project "${proj.name}" in ${proj.folder_name}!`, "success");
+  showToast(`✨ Created Project with Front Matter (Disclaimer + Contents)!`, "success");
 }
 
 function openProjectByPath(path) {
@@ -1225,16 +1520,10 @@ function applyMediaToSlot(mediaId, slotType) {
     showToast(`⚡ Filled Reference, Drawing, and Title with "${item.name}"!`, "success");
   }
 
+  renumberPages();
   markProjectDirty();
   loadPageIntoCanvas(currentPageIndex);
   renderTimeline();
-}
-
-function cleanFileName(filename) {
-  let name = filename.replace(/\.[^/.]+$/, "");
-  name = name.replace(/^\d+[\s_\.\-]+/, "");
-  name = name.replace(/[_\-]+/g, " ").trim();
-  return name.replace(/\b\w/g, c => c.toUpperCase());
 }
 
 // ==========================================
@@ -1330,7 +1619,9 @@ function getLayoutName(key) {
     side_by_side: "Side-by-Side Split",
     top_title: "Top Title + Center Art",
     color_and_trace: "Color & Handwriting",
-    grid_4: "2x2 Quadrant Grid"
+    grid_4: "2x2 Quadrant Grid",
+    disclaimer_standard: "Disclaimer & Copyright",
+    contents_standard: "Table of Contents"
   };
   return map[key] || key;
 }
@@ -1394,6 +1685,11 @@ function loadPageIntoCanvas(index) {
       elDiv.innerText = elem.text || "Title";
       elDiv.style.fontSize = `${elem.font_size || 22}px`;
       elDiv.style.color = elem.color || "#111827";
+      if (elem.alignment === "center") {
+        elDiv.style.textAlign = "center";
+      } else if (elem.alignment === "left") {
+        elDiv.style.textAlign = "left";
+      }
     } else if (elem.type === "tracing") {
       elDiv.classList.add("elem-tracing-box");
       elDiv.innerHTML = `
@@ -1424,7 +1720,12 @@ function loadPageIntoCanvas(index) {
   });
 
   const pageReadout = document.getElementById("page-num-readout");
-  if (pageReadout) pageReadout.innerText = `Page ${index + 1} of ${currentProject.pages.length}`;
+  if (pageReadout) {
+    const pageTypeTag = page.page_type === "front_matter_disclaimer" 
+      ? " (Disclaimer)" 
+      : (page.page_type === "front_matter_contents" ? " (Contents)" : "");
+    pageReadout.innerText = `Page ${index + 1} of ${currentProject.pages.length}${pageTypeTag}`;
+  }
 }
 
 // Drag & Resize Canvas Interactions
@@ -1737,6 +2038,7 @@ function addNewPage() {
   const num = currentProject.pages.length + 1;
   currentProject.pages.push({
     page_number: num,
+    page_type: "content",
     title: `Page ${num}`,
     layout: "top_ref",
     elements: [
@@ -1764,6 +2066,7 @@ function duplicateCurrentPage() {
   const num = currentProject.pages.length + 1;
   const clone = JSON.parse(JSON.stringify(curr));
   clone.page_number = num;
+  clone.title = `${clone.title} (Copy)`;
   currentProject.pages.splice(currentPageIndex + 1, 0, clone);
 
   renumberPages();
@@ -1812,13 +2115,20 @@ function renderTimeline() {
     card.className = `thumb-card ${idx === currentPageIndex ? 'active' : ''}`;
     card.onclick = () => selectPage(idx);
 
+    let typeBadge = "";
+    if (page.page_type === "front_matter_disclaimer") {
+      typeBadge = `<div style="font-size:9px;color:var(--warning);font-weight:700;">[Disclaimer]</div>`;
+    } else if (page.page_type === "front_matter_contents") {
+      typeBadge = `<div style="font-size:9px;color:var(--secondary);font-weight:700;">[Contents]</div>`;
+    }
+
     const mainEl = page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src);
     const previewContent = mainEl 
       ? `<img src="${mainEl.image_src}">` 
-      : `<span style="font-size:16px;">📄</span>`;
+      : `<span style="font-size:16px;">${page.page_type === 'front_matter_disclaimer' ? '📜' : (page.page_type === 'front_matter_contents' ? '📋' : '📄')}</span>`;
 
     card.innerHTML = `
-      <div class="thumb-page-num">Page ${page.page_number}</div>
+      <div class="thumb-page-num">Page ${page.page_number} ${typeBadge}</div>
       <div class="thumb-preview-box">${previewContent}</div>
       <div class="thumb-title">${page.title || 'Page ' + (idx + 1)}</div>
     `;
@@ -1878,6 +2188,7 @@ function handleBatchImagesUpload(event) {
 
       currentProject.pages.push({
         page_number: pageNum,
+        page_type: "content",
         title: cleanTitle,
         layout: "top_ref",
         elements: [
@@ -1897,7 +2208,7 @@ function handleBatchImagesUpload(event) {
         markProjectDirty();
         selectPage(currentProject.pages.length - files.length);
         switchTab("canvas");
-        showToast(`🎉 Batch Generated ${files.length} KDP Coloring Pages!`, "success");
+        showToast(`🎉 Batch Generated ${files.length} KDP Pages & Synced Table of Contents!`, "success");
       }
     };
     reader.readAsDataURL(file);

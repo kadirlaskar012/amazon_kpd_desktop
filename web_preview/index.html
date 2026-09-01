@@ -199,6 +199,60 @@
                 ℹ KDP Spec: 0.375 in (24-150 pages), 0.500 in (151-300 pages). Bleed adds 0.125 in to outside edges.
               </div>
             </div>
+
+            <!-- Front Matter & Metadata Configuration -->
+            <div class="settings-box" style="grid-column: 1 / -1;">
+              <h3>⚡ Automated Front Matter System</h3>
+              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+                Automatically generate and synchronize professional Disclaimer / Copyright and Table of Contents pages at the start of your book.
+              </p>
+
+              <div class="form-row-dual">
+                <div>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="setting-auto-front-matter" checked onchange="onFrontMatterConfigChange()">
+                    <span><strong>Enable Automated Front Matter Pages</strong></span>
+                  </label>
+                </div>
+                <div>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="setting-auto-sync-contents" checked onchange="onFrontMatterConfigChange()">
+                    <span><strong>Auto Sync Table of Contents with Page Changes</strong></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-row-dual" style="margin-top: 10px;">
+                <div>
+                  <label>Author / Creator Name</label>
+                  <input type="text" id="setting-author-name" class="form-control" value="Creative Kids Studio" oninput="onFrontMatterConfigChange()">
+                </div>
+                <div>
+                  <label>Publisher / Brand Name</label>
+                  <input type="text" id="setting-publisher-name" class="form-control" value="KDP Creative Publishing" oninput="onFrontMatterConfigChange()">
+                </div>
+              </div>
+
+              <div class="form-row-dual" style="margin-top: 10px;">
+                <div>
+                  <label>Contents List Style</label>
+                  <select id="setting-contents-style" class="form-control" onchange="onFrontMatterConfigChange()">
+                    <option value="numbered">Numbered List (1. Cat ... Page 3)</option>
+                    <option value="bullet">Bullet List (• Cat ... Page 3)</option>
+                    <option value="plain">Plain List (Cat ... Page 3)</option>
+                  </select>
+                </div>
+                <div>
+                  <label>ISBN (Optional)</label>
+                  <input type="text" id="setting-isbn" class="form-control" value="978-X-XXXXX-XXX-X" oninput="onFrontMatterConfigChange()">
+                </div>
+              </div>
+
+              <div style="margin-top: 14px; display: flex; gap: 10px;">
+                <button class="btn btn-sm btn-outline" onclick="regenerateFrontMatterPages()">⚡ Re-generate / Insert Front Matter Pages</button>
+                <button class="btn btn-sm btn-outline" onclick="forceSyncContents()">🔄 Force Sync Contents Page</button>
+              </div>
+            </div>
           </div>
 
           <div class="settings-footer">
@@ -627,6 +681,17 @@
               <input type="checkbox" id="modal-has-bleed" checked>
               <span>Enable Full Page Bleed (+0.125 in outer trim)</span>
             </label>
+          </div>
+
+          <!-- Automated Front Matter Option -->
+          <div class="form-row" style="background: rgba(99, 102, 241, 0.08); padding: 12px; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.25);">
+            <label class="checkbox-label" style="margin-bottom: 6px;">
+              <input type="checkbox" id="modal-auto-front-matter" checked>
+              <span><strong>⚡ Automatically Generate Front Matter Pages (Disclaimer + Contents)</strong></span>
+            </label>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-left: 24px;">
+              Inserts professional Copyright/Disclaimer (Page 1) and synchronized Table of Contents (Page 2) before your content pages.
+            </div>
           </div>
         </div>
         <div class="modal-footer">

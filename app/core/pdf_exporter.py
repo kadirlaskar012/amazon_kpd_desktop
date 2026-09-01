@@ -96,11 +96,16 @@ class KDPPdfExporter:
                 elif elem_type == "title":
                     text = elem.get("text", "")
                     font_size = float(elem.get("font_size", 24)) * scale_y
+                    alignment = elem.get("alignment", "center")
                     c.setFont("Helvetica-Bold", font_size)
                     c.setFillColor(colors.HexColor(elem.get("color", "#111827")))
-                    # Center align title in its bounding box
                     text_y = y + (h / 2.0) - (font_size / 3.0)
-                    c.drawCentredString(x + (w / 2.0), text_y, text)
+                    if alignment == "left":
+                        c.drawString(x, text_y, text)
+                    elif alignment == "right":
+                        c.drawRightString(x + w, text_y, text)
+                    else:
+                        c.drawCentredString(x + (w / 2.0), text_y, text)
 
                 elif elem_type == "border":
                     c.setStrokeColor(colors.HexColor("#111827"))
