@@ -1,5 +1,5 @@
 /**
- * KDP Book Production Studio - Project Workspace, Lock Protection & Robust Persistence Engine
+ * KDP Book Production Studio - Project Workspace, Auto-Renumbering, Lock Protection & Robust Persistence Engine
  */
 
 let defaultRootLocation = "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects";
@@ -24,7 +24,6 @@ let currentProject = {
     },
     target_dpi: 300,
   },
-  // Isolated Media Library for this project only
   media: [],
   pages: [
     {
@@ -104,6 +103,36 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================
+// Sequential Auto-Renumbering Engine
+// ==========================================
+function renumberPages() {
+  if (!currentProject.pages || !Array.isArray(currentProject.pages)) return;
+
+  currentProject.pages.forEach((page, idx) => {
+    const oldNum = page.page_number;
+    const newNum = idx + 1;
+    page.page_number = newNum;
+
+    // Check if title was default "Page X" (or matches generic page number pattern)
+    if (!page.title || /^Page\s*\d+$/i.test(page.title.trim()) || page.title.trim() === `Page ${oldNum}`) {
+      page.title = `Page ${newNum}`;
+    }
+
+    // Renumber canvas title elements if they match "PAGE <num>" pattern
+    if (page.elements && Array.isArray(page.elements)) {
+      page.elements.forEach(elem => {
+        if (elem.type === "title") {
+          const txt = (elem.text || "").trim();
+          if (/^PAGE\s*\d+$/i.test(txt) || txt === `PAGE ${oldNum}` || txt === `PAGE` || txt === "") {
+            elem.text = `PAGE ${newNum}`;
+          }
+        }
+      });
+    }
+  });
+}
+
+// ==========================================
 // Robust Initial Project Loader & Persistence
 // ==========================================
 function loadInitialProject() {
@@ -120,12 +149,12 @@ function loadInitialProject() {
     console.warn("Local cache read error:", e);
   }
 
-  // 2. Render UI immediately with cached data
+  renumberPages();
   syncActiveProjectUI();
   loadPageIntoCanvas(currentPageIndex);
   renderTimeline();
 
-  // 3. Sync from backend disk if active path is stored
+  // 2. Sync from backend disk if active path is stored
   const activePath = localStorage.getItem("kdp_active_project_path") || currentProject.project_dir;
   if (activePath) {
     fetch(`/api/projects/load?path=${encodeURIComponent(activePath)}`)
@@ -133,6 +162,7 @@ function loadInitialProject() {
       .then(data => {
         if (data.project && data.project.pages && data.project.pages.length > 0) {
           currentProject = data.project;
+          renumberPages();
           syncActiveProjectUI();
           loadPageIntoCanvas(currentPageIndex);
           renderTimeline();
@@ -329,21 +359,57 @@ function openCustomProjectFolder() {
 }
 
 // ==========================================
-// Keyboard Shortcuts Engine
+// Comprehensive Keyboard Shortcuts Engine
 // ==========================================
 function setupGlobalKeyboardShortcuts() {
   window.addEventListener("keydown", (e) => {
     const activeTagName = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
     const isInputActive = activeTagName === "input" || activeTagName === "textarea" || activeTagName === "select";
 
-    // 1. Ctrl + S -> Manual Save
+    // 1. Enter Key Handler (Modals & Element Actions)
+    if (e.key === "Enter") {
+      const renameModal = document.getElementById("rename-modal");
+      if (renameModal && renameModal.classList.contains("active")) {
+        e.preventDefault();
+        submitRenameModal();
+        return;
+      }
+      const deleteModal = document.getElementById("delete-project-modal");
+      if (deleteModal && deleteModal.classList.contains("active")) {
+        e.preventDefault();
+        executeDeleteProject();
+        return;
+      }
+      const newProjModal = document.getElementById("new-project-modal");
+      if (newProjModal && newProjModal.classList.contains("active")) {
+        e.preventDefault();
+        submitCreateProject();
+        return;
+      }
+
+      // If on canvas and an element is selected
+      if (!isInputActive) {
+        const activeElem = getActiveElement();
+        if (activeElem) {
+          e.preventDefault();
+          if (activeElem.type === "title") {
+            openRenameModal("element");
+          } else if (activeElem.type === "ref_image" || activeElem.type === "main_image") {
+            switchDrawerTab("media");
+          }
+          return;
+        }
+      }
+    }
+
+    // 2. Ctrl + S -> Manual Save
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
       e.preventDefault();
       saveProject(true);
       return;
     }
 
-    // 2. Ctrl + D -> Duplicate Element or Page
+    // 3. Ctrl + D -> Duplicate Element or Page
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {
       e.preventDefault();
       if (activeElementId) {
@@ -354,7 +420,7 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    // 3. F2 -> Rename Title Element or Page
+    // 4. F2 -> Rename Title Element or Page
     if (e.key === "F2") {
       e.preventDefault();
       const activeElem = getActiveElement();
@@ -366,7 +432,7 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    // 4. Escape -> Close Modals or Deselect Element
+    // 5. Escape -> Close Modals or Deselect Element
     if (e.key === "Escape") {
       const openModal = document.querySelector(".modal-overlay.active");
       if (openModal) {
@@ -377,18 +443,22 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    if (isInputActive) return;
-
-    // 5. Delete / Backspace -> Delete Selected Element
+    // 6. Delete / Backspace Key Handler (Deletes Selected Element OR Current Page)
     if (e.key === "Delete" || e.key === "Backspace") {
+      if (isInputActive) return; // Allow normal text editing when typing in input
+
+      e.preventDefault();
       if (activeElementId) {
-        e.preventDefault();
         deleteActiveElement();
-        return;
+      } else {
+        deleteCurrentPage();
       }
+      return;
     }
 
-    // 6. Arrow Keys -> Nudge Selected Element
+    if (isInputActive) return;
+
+    // 7. Arrow Keys -> Nudge Selected Element
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
       const elem = getActiveElement();
       if (elem) {
@@ -407,7 +477,7 @@ function setupGlobalKeyboardShortcuts() {
       }
     }
 
-    // 7. [ and ] or PageUp/PageDown -> Previous / Next Page
+    // 8. [ and ] or PageUp/PageDown -> Previous / Next Page
     if (e.key === "[" || e.key === "PageUp") {
       e.preventDefault();
       if (currentPageIndex > 0) {
@@ -425,7 +495,7 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    // 8. Hotkeys: G (Guides), S (Snap), T (Add Text), B (Add Border)
+    // 9. Hotkeys: G (Guides), S (Snap), T (Add Text), B (Add Border)
     if (e.key.toLowerCase() === "g") {
       toggleGuides();
     } else if (e.key.toLowerCase() === "s" && !e.ctrlKey) {
@@ -785,6 +855,7 @@ function finishProjectSetup(proj) {
   currentPageIndex = 0;
   activeElementId = null;
 
+  renumberPages();
   localStorage.setItem("kdp_active_project_path", currentProject.project_dir);
   localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
 
@@ -813,6 +884,7 @@ function openProjectByPath(path) {
       }
       currentPageIndex = 0;
       activeElementId = null;
+      renumberPages();
       localStorage.setItem("kdp_active_project_path", currentProject.project_dir);
       localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
 
@@ -1523,13 +1595,17 @@ function deleteActiveElement() {
   }
 
   const page = currentProject.pages[currentPageIndex];
-  if (!page || !activeElementId) return;
+  if (!page) return;
 
-  page.elements = page.elements.filter(e => e.id !== activeElementId);
-  setActiveElement(null);
-  loadPageIntoCanvas(currentPageIndex);
-  markProjectDirty();
-  showToast("Deleted element (Del)", "info");
+  if (activeElementId) {
+    page.elements = page.elements.filter(e => e.id !== activeElementId);
+    setActiveElement(null);
+    loadPageIntoCanvas(currentPageIndex);
+    markProjectDirty();
+    showToast("Deleted element (Del)", "info");
+  } else {
+    deleteCurrentPage();
+  }
 }
 
 // Page Actions
@@ -1551,10 +1627,13 @@ function addNewPage() {
       { id: `elem_frame_${Date.now()}`, type: "border", x: 30, y: 25, w: 450, h: 610 }
     ]
   });
+
+  renumberPages();
   renderTimeline();
   selectPage(currentProject.pages.length - 1);
+  syncActiveProjectUI();
   markProjectDirty();
-  showToast(`Added Page ${num}`, "success");
+  showToast(`Added Page ${currentProject.pages.length}`, "success");
 }
 
 function duplicateCurrentPage() {
@@ -1566,10 +1645,12 @@ function duplicateCurrentPage() {
   const num = currentProject.pages.length + 1;
   const clone = JSON.parse(JSON.stringify(curr));
   clone.page_number = num;
-  clone.title = `${clone.title} (Copy)`;
   currentProject.pages.splice(currentPageIndex + 1, 0, clone);
+
+  renumberPages();
   renderTimeline();
   selectPage(currentPageIndex + 1);
+  syncActiveProjectUI();
   markProjectDirty();
   showToast(`Duplicated page to Page ${currentPageIndex + 1}`, "success");
 }
@@ -1584,13 +1665,22 @@ function deleteCurrentPage() {
     showToast("A book must contain at least one page.", "info");
     return;
   }
+
   const deletedNum = currentPageIndex + 1;
   currentProject.pages.splice(currentPageIndex, 1);
-  const target = Math.max(0, currentPageIndex - 1);
+
+  // Auto-renumber all remaining pages sequentially (e.g. 7, 8, 9, 10 become 1, 2, 3, 4)
+  renumberPages();
+
+  const target = Math.min(currentPageIndex, currentProject.pages.length - 1);
+  currentPageIndex = Math.max(0, target);
+  activeElementId = null;
+
   renderTimeline();
-  selectPage(target);
+  selectPage(currentPageIndex);
+  syncActiveProjectUI();
   markProjectDirty();
-  showToast(`Deleted Page ${deletedNum}`, "info");
+  showToast(`🗑 Deleted Page ${deletedNum} & Auto-Renumbered Remaining Pages!`, "info");
 }
 
 // Timeline
@@ -1682,6 +1772,7 @@ function handleBatchImagesUpload(event) {
 
       loadedCount++;
       if (loadedCount === files.length) {
+        renumberPages();
         renderMediaLibrary();
         renderTimeline();
         syncActiveProjectUI();
