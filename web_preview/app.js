@@ -1,4 +1,4 @@
-/**
+﻿/**
  * KDP Book Production Studio - Exact Reference Layout (Top-Left Ref + Big Outline Title + 75% Drawing Area) & Single-Sided Blank Page Rules
  */
 
@@ -196,7 +196,7 @@ function performUndo() {
     markProjectDirty();
     updateUndoRedoButtons();
 
-    showToast(`↶ Undo: ${previousState.action || 'Action'}`, "info");
+    showToast(`â†¶ Undo: ${previousState.action || 'Action'}`, "info");
   } catch (e) {
     console.error("Undo error:", e);
   } finally {
@@ -232,7 +232,7 @@ function performRedo() {
     markProjectDirty();
     updateUndoRedoButtons();
 
-    showToast(`↷ Redo: ${nextState.action || 'Action'}`, "info");
+    showToast(`â†· Redo: ${nextState.action || 'Action'}`, "info");
   } catch (e) {
     console.error("Redo error:", e);
   } finally {
@@ -372,7 +372,7 @@ function syncContentsPage() {
   if (contentPages.length <= maxRows) {
     contentPages.forEach((p, idx) => {
       const resolvedTitle = resolveCleanPageTitle(p, idx + 1);
-      const prefix = cfg.contents_style === "bullet" ? "• " : (cfg.contents_style === "plain" ? "" : `${idx + 1}. `);
+      const prefix = cfg.contents_style === "bullet" ? "â€¢ " : (cfg.contents_style === "plain" ? "" : `${idx + 1}. `);
       const line = `${prefix}${resolvedTitle} .................................... Page ${p.page_number}`;
       elements.push({
         id: `elem_cnt_item_${idx + 1}`,
@@ -435,7 +435,7 @@ function syncContentsPage() {
 // ==========================================
 function regenerateFrontMatterPages() {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot modify: Project is locked!", "warning");
     return;
   }
 
@@ -455,16 +455,16 @@ function regenerateFrontMatterPages() {
     elements: [
       { id: "elem_disc_frame", type: "border", x: 30, y: 25, w: 450, h: 610 },
       { id: "elem_disc_title", type: "title", x: 45, y: 65, w: 420, h: 40, text: projName.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
-      { id: "elem_disc_sub", type: "title", x: 45, y: 110, w: 420, h: 25, text: "First Edition • Premium KDP Edition", font_size: 13, color: "#475569", is_outline: false },
-      { id: "elem_disc_copy", type: "title", x: 45, y: 180, w: 420, h: 25, text: `Copyright © ${year} by ${authorName}`, font_size: 14, color: "#1e293b", is_outline: false },
+      { id: "elem_disc_sub", type: "title", x: 45, y: 110, w: 420, h: 25, text: "First Edition â€¢ Premium KDP Edition", font_size: 13, color: "#475569", is_outline: false },
+      { id: "elem_disc_copy", type: "title", x: 45, y: 180, w: 420, h: 25, text: `Copyright Â© ${year} by ${authorName}`, font_size: 14, color: "#1e293b", is_outline: false },
       { id: "elem_disc_rights", type: "title", x: 45, y: 210, w: 420, h: 20, text: "All rights reserved.", font_size: 12, color: "#475569", is_outline: false },
       { id: "elem_disc_p1", type: "title", x: 45, y: 260, w: 420, h: 20, text: "No part of this publication may be reproduced, distributed, or transmitted in any form", font_size: 10, color: "#64748b", is_outline: false },
       { id: "elem_disc_p2", type: "title", x: 45, y: 285, w: 420, h: 20, text: "or by any means, including photocopying, recording, or other electronic methods,", font_size: 10, color: "#64748b", is_outline: false },
       { id: "elem_disc_p3", type: "title", x: 45, y: 310, w: 420, h: 20, text: "without the prior written permission of the author and publisher.", font_size: 10, color: "#64748b", is_outline: false },
       { id: "elem_disc_pub", type: "title", x: 45, y: 400, w: 420, h: 20, text: "Published by: KDP Creative Publishing", font_size: 11, color: "#334155", is_outline: false },
       { id: "elem_disc_isbn", type: "title", x: 45, y: 430, w: 420, h: 20, text: "ISBN-13: 978-X-XXXXX-XXX-X", font_size: 11, color: "#334155", is_outline: false },
-      { id: "elem_disc_contact", type: "title", x: 45, y: 480, w: 420, h: 20, text: "Visit us: www.kdpbooks.com • support@kdpbooks.com", font_size: 10, color: "#64748b", is_outline: false },
-      { id: "elem_disc_kdp", type: "title", x: 45, y: 550, w: 420, h: 20, text: "Printed for Amazon KDP Distribution • First Printing", font_size: 9, color: "#94a3b8", is_outline: false }
+      { id: "elem_disc_contact", type: "title", x: 45, y: 480, w: 420, h: 20, text: "Visit us: www.kdpbooks.com â€¢ support@kdpbooks.com", font_size: 10, color: "#64748b", is_outline: false },
+      { id: "elem_disc_kdp", type: "title", x: 45, y: 550, w: 420, h: 20, text: "Printed for Amazon KDP Distribution â€¢ First Printing", font_size: 9, color: "#94a3b8", is_outline: false }
     ]
   };
 
@@ -486,7 +486,7 @@ function regenerateFrontMatterPages() {
   selectPage(0);
   switchTab("canvas");
   markProjectDirty();
-  showToast("⚡ Inserted & Synchronized Front Matter Pages (Disclaimer + Contents)!", "success");
+  showToast("âš¡ Inserted & Synchronized Front Matter Pages (Disclaimer + Contents)!", "success");
 }
 
 function forceSyncContents() {
@@ -495,7 +495,7 @@ function forceSyncContents() {
   loadPageIntoCanvas(currentPageIndex);
   renderTimeline();
   markProjectDirty();
-  showToast("🔄 Synchronized Table of Contents!", "success");
+  showToast("ðŸ”„ Synchronized Table of Contents!", "success");
 }
 
 function onFrontMatterConfigChange() {
@@ -623,7 +623,7 @@ function updateAutoSaveIndicator(saving) {
 
 function saveProject(isManual = false) {
   if (currentProject.is_locked) {
-    if (isManual) showToast("🔒 Project is locked (Read-Only)!", "warning");
+    if (isManual) showToast("ðŸ”’ Project is locked (Read-Only)!", "warning");
     return;
   }
 
@@ -650,14 +650,14 @@ function saveProject(isManual = false) {
     updateAutoSaveIndicator(false);
     fetchRecentProjects();
     if (isManual) {
-      showToast(`💾 Saved "${currentProject.name}" to disk!`, "success");
+      showToast(`ðŸ’¾ Saved "${currentProject.name}" to disk!`, "success");
     }
   })
   .catch(() => {
     isDirty = false;
     updateAutoSaveIndicator(false);
     if (isManual) {
-      showToast(`💾 Saved "${currentProject.name}" locally!`, "success");
+      showToast(`ðŸ’¾ Saved "${currentProject.name}" locally!`, "success");
     }
   });
 }
@@ -682,7 +682,7 @@ function openExportPdfModal() {
   const trimWidthIn = (currentProject.settings.trim_width_pt / 72.0).toFixed(1);
   const trimHeightIn = (currentProject.settings.trim_height_pt / 72.0).toFixed(1);
   const trimLabel = document.getElementById("exp-spec-trim");
-  if (trimLabel) trimLabel.innerText = `${trimWidthIn} × ${trimHeightIn} in`;
+  if (trimLabel) trimLabel.innerText = `${trimWidthIn} Ã— ${trimHeightIn} in`;
 
   const bleedLabel = document.getElementById("exp-spec-bleed");
   if (bleedLabel) {
@@ -692,7 +692,7 @@ function openExportPdfModal() {
   const pathLabel = document.getElementById("exp-target-path-preview");
   if (pathLabel) {
     const filename = `${currentProject.name.replace(/ /g, '_')}_KDP_Print_Ready.pdf`;
-    pathLabel.innerText = `📁 ${currentProject.project_dir}\\exports\\${filename}`;
+    pathLabel.innerText = `ðŸ“ ${currentProject.project_dir}\\exports\\${filename}`;
   }
 
   const bType = currentProject.book_type || "coloring_book";
@@ -751,16 +751,16 @@ function updateExportModalPreview() {
   // Build compiled full KDP book pages dynamically based on ticked checkboxes
   let exportPages = [];
   if (incDisclaimer) {
-    exportPages.push({ page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", badge: `Page ${exportPages.length + 1} • Disclaimer` });
+    exportPages.push({ page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", badge: `Page ${exportPages.length + 1} â€¢ Disclaimer` });
   }
   if (incContents) {
-    exportPages.push({ page_type: "front_matter_contents", title: "Table of Contents", badge: `Page ${exportPages.length + 1} • Contents` });
+    exportPages.push({ page_type: "front_matter_contents", title: "Table of Contents", badge: `Page ${exportPages.length + 1} â€¢ Contents` });
   }
   if (incBelongs) {
-    exportPages.push({ page_type: "front_matter_belongs_to", title: "Belongs To Page", badge: `Page ${exportPages.length + 1} • Belongs To` });
+    exportPages.push({ page_type: "front_matter_belongs_to", title: "Belongs To Page", badge: `Page ${exportPages.length + 1} â€¢ Belongs To` });
   }
   if (incColorTest) {
-    exportPages.push({ page_type: "front_matter_color_test", title: "Color Test Palette", badge: `Page ${exportPages.length + 1} • Color Test` });
+    exportPages.push({ page_type: "front_matter_color_test", title: "Color Test Palette", badge: `Page ${exportPages.length + 1} â€¢ Color Test` });
   }
 
   const fmCount = exportPages.length;
@@ -771,7 +771,7 @@ function updateExportModalPreview() {
     exportPages.push({
       ...p,
       doc_page_number: drawPageNum,
-      badge: `Page ${drawPageNum} • ${labelType} ${idx + 1}`
+      badge: `Page ${drawPageNum} â€¢ ${labelType} ${idx + 1}`
     });
 
     if (singleSided) {
@@ -779,7 +779,7 @@ function updateExportModalPreview() {
         page_type: "blank_verso",
         title: "Blank Back Page",
         doc_page_number: drawPageNum + 1,
-        badge: `Page ${drawPageNum + 1} • Blank Back`
+        badge: `Page ${drawPageNum + 1} â€¢ Blank Back`
       });
     }
   });
@@ -800,7 +800,7 @@ function updateExportModalPreview() {
       page_type: "solution_divider",
       title: "Solutions Section Divider",
       doc_page_number: divPageNum,
-      badge: `Page ${divPageNum} • Solutions Divider`
+      badge: `Page ${divPageNum} â€¢ Solutions Divider`
     });
 
     // 2. 4-in-1 Solution Pages
@@ -814,7 +814,7 @@ function updateExportModalPreview() {
         page_type: "sudoku_solutions",
         title: `Solutions: #${firstNum} - #${lastNum}`,
         doc_page_number: solPageNum,
-        badge: `Page ${solPageNum} • Solutions (4-in-1)`
+        badge: `Page ${solPageNum} â€¢ Solutions (4-in-1)`
       });
     }
   }
@@ -831,10 +831,10 @@ function updateExportModalPreview() {
     if (isBlank) {
       html += `
         <div class="export-page-card blank-verso">
-          <div class="export-page-badge verso">Page ${docPageNum} • Blank Back</div>
+          <div class="export-page-badge verso">Page ${docPageNum} â€¢ Blank Back</div>
           <div class="export-page-thumb" style="background:#f8fafc;">
             <span style="font-size:10px;color:#94a3b8;text-align:center;padding:6px;">
-              ${blankNote ? '🛡️ Bleed-Safe Blank' : '⚪ Blank White Page'}
+              ${blankNote ? 'ðŸ›¡ï¸ Bleed-Safe Blank' : 'âšª Blank White Page'}
             </span>
           </div>
           <div class="export-page-title" style="color:#94a3b8;">Blank Verso</div>
@@ -846,25 +846,25 @@ function updateExportModalPreview() {
       if (mainEl && mainEl.image_src) {
         thumbImg = `<img src="${mainEl.image_src}">`;
       } else if (isDisclaimer) {
-        thumbImg = `<span style="font-size:24px;">📜</span>`;
+        thumbImg = `<span style="font-size:24px;">ðŸ“œ</span>`;
       } else if (isContents) {
-        thumbImg = `<span style="font-size:24px;">📋</span>`;
+        thumbImg = `<span style="font-size:24px;">ðŸ“‹</span>`;
       } else if (isBelongsTo) {
-        thumbImg = `<span style="font-size:24px;">🏷️</span>`;
+        thumbImg = `<span style="font-size:24px;">ðŸ·ï¸</span>`;
       } else if (isColorTest) {
-        thumbImg = `<span style="font-size:24px;">🧪</span>`;
+        thumbImg = `<span style="font-size:24px;">ðŸ§ª</span>`;
       } else if (p.page_type === "solution_divider") {
-        thumbImg = `<span style="font-size:24px;">🏆</span>`;
+        thumbImg = `<span style="font-size:24px;">ðŸ†</span>`;
       } else if (p.page_type === "sudoku_solutions" || p.puzzles) {
-        thumbImg = `<span style="font-size:24px;">🧩</span>`;
+        thumbImg = `<span style="font-size:24px;">ðŸ§©</span>`;
       } else if (p.maze) {
-        thumbImg = `<span style="font-size:24px;">🌀</span>`;
+        thumbImg = `<span style="font-size:24px;">ðŸŒ€</span>`;
       } else if (p.word_search) {
-        thumbImg = `<span style="font-size:24px;">🔤</span>`;
+        thumbImg = `<span style="font-size:24px;">ðŸ”¤</span>`;
       } else if (p.games) {
-        thumbImg = `<span style="font-size:24px;">⭕</span>`;
+        thumbImg = `<span style="font-size:24px;">â­•</span>`;
       } else {
-        thumbImg = `<span style="font-size:24px;">🎨</span>`;
+        thumbImg = `<span style="font-size:24px;">ðŸŽ¨</span>`;
       }
 
       html += `
@@ -898,7 +898,7 @@ function executePdfExport(openInBrowser = true) {
     subtext: document.getElementById("exp-fm-text-subtext")?.value || "Color with joy, love and your wild imagination!"
   };
 
-  showToast("⚙️ Generating 300 DPI Amazon KDP PDF...", "info");
+  showToast("âš™ï¸ Generating 300 DPI Amazon KDP PDF...", "info");
 
   // Save current project state first
   saveProject(false);
@@ -919,7 +919,7 @@ function executePdfExport(openInBrowser = true) {
   .then(data => {
     closeModal("export-pdf-modal");
     if (data.status === "success" && data.download_url) {
-      showToast(`🎉 PDF Generated: ${data.filename}!`, "success");
+      showToast(`ðŸŽ‰ PDF Generated: ${data.filename}!`, "success");
       if (openInBrowser) {
         window.open(data.download_url, "_blank");
       } else {
@@ -931,17 +931,17 @@ function executePdfExport(openInBrowser = true) {
         document.body.removeChild(a);
       }
     } else {
-      showToast("❌ PDF generation failed: " + (data.error || "Unknown error"), "error");
+      showToast("âŒ PDF generation failed: " + (data.error || "Unknown error"), "error");
     }
   })
   .catch(err => {
-    showToast("❌ Error: " + err.message, "error");
+    showToast("âŒ Error: " + err.message, "error");
   });
 }
 
 function formatProjectForKDP() {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot modify: Project is locked!", "warning");
     return;
   }
 
@@ -977,7 +977,7 @@ function formatProjectForKDP() {
   renderTimeline();
   markProjectDirty();
 
-  showToast(`🛡️ Inserted Blank Back Pages behind all ${contentPages.length} Drawing Pages!`, "success");
+  showToast(`ðŸ›¡ï¸ Inserted Blank Back Pages behind all ${contentPages.length} Drawing Pages!`, "success");
 }
 
 // ==========================================
@@ -1051,7 +1051,7 @@ function renderSpreadPreview() {
     if (page.page_type === "blank_verso") {
       return `
         <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}" style="background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <div class="spread-page-header">Page ${page.page_number} • Blank Back (Verso)</div>
+          <div class="spread-page-header">Page ${page.page_number} â€¢ Blank Back (Verso)</div>
           <div style="color:#cbd5e1;font-size:11px;font-style:italic;text-align:center;padding:20px;">
             [ Blank page to prevent marker bleed-through ]
           </div>
@@ -1062,11 +1062,11 @@ function renderSpreadPreview() {
     if (page.page_type === "front_matter_disclaimer") {
       return `
         <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
-          <div class="spread-page-header">Page 1 • Disclaimer & Copyright</div>
+          <div class="spread-page-header">Page 1 â€¢ Disclaimer & Copyright</div>
           <div class="spread-inner-content" style="border:1.5px solid #0f172a;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;">
             <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:6px;">${(currentProject.name || 'COLORING BOOK').toUpperCase()}</div>
-            <div style="font-size:10px;color:#475569;margin-bottom:12px;">First Edition • Amazon KDP Publication</div>
-            <div style="font-size:10px;font-weight:700;color:#1e293b;">Copyright © 2026 by ${currentProject.author || 'Author'}</div>
+            <div style="font-size:10px;color:#475569;margin-bottom:12px;">First Edition â€¢ Amazon KDP Publication</div>
+            <div style="font-size:10px;font-weight:700;color:#1e293b;">Copyright Â© 2026 by ${currentProject.author || 'Author'}</div>
             <div style="font-size:8.5px;color:#64748b;margin-top:10px;max-width:200px;">All rights reserved. No reproduction without prior written permission.</div>
           </div>
         </div>
@@ -1082,7 +1082,7 @@ function renderSpreadPreview() {
 
       return `
         <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
-          <div class="spread-page-header">Page 2 • Table of Contents</div>
+          <div class="spread-page-header">Page 2 â€¢ Table of Contents</div>
           <div class="spread-inner-content" style="border:1.5px solid #0f172a;border-radius:6px;display:flex;flex-direction:column;padding:16px;">
             <div style="font-size:14px;font-weight:800;text-align:center;color:#0f172a;margin-bottom:4px;">TABLE OF CONTENTS</div>
             <div style="font-size:9px;text-align:center;color:#64748b;margin-bottom:12px;">Complete illustration list in this book</div>
@@ -1095,7 +1095,7 @@ function renderSpreadPreview() {
     if (page.page_type === "front_matter_belongs_to") {
       return `
         <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
-          <div class="spread-page-header">Page 3 • Belongs To Page</div>
+          <div class="spread-page-header">Page 3 â€¢ Belongs To Page</div>
           <div class="spread-inner-content" style="border:1.5px solid #0f172a;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;">
             <div style="font-size:13px;font-weight:800;color:#1e293b;">THIS COLORING BOOK</div>
             <div style="font-size:20px;font-weight:800;color:#ffffff;-webkit-text-stroke:1.5px #0f172a;margin:8px 0;">BELONGS TO:</div>
@@ -1109,7 +1109,7 @@ function renderSpreadPreview() {
     if (page.page_type === "front_matter_color_test") {
       return `
         <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
-          <div class="spread-page-header">Page 4 • Color Test Palette</div>
+          <div class="spread-page-header">Page 4 â€¢ Color Test Palette</div>
           <div class="spread-inner-content" style="border:1.5px solid #0f172a;border-radius:6px;display:flex;flex-direction:column;align-items:center;padding:12px;text-align:center;">
             <div style="font-size:13px;font-weight:800;color:#ffffff;-webkit-text-stroke:1.2px #0f172a;margin-bottom:2px;">COLOR TEST PALETTE</div>
             <div style="font-size:8.5px;color:#64748b;margin-bottom:10px;">Test pencils and markers here</div>
@@ -1144,12 +1144,12 @@ function renderSpreadPreview() {
       // Fallback: If only 1 image attached, render as B&W coloring outline in main area
       imgContent = `<div class="spread-img-box"><img src="${refEl.image_src}" class="${isColoring ? 'spread-coloring-art' : ''}" style="width:100%;height:100%;object-fit:contain;" alt="Coloring Outline Art"></div>`;
     } else {
-      imgContent = `<div class="spread-img-placeholder"><span>🎨</span><span>Coloring Drawing Area</span></div>`;
+      imgContent = `<div class="spread-img-placeholder"><span>ðŸŽ¨</span><span>Coloring Drawing Area</span></div>`;
     }
 
     return `
       <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
-        <div class="spread-page-header">Page ${page.page_number} • Drawing</div>
+        <div class="spread-page-header">Page ${page.page_number} â€¢ Drawing</div>
         <div class="spread-inner-content">
           <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:8px;">
             ${refEl ? `<div class="spread-ref-box" style="width:75px;height:60px;border:1.5px solid #cbd5e1;border-radius:6px;overflow:hidden;background:#ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.06);flex-shrink:0;"><img src="${refEl.image_src}" class="spread-ref-img" style="width:100%;height:100%;object-fit:contain;" alt="Color Reference"></div>` : ''}
@@ -1205,7 +1205,7 @@ function toggleActiveProjectLock() {
   }).catch(() => {});
 
   localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
-  showToast(currentProject.is_locked ? `🔒 Locked "${currentProject.name}"!` : `🔓 Unlocked "${currentProject.name}"!`, "info");
+  showToast(currentProject.is_locked ? `ðŸ”’ Locked "${currentProject.name}"!` : `ðŸ”“ Unlocked "${currentProject.name}"!`, "info");
 }
 
 function toggleProjectLock(path) {
@@ -1222,7 +1222,7 @@ function toggleProjectLock(path) {
       localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
     }
     fetchRecentProjects();
-    showToast(data.is_locked ? "🔒 Project Locked!" : "🔓 Project Unlocked!", "info");
+    showToast(data.is_locked ? "ðŸ”’ Project Locked!" : "ðŸ”“ Project Unlocked!", "info");
   })
   .catch(() => {
     fetchRecentProjects();
@@ -1231,14 +1231,14 @@ function toggleProjectLock(path) {
 
 function promptDeleteProject(path, name, isLocked) {
   if (isLocked) {
-    showToast(`🔒 Cannot delete "${name}": Project is LOCKED! Please unlock it first.`, "warning");
+    showToast(`ðŸ”’ Cannot delete "${name}": Project is LOCKED! Please unlock it first.`, "warning");
     return;
   }
 
   projectToDelete = { path, name };
   const pathLabel = document.getElementById("delete-modal-project-path");
   if (pathLabel) {
-    pathLabel.innerText = `📁 ${path}\\`;
+    pathLabel.innerText = `ðŸ“ ${path}\\`;
   }
   const modal = document.getElementById("delete-project-modal");
   if (modal) modal.classList.add("active");
@@ -1259,11 +1259,11 @@ function executeDeleteProject() {
   .then(res => {
     closeModal("delete-project-modal");
     if (res.error) {
-      showToast(`⚠️ ${res.error}`, "danger");
+      showToast(`âš ï¸ ${res.error}`, "danger");
       return;
     }
 
-    showToast(`🗑 Permanently deleted "${targetName}" and all files!`, "success");
+    showToast(`ðŸ—‘ Permanently deleted "${targetName}" and all files!`, "success");
 
     const normTarget = (targetPath || "").replace(/\\/g, "/").toLowerCase();
     const normCurrent = (currentProject.project_dir || "").replace(/\\/g, "/").toLowerCase();
@@ -1471,7 +1471,7 @@ function openRenameModal(type = "page") {
     mediaList.forEach(m => {
       const opt = document.createElement("option");
       opt.value = m.name || m.fileName;
-      opt.innerText = `🖼️ ${m.name || m.fileName}`;
+      opt.innerText = `ðŸ–¼ï¸ ${m.name || m.fileName}`;
       mediaSelect.appendChild(opt);
     });
   }
@@ -1482,16 +1482,16 @@ function openRenameModal(type = "page") {
 
   if (type === "page") {
     const page = currentProject.pages[currentPageIndex];
-    title.innerText = `✏️ Rename Page ${page.page_number}`;
+    title.innerText = `âœï¸ Rename Page ${page.page_number}`;
     label.innerText = "Enter new page title:";
     input.value = page.title || `Page ${page.page_number}`;
   } else if (type === "element") {
     const elem = getActiveElement();
-    title.innerText = `✏️ Rename Text Element`;
+    title.innerText = `âœï¸ Rename Text Element`;
     label.innerText = "Enter text content:";
     input.value = elem ? (elem.text || "") : "";
   } else if (type === "project") {
-    title.innerText = `✏️ Rename Book Project`;
+    title.innerText = `âœï¸ Rename Book Project`;
     label.innerText = "Enter project name:";
     input.value = currentProject.name;
   }
@@ -1531,7 +1531,7 @@ function submitRenameModal() {
       renumberPages();
       renderTimeline();
       loadPageIntoCanvas(currentPageIndex);
-      showToast(`✏️ Renamed page to "${val}"!`, "success");
+      showToast(`âœï¸ Renamed page to "${val}"!`, "success");
     }
   } else if (renameTargetType === "element") {
     const elem = getActiveElement();
@@ -1540,12 +1540,12 @@ function submitRenameModal() {
       const node = document.getElementById(elem.id);
       if (node) node.innerText = val;
       updatePropertiesInspector();
-      showToast(`✏️ Updated text to "${val}"!`, "success");
+      showToast(`âœï¸ Updated text to "${val}"!`, "success");
     }
   } else if (renameTargetType === "project") {
     currentProject.name = val;
     syncActiveProjectUI();
-    showToast(`✏️ Renamed project to "${val}"!`, "success");
+    showToast(`âœï¸ Renamed project to "${val}"!`, "success");
   }
 
   markProjectDirty();
@@ -1608,9 +1608,9 @@ function renderRecentProjects() {
 
   const renderItemHtml = (p) => {
     const isLocked = Boolean(p.is_locked);
-    const lockIcon = isLocked ? "🔒" : "🔓";
+    const lockIcon = isLocked ? "ðŸ”’" : "ðŸ”“";
     const lockText = isLocked ? "LOCKED" : "UNLOCKED";
-    const lockBtnLabel = isLocked ? "🔓 Unlock" : "🔒 Lock";
+    const lockBtnLabel = isLocked ? "ðŸ”“ Unlock" : "ðŸ”’ Lock";
 
     return `
       <div class="recent-item">
@@ -1631,7 +1631,7 @@ function renderRecentProjects() {
           <button class="btn btn-sm btn-danger btn-icon-only ${isLocked ? 'btn-disabled' : ''}" 
             onclick="promptDeleteProject('${p.path.replace(/\\/g, '\\\\')}', '${p.name.replace(/'/g, "\\'")}', ${isLocked})" 
             title="${isLocked ? 'Cannot delete locked project' : 'Delete Project Folder'}">
-            🗑
+            ðŸ—‘
           </button>
         </div>
       </div>
@@ -1704,7 +1704,7 @@ function syncActiveProjectUI() {
   const navProjName = document.getElementById("nav-project-name");
   if (navProjName) {
     navProjName.innerText = hasProject 
-      ? `${currentProject.is_locked ? '🔒' : '🔓'} ${currentProject.name}`
+      ? `${currentProject.is_locked ? 'ðŸ”’' : 'ðŸ”“'} ${currentProject.name}`
       : "No Active Project";
   }
 
@@ -1716,10 +1716,10 @@ function syncActiveProjectUI() {
     if (activeDisplay) {
       activeDisplay.innerHTML = `
         <div style="text-align:center; padding: 28px 16px; color: var(--text-muted); width: 100%;">
-          <div style="font-size: 36px; margin-bottom: 8px;">📂</div>
+          <div style="font-size: 36px; margin-bottom: 8px;">ðŸ“‚</div>
           <h4 style="color: var(--text-main); font-size: 15px; margin-bottom: 4px; font-weight: 700;">No Active Project</h4>
           <p style="font-size: 12px; margin-bottom: 16px; color: var(--text-muted);">All projects have been deleted. Click below to create a new book project.</p>
-          <button class="btn btn-primary" onclick="openNewProjectModal()">✨ Create New Project</button>
+          <button class="btn btn-primary" onclick="openNewProjectModal()">âœ¨ Create New Project</button>
         </div>
       `;
     }
@@ -1731,9 +1731,9 @@ function syncActiveProjectUI() {
   }
 
   const isLocked = Boolean(currentProject.is_locked);
-  const lockIcon = isLocked ? "🔒" : "🔓";
+  const lockIcon = isLocked ? "ðŸ”’" : "ðŸ”“";
   const lockText = isLocked ? "LOCKED" : "UNLOCKED";
-  const lockBtnText = isLocked ? "🔓 Unlock Project" : "🔒 Lock Project";
+  const lockBtnText = isLocked ? "ðŸ”“ Unlock Project" : "ðŸ”’ Lock Project";
 
   if (lockBadge) {
     lockBadge.style.display = "inline-flex";
@@ -1743,19 +1743,19 @@ function syncActiveProjectUI() {
 
   if (activeDisplay) {
     activeDisplay.innerHTML = `
-      <div class="proj-banner-icon">📖</div>
+      <div class="proj-banner-icon">ðŸ“–</div>
       <div class="proj-banner-info">
         <h4 id="active-proj-title">${currentProject.name}</h4>
-        <div class="proj-path-tag" id="active-proj-path">📁 ${currentProject.project_dir}</div>
+        <div class="proj-path-tag" id="active-proj-path">ðŸ“ ${currentProject.project_dir}</div>
         <div class="proj-meta-row" id="active-proj-meta">
-          <span>Pages: ${(currentProject.pages || []).length}</span> • 
-          <span>Author: ${currentProject.author || 'Creative Author'}</span> • 
+          <span>Pages: ${(currentProject.pages || []).length}</span> â€¢ 
+          <span>Author: ${currentProject.author || 'Creative Author'}</span> â€¢ 
           <span>Trim: 8.5x11 in</span>
         </div>
       </div>
       <div class="proj-banner-actions">
         <div style="display: flex; gap: 8px;">
-          <button class="btn btn-primary" style="flex: 1;" onclick="switchTab('canvas')">Open Canvas Editor ➔</button>
+          <button class="btn btn-primary" style="flex: 1;" onclick="switchTab('canvas')">Open Canvas Editor âž”</button>
           <button class="btn btn-outline" id="active-lock-toggle-btn" onclick="toggleActiveProjectLock()">${lockBtnText}</button>
         </div>
       </div>
@@ -1819,7 +1819,7 @@ function updateModalPathPreview() {
 
   const fullPath = `${root.replace(/[\/\\]+$/, "")}\\${folderName}`;
   if (previewDiv) {
-    previewDiv.innerText = `📁 ${fullPath}\\`;
+    previewDiv.innerText = `ðŸ“ ${fullPath}\\`;
   }
 }
 
@@ -2314,7 +2314,7 @@ function finishProjectSetup(proj) {
   loadPageIntoCanvas(0);
   switchTab("canvas");
 
-  showToast(`✨ Created Project "${currentProject.name}"!`, "success");
+  showToast(`âœ¨ Created Project "${currentProject.name}"!`, "success");
 }
 
 function openProjectByPath(path) {
@@ -2345,13 +2345,13 @@ function openProjectByPath(path) {
       syncActiveProjectUI();
       loadPageIntoCanvas(0);
       switchTab("canvas");
-      showToast(`📂 Opened Project "${currentProject.name}"!`, "info");
+      showToast(`ðŸ“‚ Opened Project "${currentProject.name}"!`, "info");
     })
     .catch(() => {
       closeModal("open-folder-modal");
       syncActiveProjectUI();
       switchTab("canvas");
-      showToast(`📂 Opened Project "${currentProject.name}"!`, "info");
+      showToast(`ðŸ“‚ Opened Project "${currentProject.name}"!`, "info");
     });
 }
 
@@ -2448,7 +2448,7 @@ function readAsDataURLAsync(file) {
 // ==========================================
 function triggerMediaUpload() {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot upload: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot upload: Project is locked!", "warning");
     return;
   }
   const fileInput = document.getElementById("media-library-upload-input");
@@ -2478,7 +2478,7 @@ async function handleMediaLibraryUpload(event) {
     const file = files[i];
     const origSizeKb = Math.round(file.size / 1024);
 
-    updateImageProcessingProgress(i, files.length, file.name, "🪄 [1/3] Purifying White Background (#FFFFFF)...", totalKbSaved);
+    updateImageProcessingProgress(i, files.length, file.name, "ðŸª„ [1/3] Purifying White Background (#FFFFFF)...", totalKbSaved);
     await new Promise(r => setTimeout(r, 180));
 
     let rawDataUrl = "";
@@ -2489,14 +2489,14 @@ async function handleMediaLibraryUpload(event) {
       continue;
     }
 
-    updateImageProcessingProgress(i, files.length, file.name, "🎯 [2/3] Auto-focusing & cropping artwork borders...", totalKbSaved);
+    updateImageProcessingProgress(i, files.length, file.name, "ðŸŽ¯ [2/3] Auto-focusing & cropping artwork borders...", totalKbSaved);
     await new Promise(r => setTimeout(r, 180));
 
     let finalDataUrl = rawDataUrl;
     let finalSizeKb = origSizeKb;
 
     try {
-      updateImageProcessingProgress(i, files.length, file.name, "⚡ [3/3] Compressing 300 DPI Print-Ready PNG...", totalKbSaved);
+      updateImageProcessingProgress(i, files.length, file.name, "âš¡ [3/3] Compressing 300 DPI Print-Ready PNG...", totalKbSaved);
       const resp = await fetch("/api/projects/upload_asset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2531,7 +2531,7 @@ async function handleMediaLibraryUpload(event) {
     currentProject.media.unshift(mediaItem);
     lastMediaItem = mediaItem;
 
-    updateImageProcessingProgress(i + 1, files.length, file.name, "✅ Complete!", totalKbSaved);
+    updateImageProcessingProgress(i + 1, files.length, file.name, "âœ… Complete!", totalKbSaved);
     await new Promise(r => setTimeout(r, 220));
   }
 
@@ -2543,7 +2543,7 @@ async function handleMediaLibraryUpload(event) {
   await new Promise(r => setTimeout(r, 350));
   closeImageProcessingModal();
   const savedLabel = totalKbSaved > 1024 ? `${(totalKbSaved / 1024).toFixed(1)} MB` : `${totalKbSaved} KB`;
-  showToast(`✨ Auto-Cleaned, Auto-Cropped & Compressed ${files.length} image(s)! Saved ~${savedLabel}!`, "success");
+  showToast(`âœ¨ Auto-Cleaned, Auto-Cropped & Compressed ${files.length} image(s)! Saved ~${savedLabel}!`, "success");
 
   if (lastMediaItem) {
     const activeElem = getActiveElement();
@@ -2554,11 +2554,11 @@ async function handleMediaLibraryUpload(event) {
 }
 
 // ==========================================
-// ⚡ Batch Import Images to Coloring Pages
+// âš¡ Batch Import Images to Coloring Pages
 // ==========================================
 function triggerBatchUpload() {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot import: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot import: Project is locked!", "warning");
     return;
   }
   const input = document.getElementById("batch-import-upload-input");
@@ -2589,7 +2589,7 @@ async function handleBatchImportUpload(event) {
     const file = files[i];
     const origSizeKb = Math.round(file.size / 1024);
 
-    updateImageProcessingProgress(i, files.length, file.name, "🪄 [1/3] Purifying White Background (#FFFFFF)...", totalKbSaved);
+    updateImageProcessingProgress(i, files.length, file.name, "ðŸª„ [1/3] Purifying White Background (#FFFFFF)...", totalKbSaved);
     await new Promise(r => setTimeout(r, 180));
 
     let rawDataUrl = "";
@@ -2600,14 +2600,14 @@ async function handleBatchImportUpload(event) {
       continue;
     }
 
-    updateImageProcessingProgress(i, files.length, file.name, "🎯 [2/3] Auto-detecting & centering artwork...", totalKbSaved);
+    updateImageProcessingProgress(i, files.length, file.name, "ðŸŽ¯ [2/3] Auto-detecting & centering artwork...", totalKbSaved);
     await new Promise(r => setTimeout(r, 180));
 
     let finalDataUrl = rawDataUrl;
     let finalSizeKb = origSizeKb;
 
     try {
-      updateImageProcessingProgress(i, files.length, file.name, "⚡ [3/3] Compressing 300 DPI Lossless PNG...", totalKbSaved);
+      updateImageProcessingProgress(i, files.length, file.name, "âš¡ [3/3] Compressing 300 DPI Lossless PNG...", totalKbSaved);
       const resp = await fetch("/api/projects/upload_asset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2699,7 +2699,7 @@ async function handleBatchImportUpload(event) {
 
     currentProject.pages.push(newPage);
 
-    updateImageProcessingProgress(i + 1, files.length, file.name, "✅ Page Generated!", totalKbSaved);
+    updateImageProcessingProgress(i + 1, files.length, file.name, "âœ… Page Generated!", totalKbSaved);
     await new Promise(r => setTimeout(r, 220));
   }
 
@@ -2714,7 +2714,7 @@ async function handleBatchImportUpload(event) {
   await new Promise(r => setTimeout(r, 350));
   closeImageProcessingModal();
   const savedLabel = totalKbSaved > 1024 ? `${(totalKbSaved / 1024).toFixed(1)} MB` : `${totalKbSaved} KB`;
-  showToast(`🎉 Batch imported & created ${files.length} coloring pages (Saved ~${savedLabel})!`, "success");
+  showToast(`ðŸŽ‰ Batch imported & created ${files.length} coloring pages (Saved ~${savedLabel})!`, "success");
 }
 
 let mediaSortOrder = "name_asc";
@@ -2803,7 +2803,7 @@ let pendingMediaDeleteAction = null;
 
 function deleteSingleMedia(mediaId) {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot delete: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot delete: Project is locked!", "warning");
     return;
   }
 
@@ -2821,21 +2821,21 @@ function deleteSingleMedia(mediaId) {
   const prevImg = document.getElementById("media-delete-modal-img");
   const actionBtn = document.getElementById("media-delete-confirm-action-btn");
 
-  if (title) title.innerText = "🗑 Delete Image from Media";
+  if (title) title.innerText = "ðŸ—‘ Delete Image from Media";
   if (msg) msg.innerText = `Delete "${item.name}" from Media Library?`;
   if (sub) sub.innerText = `File: ${item.fileName || item.name} (${item.sizeKb || 0} KB). This image will be removed from this project's library.`;
   if (prevBox && prevImg) {
     prevBox.style.display = "block";
     prevImg.src = item.dataUrl;
   }
-  if (actionBtn) actionBtn.innerText = "🗑 Yes, Delete Image";
+  if (actionBtn) actionBtn.innerText = "ðŸ—‘ Yes, Delete Image";
 
   if (modal) modal.classList.add("active");
 }
 
 function deleteSelectedMedia() {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot delete: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot delete: Project is locked!", "warning");
     return;
   }
 
@@ -2851,18 +2851,18 @@ function deleteSelectedMedia() {
   const prevBox = document.getElementById("media-delete-modal-preview");
   const actionBtn = document.getElementById("media-delete-confirm-action-btn");
 
-  if (title) title.innerText = `🗑 Bulk Delete (${count} Images)`;
+  if (title) title.innerText = `ðŸ—‘ Bulk Delete (${count} Images)`;
   if (msg) msg.innerText = `Delete all ${count} selected images?`;
   if (sub) sub.innerText = `These ${count} selected images will be removed from this project's media library.`;
   if (prevBox) prevBox.style.display = "none";
-  if (actionBtn) actionBtn.innerText = `🗑 Delete ${count} Selected`;
+  if (actionBtn) actionBtn.innerText = `ðŸ—‘ Delete ${count} Selected`;
 
   if (modal) modal.classList.add("active");
 }
 
 function clearAllMedia() {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot clear: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot clear: Project is locked!", "warning");
     return;
   }
 
@@ -2881,11 +2881,11 @@ function clearAllMedia() {
   const prevBox = document.getElementById("media-delete-modal-preview");
   const actionBtn = document.getElementById("media-delete-confirm-action-btn");
 
-  if (title) title.innerText = "🧹 Clear Entire Media Library";
-  if (msg) msg.innerText = `⚠️ Clear ALL ${projectMedia.length} image(s) from this project?`;
+  if (title) title.innerText = "ðŸ§¹ Clear Entire Media Library";
+  if (msg) msg.innerText = `âš ï¸ Clear ALL ${projectMedia.length} image(s) from this project?`;
   if (sub) sub.innerText = "All uploaded artwork in this project will be deleted. This cannot be undone.";
   if (prevBox) prevBox.style.display = "none";
-  if (actionBtn) actionBtn.innerText = "🧹 Yes, Clear All Media";
+  if (actionBtn) actionBtn.innerText = "ðŸ§¹ Yes, Clear All Media";
 
   if (modal) modal.classList.add("active");
 }
@@ -2905,7 +2905,7 @@ function executeMediaDeleteAction() {
     renderMediaLibrary();
     syncActiveProjectUI();
     markProjectDirty();
-    showToast(`🗑 Deleted "${name}"!`, "info");
+    showToast(`ðŸ—‘ Deleted "${name}"!`, "info");
   } else if (pendingMediaDeleteAction.type === "bulk") {
     const count = pendingMediaDeleteAction.count;
     recordHistoryState(`Delete ${count} Media Files`);
@@ -2915,7 +2915,7 @@ function executeMediaDeleteAction() {
     renderMediaLibrary();
     syncActiveProjectUI();
     markProjectDirty();
-    showToast(`🗑 Deleted ${count} image(s) from media library!`, "info");
+    showToast(`ðŸ—‘ Deleted ${count} image(s) from media library!`, "info");
   } else if (pendingMediaDeleteAction.type === "clear") {
     recordHistoryState("Clear All Media");
     currentProject.media = [];
@@ -2923,7 +2923,7 @@ function executeMediaDeleteAction() {
     renderMediaLibrary();
     syncActiveProjectUI();
     markProjectDirty();
-    showToast("🧹 All media cleared from project!", "info");
+    showToast("ðŸ§¹ All media cleared from project!", "info");
   }
 
   pendingMediaDeleteAction = null;
@@ -2941,7 +2941,7 @@ function renderMediaLibrary() {
   if (projectMedia.length === 0) {
     container.innerHTML = `
       <div class="media-empty-state" onclick="triggerMediaUpload()" style="cursor: pointer;">
-        <div class="media-empty-icon">📁</div>
+        <div class="media-empty-icon">ðŸ“</div>
         <strong>No images in this project</strong>
         <p style="margin-top: 4px; color: var(--text-muted); font-size: 11px;">
           Click here to upload images from your PC into <code>${currentProject.folder_name}/assets</code>.
@@ -2977,24 +2977,24 @@ function renderMediaLibrary() {
         </div>
         <div class="media-card-meta" onclick="handleMediaCardClick('${item.id}')" style="cursor: pointer;">
           <div class="media-name" title="${item.name}">${item.name}</div>
-          <div class="media-tag">${item.sizeKb} KB • ${currentProject.folder_name}</div>
+          <div class="media-tag">${item.sizeKb} KB â€¢ ${currentProject.folder_name}</div>
         </div>
         <button class="media-card-delete-btn" onclick="event.stopPropagation(); deleteSingleMedia('${item.id}')" title="Delete this image">
-          🗑
+          ðŸ—‘
         </button>
       </div>
       <div class="media-action-buttons">
         <button class="btn-action-pill ref-btn" onclick="applyMediaToSlot('${item.id}', 'ref')">
-          🎯 1. Reference
+          ðŸŽ¯ 1. Reference
         </button>
         <button class="btn-action-pill drawing-btn" onclick="applyMediaToSlot('${item.id}', 'drawing')">
-          🎨 2. Drawing
+          ðŸŽ¨ 2. Drawing
         </button>
         <button class="btn-action-pill" onclick="applyMediaToSlot('${item.id}', 'title')">
-          🔤 3. Title Text
+          ðŸ”¤ 3. Title Text
         </button>
         <button class="btn-action-pill all-btn" onclick="applyMediaToSlot('${item.id}', 'all')">
-          ⚡ Apply All 3 (Ref + Draw + Title)
+          âš¡ Apply All 3 (Ref + Draw + Title)
         </button>
       </div>
     `;
@@ -3019,7 +3019,7 @@ function handleMediaCardClick(mediaId) {
 
 async function applyMediaToSlot(mediaId, slotType) {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot modify: Project is locked!", "warning");
     return;
   }
 
@@ -3035,7 +3035,7 @@ async function applyMediaToSlot(mediaId, slotType) {
 
   if (isDotProject) {
     recordHistoryState("Convert Image to Dot-to-Dot");
-    showToast("🪄 Analyzing image contour & generating numbered dots...", "info");
+    showToast("ðŸª„ Analyzing image contour & generating numbered dots...", "info");
 
     const firstWordCaps = extractFirstWordCaps(item.name || item.fileName);
     const dotCount = (page.dot_to_dot && page.dot_to_dot.dot_count) ? page.dot_to_dot.dot_count : 35;
@@ -3091,7 +3091,7 @@ async function applyMediaToSlot(mediaId, slotType) {
         renderTimeline();
         syncActiveProjectUI();
         markProjectDirty();
-        showToast(`🎉 Converted "${firstWordCaps}" into ${data.puzzle.dot_count} Numbered Dots!`, "success");
+        showToast(`ðŸŽ‰ Converted "${firstWordCaps}" into ${data.puzzle.dot_count} Numbered Dots!`, "success");
         return;
       }
     } catch (err) {
@@ -3110,7 +3110,7 @@ async function applyMediaToSlot(mediaId, slotType) {
     refElem.image_src = imgSrc;
     refElem.text = labelText;
     setActiveElement(refElem.id);
-    showToast(`🎯 Set "${item.name}" as Reference Image!`, "success");
+    showToast(`ðŸŽ¯ Set "${item.name}" as Reference Image!`, "success");
   } 
   else if (slotType === "drawing") {
     let mainElem = page.elements.find(e => e.type === "main_image");
@@ -3121,7 +3121,7 @@ async function applyMediaToSlot(mediaId, slotType) {
     mainElem.image_src = imgSrc;
     mainElem.text = labelText;
     setActiveElement(mainElem.id);
-    showToast(`🎨 Set "${item.name}" as Drawing Image!`, "success");
+    showToast(`ðŸŽ¨ Set "${item.name}" as Drawing Image!`, "success");
   } 
   else if (slotType === "title") {
     const firstWordCaps = extractFirstWordCaps(item.name || item.fileName);
@@ -3141,7 +3141,7 @@ async function applyMediaToSlot(mediaId, slotType) {
     titleElem.text = firstWordCaps;
     page.title = cleanTitleString(firstWordCaps);
     setActiveElement(titleElem.id);
-    showToast(`🔤 Set Title to "${firstWordCaps}" (Auto-adjusted: ${autoSize}pt)!`, "success");
+    showToast(`ðŸ”¤ Set Title to "${firstWordCaps}" (Auto-adjusted: ${autoSize}pt)!`, "success");
   } 
   else if (slotType === "all") {
     const firstWordCaps = extractFirstWordCaps(item.name || item.fileName);
@@ -3161,7 +3161,7 @@ async function applyMediaToSlot(mediaId, slotType) {
       titleElem.font_size = calculateAutoTitleFontSize(firstWordCaps, 40);
     }
     page.title = cleanTitleString(firstWordCaps);
-    showToast(`⚡ Applied "${firstWordCaps}" (Ref + Drawing + Title)!`, "success");
+    showToast(`âš¡ Applied "${firstWordCaps}" (Ref + Drawing + Title)!`, "success");
   }
 
   renumberPages();
@@ -3175,7 +3175,7 @@ async function applyMediaToSlot(mediaId, slotType) {
 // ==========================================
 function applyPageLayout(layoutKey) {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot change layout: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot change layout: Project is locked!", "warning");
     return;
   }
 
@@ -3291,7 +3291,7 @@ function loadPageIntoCanvas(index) {
   if (page.page_type === "blank_verso") {
     layer.innerHTML = `
       <div class="blank-page-canvas-placeholder">
-        <span style="font-size: 32px; margin-bottom: 8px;">🛡️</span>
+        <span style="font-size: 32px; margin-bottom: 8px;">ðŸ›¡ï¸</span>
         <strong style="color: #1e293b; font-size: 14px;">Amazon KDP Blank Back Page (Verso)</strong>
         <p style="font-size: 11px; color: #64748b; margin-top: 4px; max-width: 300px;">
           This back page will be kept completely blank in the exported book to protect against marker / color bleed-through.
@@ -3319,9 +3319,9 @@ function loadPageIntoCanvas(index) {
       } else {
         elDiv.innerHTML = `
           <div class="placeholder-hint" onclick="event.stopPropagation(); setActiveElement('${elem.id}'); triggerMediaUpload();" style="cursor: pointer;" title="Click to Upload Reference Image">
-            <span class="icon">📷</span>
+            <span class="icon">ðŸ“·</span>
             <span class="txt">Ref Image</span>
-            <span class="sub">➕ Click to Upload</span>
+            <span class="sub">âž• Click to Upload</span>
           </div>
         `;
       }
@@ -3337,9 +3337,9 @@ function loadPageIntoCanvas(index) {
       } else {
         elDiv.innerHTML = `
           <div class="placeholder-hint" onclick="event.stopPropagation(); setActiveElement('${elem.id}'); triggerMediaUpload();" style="cursor: pointer;" title="Click to Upload Drawing Artwork">
-            <span class="icon">🎨</span>
+            <span class="icon">ðŸŽ¨</span>
             <span class="txt">Drawing Area (75%)</span>
-            <span class="sub">➕ Click to Upload Artwork</span>
+            <span class="sub">âž• Click to Upload Artwork</span>
           </div>
         `;
       }
@@ -3356,9 +3356,9 @@ function loadPageIntoCanvas(index) {
       } else {
         elDiv.innerHTML = `
           <div class="placeholder-hint" onclick="event.stopPropagation(); setActiveElement('${elem.id}'); triggerMediaUpload();" style="cursor: pointer;" title="Click to Upload Reference Image to Convert to Dot-to-Dot">
-            <span class="icon">🔢</span>
+            <span class="icon">ðŸ”¢</span>
             <span class="txt">Dot-to-Dot Puzzle Area</span>
-            <span class="sub">➕ Click to Upload Artwork to Convert</span>
+            <span class="sub">âž• Click to Upload Artwork to Convert</span>
           </div>
         `;
       }
@@ -3424,7 +3424,7 @@ function loadPageIntoCanvas(index) {
 
     const diffDiv = document.createElement("div");
     diffDiv.style.cssText = "font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;";
-    diffDiv.innerText = `Difficulty: ${p.difficulty || 'Medium'} • ${p.clues_count || 32} Clues`;
+    diffDiv.innerText = `Difficulty: ${p.difficulty || 'Medium'} â€¢ ${p.clues_count || 32} Clues`;
     wrapper.appendChild(diffDiv);
 
     const board = document.createElement("div");
@@ -3543,10 +3543,10 @@ function loadPageIntoCanvas(index) {
     // Start & Finish labels
     ctx.font = "bold 11px 'Plus Jakarta Sans', sans-serif";
     ctx.fillStyle = "#16a34a";
-    ctx.fillText("START ▶", pad + 4, pad + 14);
+    ctx.fillText("START â–¶", pad + 4, pad + 14);
 
     ctx.fillStyle = "#dc2626";
-    ctx.fillText("◀ FINISH", 420 - pad - 60, 480 - pad - 6);
+    ctx.fillText("â—€ FINISH", 420 - pad - 60, 480 - pad - 6);
 
     layer.appendChild(wrapper);
   }
@@ -3846,7 +3846,7 @@ function renderDotToDotSvgHtml(pData, width = 440, height = 440, page = null) {
         <g class="dot-start-marker">
           <circle cx="${d.x}" cy="${d.y}" r="6.5" fill="#f59e0b" opacity="0.35" />
           <circle cx="${d.x}" cy="${d.y}" r="4.2" fill="#d97706" />
-          <text x="${d.x}" y="${d.y - 12}" font-family="'Fredoka', sans-serif" font-size="11" font-weight="900" fill="#d97706" text-anchor="middle">★ START (1)</text>
+          <text x="${d.x}" y="${d.y - 12}" font-family="'Fredoka', sans-serif" font-size="11" font-weight="900" fill="#d97706" text-anchor="middle">â˜… START (1)</text>
         </g>
       `;
     } else {
@@ -3917,7 +3917,7 @@ async function resampleCurrentDotToDot() {
   const pData = page.dot_to_dot;
   const refImg = page.elements?.find(e => (e.type === "ref_image" || e.type === "main_image") && e.image_src)?.image_src || pData?.image_src;
 
-  showToast("🪄 Re-sampling Dot-to-Dot points...", "info");
+  showToast("ðŸª„ Re-sampling Dot-to-Dot points...", "info");
 
   try {
     const payload = refImg 
@@ -3936,7 +3936,7 @@ async function resampleCurrentDotToDot() {
       if (refImg) page.dot_to_dot.image_src = refImg;
       loadPageIntoCanvas(currentPageIndex);
       markProjectDirty();
-      showToast(`✨ Re-sampled to ${data.puzzle.dot_count} dots!`, "success");
+      showToast(`âœ¨ Re-sampled to ${data.puzzle.dot_count} dots!`, "success");
     }
   } catch (err) {
     showToast("Re-sample error: " + err.message, "danger");
@@ -3974,7 +3974,7 @@ function populateQuickMediaPicker() {
   mediaList.forEach(m => {
     const opt = document.createElement("option");
     opt.value = m.id;
-    opt.innerText = `🖼️ ${m.name || m.fileName} (${m.sizeKb || 0} KB)`;
+    opt.innerText = `ðŸ–¼ï¸ ${m.name || m.fileName} (${m.sizeKb || 0} KB)`;
     if (m.id === matchedMediaId) opt.selected = true;
     select.appendChild(opt);
   });
@@ -4022,7 +4022,7 @@ function onQuickMediaPickerChange() {
 
 function applyQuickMediaNameToCanvas() {
   if (currentProject.is_locked) {
-    showToast("🔒 Project is locked!", "warning");
+    showToast("ðŸ”’ Project is locked!", "warning");
     return;
   }
 
@@ -4083,7 +4083,7 @@ function applyQuickMediaNameToCanvas() {
   updatePropertiesInspector();
   markProjectDirty();
 
-  showToast(`✨ Applied Title "${formattedTitle}" (Auto-sized: ${autoSize}pt)!`, "success");
+  showToast(`âœ¨ Applied Title "${formattedTitle}" (Auto-sized: ${autoSize}pt)!`, "success");
 }
 
 function onPropChange() {
@@ -4200,7 +4200,7 @@ function alignActive(mode) {
 // Add Elements
 function addNewTextElement() {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot add element: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot add element: Project is locked!", "warning");
     return;
   }
 
@@ -4232,7 +4232,7 @@ function addNewTextElement() {
 
 function addNewBorderElement() {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot add element: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot add element: Project is locked!", "warning");
     return;
   }
 
@@ -4279,7 +4279,7 @@ function duplicateActiveElement() {
 
 function deleteActiveElement() {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot delete: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot delete: Project is locked!", "warning");
     return;
   }
 
@@ -4301,7 +4301,7 @@ function deleteActiveElement() {
 // Page Actions - Adds 1 Page dynamically based on Book Type (Sudoku, Tic-Tac-Toe, or Coloring)
 async function addNewPage() {
   if (currentProject.is_locked) {
-    showToast("🔒 Project is locked!", "warning");
+    showToast("ðŸ”’ Project is locked!", "warning");
     return;
   }
 
@@ -4310,7 +4310,7 @@ async function addNewPage() {
 
   if (bType === "sudoku") {
     recordHistoryState("Add Sudoku Page");
-    showToast("⚡ Generating new 9x9 Sudoku puzzle...", "info");
+    showToast("âš¡ Generating new 9x9 Sudoku puzzle...", "info");
 
     try {
       const totalPuzzlesSoFar = currentProject.pages.reduce((acc, pg) => acc + (pg.puzzles ? pg.puzzles.length : 0), 0);
@@ -4344,7 +4344,7 @@ async function addNewPage() {
     }
   } else if (bType === "tic_tac_toe") {
     recordHistoryState("Add Tic-Tac-Toe Page");
-    showToast("⚡ Generating 4 Tic-Tac-Toe game grids...", "info");
+    showToast("âš¡ Generating 4 Tic-Tac-Toe game grids...", "info");
 
     try {
       const totalSoFar = currentProject.pages.length * 4;
@@ -4384,7 +4384,7 @@ async function addNewPage() {
     }
   } else if (bType === "maze") {
     recordHistoryState("Add Maze Page");
-    showToast("⚡ Generating new solvable Maze...", "info");
+    showToast("âš¡ Generating new solvable Maze...", "info");
 
     try {
       const resp = await fetch("/api/generators/maze", {
@@ -4412,7 +4412,7 @@ async function addNewPage() {
     }
   } else if (bType === "word_search") {
     recordHistoryState("Add Word Search Page");
-    showToast("⚡ Generating themed Word Search puzzle...", "info");
+    showToast("âš¡ Generating themed Word Search puzzle...", "info");
 
     try {
       const resp = await fetch("/api/generators/word_search", {
@@ -4440,7 +4440,7 @@ async function addNewPage() {
     }
   } else if (bType === "dot_to_dot") {
     recordHistoryState("Add Dot-to-Dot Page");
-    showToast("⚡ Generating new Dot-to-Dot page...", "info");
+    showToast("âš¡ Generating new Dot-to-Dot page...", "info");
 
     try {
       const presets = ["star", "butterfly", "rocket", "dinosaur", "heart", "cat", "airplane", "fish"];
@@ -4616,7 +4616,7 @@ async function addNewPage() {
   selectPage(currentProject.pages.length - 1);
   syncActiveProjectUI();
   markProjectDirty();
-  showToast(`➕ Added Page ${newPageNum} to book!`, "success");
+  showToast(`âž• Added Page ${newPageNum} to book!`, "success");
 }
 
 function duplicateCurrentPage() {
@@ -4641,7 +4641,7 @@ function duplicateCurrentPage() {
 
 function deleteCurrentPage() {
   if (currentProject.is_locked) {
-    showToast("🔒 Project is locked!", "warning");
+    showToast("ðŸ”’ Project is locked!", "warning");
     return;
   }
 
@@ -4665,7 +4665,7 @@ function deleteCurrentPage() {
   selectPage(currentPageIndex);
   syncActiveProjectUI();
   markProjectDirty();
-  showToast(`🗑 Deleted Page ${deletedNum} & Auto-Renumbered Remaining Pages!`, "info");
+  showToast(`ðŸ—‘ Deleted Page ${deletedNum} & Auto-Renumbered Remaining Pages!`, "info");
 }
 
 // Timeline Ribbon - Displays clean working canvases with in-between + insert slots, drag-and-drop swapping, and card actions
@@ -4673,7 +4673,7 @@ let draggedTimelinePageIndex = null;
 
 function reorderPage(fromIdx, toIdx) {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot reorder: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot reorder: Project is locked!", "warning");
     return;
   }
   if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= currentProject.pages.length || toIdx >= currentProject.pages.length) return;
@@ -4704,7 +4704,7 @@ function reorderPage(fromIdx, toIdx) {
   selectPage(currentPageIndex);
   markProjectDirty();
 
-  showToast(`🔀 Swapped & Moved "${pageTitle}" to Page ${toIdx + 1}!`, "success");
+  showToast(`ðŸ”€ Swapped & Moved "${pageTitle}" to Page ${toIdx + 1}!`, "success");
 }
 
 function renderTimeline() {
@@ -4720,7 +4720,7 @@ function renderTimeline() {
     const slot = document.createElement("div");
     slot.className = "timeline-insert-slot";
     slot.innerHTML = `
-      <button class="timeline-insert-btn" onclick="openInsertPageMenu(${targetIdx}, event)" title="➕ Insert Page Here">
+      <button class="timeline-insert-btn" onclick="openInsertPageMenu(${targetIdx}, event)" title="âž• Insert Page Here">
         +
       </button>
     `;
@@ -4833,33 +4833,33 @@ function renderTimeline() {
 
     if (isBlank) {
       pageLabel = `Blank ${idx + 1}`;
-      previewContent = `<span style="font-size:16px;">⚪</span>`;
+      previewContent = `<span style="font-size:16px;">âšª</span>`;
     } else if (page.puzzles || page.layout === "sudoku" || bType === "sudoku") {
       pageLabel = `Sudoku ${idx + 1}`;
-      previewContent = `<span style="font-size:16px;">🔢</span>`;
+      previewContent = `<span style="font-size:16px;">ðŸ”¢</span>`;
     } else if (page.games || page.layout === "tic_tac_toe" || bType === "tic_tac_toe") {
       pageLabel = `Game Page ${idx + 1}`;
-      previewContent = `<span style="font-size:16px;">⭕</span>`;
+      previewContent = `<span style="font-size:16px;">â­•</span>`;
     } else if (page.maze || page.layout === "maze" || bType === "maze") {
       pageLabel = `Maze ${idx + 1}`;
-      previewContent = `<span style="font-size:16px;">🌀</span>`;
+      previewContent = `<span style="font-size:16px;">ðŸŒ€</span>`;
     } else if (page.word_search || page.layout === "word_search" || bType === "word_search") {
       pageLabel = `Word Search ${idx + 1}`;
-      previewContent = `<span style="font-size:16px;">🔤</span>`;
+      previewContent = `<span style="font-size:16px;">ðŸ”¤</span>`;
     } else if (page.dot_to_dot || page.layout === "dot_to_dot" || bType === "dot_to_dot") {
       pageLabel = `Dot-to-Dot ${idx + 1}`;
-      previewContent = `<span style="font-size:16px;">🔢</span>`;
+      previewContent = `<span style="font-size:16px;">ðŸ”¢</span>`;
     } else {
       pageLabel = `Drawing ${idx + 1}`;
       const mainEl = page.elements ? page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src) : null;
-      previewContent = mainEl ? `<img src="${mainEl.image_src}">` : `<span style="font-size:16px;">🎨</span>`;
+      previewContent = mainEl ? `<img src="${mainEl.image_src}">` : `<span style="font-size:16px;">ðŸŽ¨</span>`;
     }
 
     card.innerHTML = `
       <div class="thumb-card-actions">
-        <button class="thumb-action-btn" onclick="openRenameModalForIndex(${idx}, event)" title="✏️ Rename Page">✏️</button>
-        <button class="thumb-action-btn" onclick="duplicatePageAtIndex(${idx}, event)" title="📋 Duplicate Page">📋</button>
-        <button class="thumb-action-btn btn-del" onclick="deletePageAtIndex(${idx}, event)" title="🗑 Delete Page">🗑</button>
+        <button class="thumb-action-btn" onclick="openRenameModalForIndex(${idx}, event)" title="âœï¸ Rename Page">âœï¸</button>
+        <button class="thumb-action-btn" onclick="duplicatePageAtIndex(${idx}, event)" title="ðŸ“‹ Duplicate Page">ðŸ“‹</button>
+        <button class="thumb-action-btn btn-del" onclick="deletePageAtIndex(${idx}, event)" title="ðŸ—‘ Delete Page">ðŸ—‘</button>
       </div>
       <div class="thumb-page-num">${pageLabel}</div>
       <div class="thumb-preview-box">${previewContent}</div>
@@ -4879,7 +4879,7 @@ function renderTimeline() {
 function openInsertPageMenu(targetIndex, event) {
   if (event) event.stopPropagation();
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot insert: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot insert: Project is locked!", "warning");
     return;
   }
 
@@ -4887,10 +4887,10 @@ function openInsertPageMenu(targetIndex, event) {
   closeInsertPageMenu();
 
   const bType = currentProject.book_type || "coloring_book";
-  const contentLabel = bType === "sudoku" ? "🔢 Sudoku Puzzle Page" :
-                       (bType === "tic_tac_toe" ? "⭕ Tic-Tac-Toe Game Page" :
-                       (bType === "maze" ? "🌀 Maze Labyrinth Page" :
-                       (bType === "word_search" ? "🔤 Word Search Page" : "🎨 Drawing / Coloring Page")));
+  const contentLabel = bType === "sudoku" ? "ðŸ”¢ Sudoku Puzzle Page" :
+                       (bType === "tic_tac_toe" ? "â­• Tic-Tac-Toe Game Page" :
+                       (bType === "maze" ? "ðŸŒ€ Maze Labyrinth Page" :
+                       (bType === "word_search" ? "ðŸ”¤ Word Search Page" : "ðŸŽ¨ Drawing / Coloring Page")));
 
   const menu = document.createElement("div");
   menu.id = "active-insert-popup-menu";
@@ -4898,7 +4898,7 @@ function openInsertPageMenu(targetIndex, event) {
 
   menu.innerHTML = `
     <button class="insert-popup-item" onclick="insertPageAt(${targetIndex}, 'blank')">
-      ⚪ <strong>Insert Blank Page</strong>
+      âšª <strong>Insert Blank Page</strong>
     </button>
     <button class="insert-popup-item" onclick="insertPageAt(${targetIndex}, 'content')">
       ${contentLabel}
@@ -4926,7 +4926,7 @@ function closeInsertPageMenu() {
 async function insertPageAt(targetIndex, pageType = "blank") {
   closeInsertPageMenu();
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot modify: Project is locked!", "warning");
     return;
   }
 
@@ -5057,13 +5057,13 @@ async function insertPageAt(targetIndex, pageType = "blank") {
   selectPage(targetIndex);
   syncActiveProjectUI();
   markProjectDirty();
-  showToast(`✨ Inserted page at Position ${targetIndex + 1}!`, "success");
+  showToast(`âœ¨ Inserted page at Position ${targetIndex + 1}!`, "success");
 }
 
 function duplicatePageAtIndex(idx, event) {
   if (event) event.stopPropagation();
   if (currentProject.is_locked) {
-    showToast("🔒 Project is locked!", "warning");
+    showToast("ðŸ”’ Project is locked!", "warning");
     return;
   }
 
@@ -5082,13 +5082,13 @@ function duplicatePageAtIndex(idx, event) {
   selectPage(idx + 1);
   syncActiveProjectUI();
   markProjectDirty();
-  showToast(`📋 Duplicated to Page ${idx + 2}!`, "success");
+  showToast(`ðŸ“‹ Duplicated to Page ${idx + 2}!`, "success");
 }
 
 function deletePageAtIndex(idx, event) {
   if (event) event.stopPropagation();
   if (currentProject.is_locked) {
-    showToast("🔒 Project is locked!", "warning");
+    showToast("ðŸ”’ Project is locked!", "warning");
     return;
   }
 
@@ -5110,7 +5110,7 @@ function deletePageAtIndex(idx, event) {
   selectPage(currentPageIndex);
   syncActiveProjectUI();
   markProjectDirty();
-  showToast(`🗑 Deleted Page ${deletedNum}!`, "info");
+  showToast(`ðŸ—‘ Deleted Page ${deletedNum}!`, "info");
 }
 
 function openRenameModalForIndex(idx, event) {
@@ -5130,7 +5130,7 @@ function selectPage(index) {
 // Batch Ingestion - Each Image becomes a Drawing Page with auto font scaling
 function triggerBatchUpload() {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot batch import: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot batch import: Project is locked!", "warning");
     return;
   }
   const fileInput = document.getElementById("batch-images-input");
@@ -5147,7 +5147,7 @@ function handleBatchImagesUpload(event) {
   if (!files.length) return;
 
   recordHistoryState(`Batch Import ${files.length} Images`);
-  showToast(`⚡ Importing ${files.length} images into canvas editor...`, "info");
+  showToast(`âš¡ Importing ${files.length} images into canvas editor...`, "info");
 
   const projFont = currentProject.settings?.default_font_family || "Fredoka";
   const projOutline = currentProject.settings?.default_font_mode !== "solid";
@@ -5219,7 +5219,7 @@ function handleBatchImagesUpload(event) {
         markProjectDirty();
         selectPage(currentProject.pages.length - files.length);
         switchTab("canvas");
-        showToast(`🎉 Batch Created ${files.length} Auto-Cleaned & Optimized Drawing Pages!`, "success");
+        showToast(`ðŸŽ‰ Batch Created ${files.length} Auto-Cleaned & Optimized Drawing Pages!`, "success");
       }
     };
     reader.readAsDataURL(file);
@@ -5313,13 +5313,13 @@ function updatePreflightDashboard() {
     overallBadge.className = `badge ${isOverallPass ? 'pass' : 'warning'}`;
     overallBadge.style.background = isOverallPass ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)";
     overallBadge.style.color = isOverallPass ? "var(--secondary)" : "var(--warning)";
-    overallBadge.innerText = isOverallPass ? "✓ 100% KDP COMPLIANT" : "⚠️ KDP ADVISORY (ACTION NEEDED)";
+    overallBadge.innerText = isOverallPass ? "âœ“ 100% KDP COMPLIANT" : "âš ï¸ KDP ADVISORY (ACTION NEEDED)";
   }
 
   list.innerHTML = `
     <!-- Check 1: 24-Page Minimum Rule -->
     <div class="check-item ${is24PageMin ? 'pass' : 'warning'}">
-      <div class="check-icon">${is24PageMin ? '✓' : '⚠️'}</div>
+      <div class="check-icon">${is24PageMin ? 'âœ“' : 'âš ï¸'}</div>
       <div class="check-info">
         <h4>${is24PageMin ? 'Amazon KDP Minimum 24-Page Requirement Satisfied' : 'Page Count Below Amazon KDP Minimum (24 Pages)'}</h4>
         <p>Your book currently has <strong>${totalPages} pages</strong>. Amazon KDP paperback books require a minimum of 24 pages to bind properly. ${!is24PageMin ? `<em>Click "Auto-Fill to 24 Pages" below to add ${24 - totalPages} more pages instantly.</em>` : ''}</p>
@@ -5329,7 +5329,7 @@ function updatePreflightDashboard() {
 
     <!-- Check 2: Single-Sided Coloring Book Rule -->
     <div class="check-item ${hasSingleSided ? 'pass' : 'warning'}">
-      <div class="check-icon">${hasSingleSided ? '✓' : 'ℹ'}</div>
+      <div class="check-icon">${hasSingleSided ? 'âœ“' : 'â„¹'}</div>
       <div class="check-info">
         <h4>Single-Sided Bleed-Through Protection (Blank Verso Pages)</h4>
         <p>Coloring pages sit on odd pages (Recto) with blank back pages (Verso) inserted to protect against marker & watercolor bleed-through.</p>
@@ -5339,7 +5339,7 @@ function updatePreflightDashboard() {
 
     <!-- Check 3: Dynamic Inside Gutter Binding Margin -->
     <div class="check-item pass">
-      <div class="check-icon">✓</div>
+      <div class="check-icon">âœ“</div>
       <div class="check-info">
         <h4>Dynamic Inside Binding Gutter: ${gutterIn} in (${gutterPt} pt)</h4>
         <p>Calculated automatically for ${totalPages} pages. Satisfies Amazon KDP spine glue safe margin specifications.</p>
@@ -5349,17 +5349,17 @@ function updatePreflightDashboard() {
 
     <!-- Check 4: Calculated Spine Thickness & Wrap Cover Dimensions -->
     <div class="check-item pass">
-      <div class="check-icon">✓</div>
+      <div class="check-icon">âœ“</div>
       <div class="check-info">
         <h4>Spine Thickness Calculation: ${spineWidthIn.toFixed(4)} in (${spineWidthPt} pt)</h4>
-        <p>Paperback full wrap cover width: <strong>${(17.25 + spineWidthIn).toFixed(3)} in</strong> × <strong>11.25 in</strong> (including 0.125 in outer bleed). Spine text ${totalPages >= 79 ? 'is eligible (>=79 pages)' : 'is omitted (minimum 79 pages required by Amazon for spine text)'}.</p>
+        <p>Paperback full wrap cover width: <strong>${(17.25 + spineWidthIn).toFixed(3)} in</strong> Ã— <strong>11.25 in</strong> (including 0.125 in outer bleed). Spine text ${totalPages >= 79 ? 'is eligible (>=79 pages)' : 'is omitted (minimum 79 pages required by Amazon for spine text)'}.</p>
       </div>
       <span class="check-badge pass">PASS</span>
     </div>
 
     <!-- Check 5: Resolution & Safe Margins -->
     <div class="check-item pass">
-      <div class="check-icon">✓</div>
+      <div class="check-icon">âœ“</div>
       <div class="check-info">
         <h4>Print Resolution (300 DPI Vector PDF)</h4>
         <p>Vector lineart, stroke outlines and embedded graphics are exported at lossless 300 DPI Amazon KDP print resolution.</p>
@@ -5371,13 +5371,13 @@ function updatePreflightDashboard() {
 
 function autoFillTo24Pages() {
   if (currentProject.is_locked) {
-    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    showToast("ðŸ”’ Cannot modify: Project is locked!", "warning");
     return;
   }
 
   const currentCount = currentProject.pages ? currentProject.pages.length : 0;
   if (currentCount >= 24) {
-    showToast("✨ Book already has 24 or more pages!", "info");
+    showToast("âœ¨ Book already has 24 or more pages!", "info");
     return;
   }
 
@@ -5425,7 +5425,7 @@ function autoFillTo24Pages() {
   updatePreflightDashboard();
   renderTimeline();
   markProjectDirty();
-  showToast(`🎉 Auto-filled book to ${currentProject.pages.length} Pages (Amazon KDP Compliant)!`, "success");
+  showToast(`ðŸŽ‰ Auto-filled book to ${currentProject.pages.length} Pages (Amazon KDP Compliant)!`, "success");
 }
 
 // ==========================================
@@ -5482,7 +5482,7 @@ function updateCoverVisualPreview() {
 
   const spineElem = document.getElementById("cov-prev-spine");
   if (spineElem) {
-    spineElem.innerText = totalPages >= 79 ? `${title} • ${author}` : "SPINE";
+    spineElem.innerText = totalPages >= 79 ? `${title} â€¢ ${author}` : "SPINE";
   }
 
   // Display first project image as cover artwork
@@ -5502,13 +5502,13 @@ function updateCoverVisualPreview() {
     if (coverImg) {
       artBox.innerHTML = `<img src="${coverImg}" style="width:100%;height:100%;object-fit:contain;border-radius:6px;">`;
     } else {
-      artBox.innerHTML = `🎨`;
+      artBox.innerHTML = `ðŸŽ¨`;
     }
   }
 }
 
 function executeCoverPdfExport(openInBrowser = true) {
-  showToast("⚙️ Generating 300 DPI Amazon KDP Cover PDF...", "info");
+  showToast("âš™ï¸ Generating 300 DPI Amazon KDP Cover PDF...", "info");
 
   const title = document.getElementById("cov-input-title")?.value || currentProject.name;
   const subtitle = document.getElementById("cov-input-subtitle")?.value || "50+ Fun & Easy Coloring Pages";
@@ -5551,7 +5551,7 @@ function executeCoverPdfExport(openInBrowser = true) {
   .then(data => {
     closeModal("cover-generator-modal");
     if (data.status === "success" && data.download_url) {
-      showToast(`🎉 Cover PDF Generated: ${data.filename}!`, "success");
+      showToast(`ðŸŽ‰ Cover PDF Generated: ${data.filename}!`, "success");
       if (openInBrowser) {
         window.open(data.download_url, "_blank");
       } else {
@@ -5563,306 +5563,12 @@ function executeCoverPdfExport(openInBrowser = true) {
         a.remove();
       }
     } else {
-      showToast(`⚠️ Cover PDF Export failed: ${data.error || 'Unknown error'}`, "danger");
+      showToast(`âš ï¸ Cover PDF Export failed: ${data.error || 'Unknown error'}`, "danger");
     }
   })
   .catch(err => {
     closeModal("cover-generator-modal");
-    showToast(`⚠️ Cover PDF Export error: ${err.message}`, "danger");
-  });
-}
-
-// ==========================================
-// AI Amazon KDP Research & Keywords Hub Engine
-// ==========================================
-function openAiHubModal() {
-  const modal = document.getElementById("ai-kdp-hub-modal");
-  if (!modal) return;
-  modal.classList.add("active");
-  checkGeminiApiKeyStatus();
-  fetchTrendingNiches();
-}
-
-function switchAiTab(tabKey) {
-  document.querySelectorAll(".ai-tab-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.id === `ai-tab-btn-${tabKey}`);
-  });
-  document.querySelectorAll(".ai-sub-panel").forEach(panel => {
-    panel.style.display = (panel.id === `ai-panel-${tabKey}`) ? "block" : "none";
-  });
-}
-
-function fetchTrendingNiches() {
-  const btn = document.getElementById("btn-fetch-niches");
-  const ageSelect = document.getElementById("ai-niche-age-select");
-  const typeSelect = document.getElementById("ai-niche-type-select");
-  const container = document.getElementById("ai-niches-container");
-
-  const targetAge = ageSelect ? ageSelect.value : "Ages 4-8";
-  const category = typeSelect ? typeSelect.value : "all";
-
-  if (btn) {
-    btn.disabled = true;
-    btn.innerText = "⏳ Finding Niches...";
-  }
-
-  if (container) {
-    container.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px; color: var(--text-muted);">
-        <div class="spinner-dot" style="width: 24px; height: 24px; margin: 0 auto 12px auto; display: block;"></div>
-        Analyzing Amazon KDP Search Trends & Bestselling Categories...
-      </div>
-    `;
-  }
-
-  fetch("/api/ai/niche_ideas", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ target_age: targetAge, category: category })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = "✨ Find Trending Niches";
-    }
-    const niches = data.niches || [];
-    renderNichesList(niches);
-  })
-  .catch(err => {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = "✨ Find Trending Niches";
-    }
-    showToast(`⚠️ AI Niche Research Error: ${err.message}`, "danger");
-  });
-}
-
-function renderNichesList(niches) {
-  const container = document.getElementById("ai-niches-container");
-  if (!container) return;
-
-  if (!niches || niches.length === 0) {
-    container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 30px; color: var(--text-muted);">No niches returned.</div>`;
-    return;
-  }
-
-  let html = "";
-  niches.forEach(n => {
-    const nicheDataJson = encodeURIComponent(JSON.stringify(n));
-    html += `
-      <div class="niche-card">
-        <div>
-          <div class="niche-header">
-            <div class="niche-name">${n.niche_name}</div>
-            <div class="niche-score-badge">Demand: ${n.demand_score}/100</div>
-          </div>
-          <div class="niche-stats-row">
-            <span>👶 ${n.target_age}</span>
-            <span>📊 ${n.competition_level} Comp.</span>
-            <span>🔍 ${n.estimated_monthly_searches}</span>
-          </div>
-          <div class="niche-hook">
-            💡 <strong>Why it sells:</strong> ${n.hook_selling_point}
-          </div>
-          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.3;">
-            📖 <strong>Sample Title:</strong> "${n.sample_title}"
-          </div>
-        </div>
-        <div style="display: flex; gap: 8px; margin-top: 10px;">
-          <button class="btn btn-outline btn-sm" style="flex: 1;" onclick="useNicheForMetadata('${nicheDataJson}')">🎯 Gen Metadata</button>
-          <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="createProjectFromNiche('${nicheDataJson}')">⚡ Create Book</button>
-        </div>
-      </div>
-    `;
-  });
-
-  container.innerHTML = html;
-}
-
-function useNicheForMetadata(nicheJsonStr) {
-  try {
-    const n = JSON.parse(decodeURIComponent(nicheJsonStr));
-    switchAiTab("metadata");
-    const topicInput = document.getElementById("ai-meta-topic");
-    const typeSelect = document.getElementById("ai-meta-book-type");
-    const ageSelect = document.getElementById("ai-meta-age");
-
-    if (topicInput) topicInput.value = n.niche_name;
-    if (typeSelect && n.book_type) typeSelect.value = n.book_type;
-    if (ageSelect && n.target_age) ageSelect.value = n.target_age;
-
-    generateAiMetadata();
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-function createProjectFromNiche(nicheJsonStr) {
-  try {
-    const n = JSON.parse(decodeURIComponent(nicheJsonStr));
-    closeModal("ai-kdp-hub-modal");
-    openNewProjectModal();
-
-    const nameInput = document.getElementById("modal-project-name");
-    const typeSelect = document.getElementById("modal-book-type");
-
-    if (nameInput) nameInput.value = n.niche_name;
-    if (typeSelect && n.book_type) {
-      typeSelect.value = n.book_type;
-      onBookTypeChange();
-    }
-    showToast(`⚡ Loaded "${n.niche_name}" into New Project Wizard!`, "success");
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-function generateAiMetadata() {
-  const btn = document.getElementById("btn-generate-ai-meta");
-  const topic = document.getElementById("ai-meta-topic")?.value || "Cute Safari Animals";
-  const bookType = document.getElementById("ai-meta-book-type")?.value || "coloring_book";
-  const targetAge = document.getElementById("ai-meta-age")?.value || "Ages 4-8";
-  const author = document.getElementById("ai-meta-author")?.value || "Creative Kids Studio";
-
-  if (btn) {
-    btn.disabled = true;
-    btn.innerText = "⏳ Generating AI Metadata...";
-  }
-
-  fetch("/api/ai/generate_metadata", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      topic: topic,
-      book_type: bookType,
-      target_age: targetAge,
-      author: author
-    })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = "🚀 Generate 7 Keywords, Title & Description";
-    }
-    const meta = data.metadata || {};
-    renderAiMetadata(meta);
-  })
-  .catch(err => {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = "🚀 Generate 7 Keywords, Title & Description";
-    }
-    showToast(`⚠️ AI Metadata Error: ${err.message}`, "danger");
-  });
-}
-
-let lastGeneratedKeywords = [];
-
-function renderAiMetadata(meta) {
-  const outputBox = document.getElementById("ai-meta-output-box");
-  if (!outputBox) return;
-
-  outputBox.style.display = "block";
-
-  const titleEl = document.getElementById("ai-res-title");
-  const subtitleEl = document.getElementById("ai-res-subtitle");
-  const kwGrid = document.getElementById("ai-res-keywords-grid");
-  const catsBox = document.getElementById("ai-res-categories-box");
-  const htmlPrev = document.getElementById("ai-res-html-preview");
-  const htmlRaw = document.getElementById("ai-res-html-raw");
-
-  if (titleEl) titleEl.innerText = meta.title || "My Book Title";
-  if (subtitleEl) subtitleEl.innerText = meta.subtitle || "Subtitle";
-
-  lastGeneratedKeywords = meta.backend_keywords || [];
-  if (kwGrid) {
-    kwGrid.innerHTML = lastGeneratedKeywords.map((kw, idx) => `
-      <div class="kw-pill">
-        <span>#${idx + 1}</span>
-        <strong>${kw}</strong>
-        <button class="btn btn-xs btn-outline" style="padding: 1px 4px; font-size: 9px;" onclick="navigator.clipboard.writeText('${kw.replace(/'/g, "\\'")}'); showToast('Copied keyword #${idx + 1}!', 'success');">📋</button>
-      </div>
-    `).join("");
-  }
-
-  if (catsBox) {
-    const cats = meta.recommended_categories || [];
-    catsBox.innerHTML = cats.map(c => `
-      <div class="category-pill">🏷️ ${c}</div>
-    `).join("");
-  }
-
-  if (htmlPrev) htmlPrev.innerHTML = meta.html_description || "";
-  if (htmlRaw) htmlRaw.value = meta.html_description || "";
-
-  showToast("🎉 High-Converting Amazon Metadata & 7 Keywords Generated!", "success");
-}
-
-function copyAiField(fieldId) {
-  const raw = document.getElementById(fieldId);
-  if (fieldId === "ai-res-full-title") {
-    const t = document.getElementById("ai-res-title")?.innerText || "";
-    const s = document.getElementById("ai-res-subtitle")?.innerText || "";
-    navigator.clipboard.writeText(`${t}: ${s}`);
-    showToast("📋 Copied Title & Subtitle to clipboard!", "success");
-    return;
-  }
-  if (raw) {
-    navigator.clipboard.writeText(raw.value || raw.innerText);
-    showToast("📋 Copied HTML Description to clipboard!", "success");
-  }
-}
-
-function copyAllKeywords() {
-  if (!lastGeneratedKeywords || lastGeneratedKeywords.length === 0) {
-    showToast("No keywords generated yet!", "warning");
-    return;
-  }
-  const text = lastGeneratedKeywords.join("\n");
-  navigator.clipboard.writeText(text);
-  showToast("📋 Copied all 7 Amazon Backend Keywords to clipboard!", "success");
-}
-
-function checkGeminiApiKeyStatus() {
-  fetch("/api/ai/get_key")
-    .then(r => r.json())
-    .then(data => {
-      const pill = document.getElementById("ai-key-status-pill");
-      const input = document.getElementById("ai-gemini-api-key-input");
-      if (pill) {
-        if (data.has_key) {
-          pill.innerText = `✓ Connected to Live Google Gemini API (${data.key_preview})`;
-          pill.style.color = "#10b981";
-        } else {
-          pill.innerText = "✓ Using Built-in Intelligence Database";
-          pill.style.color = "#6366f1";
-        }
-      }
-    })
-    .catch(() => {});
-}
-
-function saveGeminiApiKey() {
-  const input = document.getElementById("ai-gemini-api-key-input");
-  const key = input ? input.value.trim() : "";
-  fetch("/api/ai/save_key", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ api_key: key })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.status === "success") {
-      showToast("💾 Gemini API Key Saved Successfully!", "success");
-      checkGeminiApiKeyStatus();
-    } else {
-      showToast("⚠️ Failed to save API Key", "danger");
-    }
-  })
-  .catch(err => {
-    showToast(`⚠️ Save Key Error: ${err.message}`, "danger");
+    showToast(`âš ï¸ Cover PDF Export error: ${err.message}`, "danger");
   });
 }
 
