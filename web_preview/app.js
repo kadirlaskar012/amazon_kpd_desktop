@@ -286,7 +286,7 @@ function cleanTitleString(str) {
 function cleanFileName(filename) {
   let name = filename.replace(/\.[^/.]+$/, "");
   name = name.replace(/^(page\s*[\-_]*)?\d+[\s_\.\-]+/i, "");
-  name = name.replace(/[\-_](coloring[\-_]?page|lineart|drawing|illustration|vector|bw|art)$/i, "");
+  name = name.replace(/[\-_](coloring[\-_]?page|lineart|drawing|illustration|vector|bw|art|color|colour|outline)$/i, "");
   name = name.replace(/[_\-]+/g, " ").trim();
   return name.replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -1292,8 +1292,25 @@ function openRenameModal(type = "page") {
   const title = document.getElementById("rename-modal-title");
   const label = document.getElementById("rename-modal-label");
   const input = document.getElementById("rename-modal-input");
+  const mediaRow = document.getElementById("rename-modal-media-row");
+  const mediaSelect = document.getElementById("rename-modal-media-select");
 
   if (!modal || !input) return;
+
+  const mediaList = currentProject.media || [];
+  if (mediaSelect) {
+    mediaSelect.innerHTML = '<option value="">-- Choose from Project Media --</option>';
+    mediaList.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m.name || m.fileName;
+      opt.innerText = `🖼️ ${m.name || m.fileName}`;
+      mediaSelect.appendChild(opt);
+    });
+  }
+
+  if (mediaRow) {
+    mediaRow.style.display = (type === "page" || type === "element") && mediaList.length > 0 ? "block" : "none";
+  }
 
   if (type === "page") {
     const page = currentProject.pages[currentPageIndex];
@@ -1316,6 +1333,15 @@ function openRenameModal(type = "page") {
     input.focus();
     input.select();
   }, 50);
+}
+
+function onRenameModalMediaSelect(val) {
+  const input = document.getElementById("rename-modal-input");
+  if (!input || !val) return;
+  const cleaned = cleanFileName(val);
+  input.value = (renameTargetType === "element") ? cleaned.toUpperCase() : cleanTitleString(cleaned);
+  input.focus();
+  input.select();
 }
 
 function submitRenameModal() {
@@ -2080,6 +2106,8 @@ function renderMediaLibrary() {
 
     container.appendChild(card);
   });
+
+  populateQuickMediaPicker();
 }
 
 function handleMediaCardClick(mediaId) {
@@ -2765,6 +2793,152 @@ function updatePropertiesInspector() {
     if (textGroup) textGroup.style.display = "none";
     if (imgGroup) imgGroup.style.display = "none";
   }
+
+  // Update Media Title Suggester box
+  populateQuickMediaPicker();
+}
+
+// ==========================================
+// Quick Item Title from Media File System
+// ==========================================
+function populateQuickMediaPicker() {
+  const select = document.getElementById("quick-media-picker-select");
+  const input = document.getElementById("quick-media-name-input");
+  const group = document.getElementById("prop-quick-media-title-group");
+  if (!select || !input) return;
+
+  const page = currentProject.pages ? currentProject.pages[currentPageIndex] : null;
+  const isBlank = page && (page.page_type === "blank_verso" || page.layout === "blank_page");
+  if (group) {
+    group.style.display = isBlank ? "none" : "block";
+  }
+
+  const mediaList = currentProject.media || [];
+  select.innerHTML = '<option value="">-- Select Uploaded Media --</option>';
+
+  // Check if current page already has an image element with media
+  let matchedMediaId = "";
+  if (page && page.elements) {
+    const imgEl = page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && (e.fileName || e.text));
+    if (imgEl) {
+      const match = mediaList.find(m => m.name === imgEl.text || m.fileName === imgEl.fileName || m.dataUrl === imgEl.image_src);
+      if (match) matchedMediaId = match.id;
+    }
+  }
+
+  mediaList.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.innerText = `🖼️ ${m.name || m.fileName} (${m.sizeKb || 0} KB)`;
+    if (m.id === matchedMediaId) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  // Pre-fill editable input if not actively typing
+  if (document.activeElement !== input) {
+    if (matchedMediaId) {
+      const matched = mediaList.find(m => m.id === matchedMediaId);
+      if (matched) {
+        input.value = cleanFileName(matched.name || matched.fileName).toUpperCase();
+      }
+    } else if (page) {
+      const titleEl = page.elements ? page.elements.find(e => e.type === "title") : null;
+      if (titleEl && titleEl.text && !/^DRAWING\s*\d+$/i.test(titleEl.text.trim()) && !/^PAGE\s*\d+$/i.test(titleEl.text.trim())) {
+        input.value = titleEl.text.toUpperCase();
+      } else if (page.title && !/^Page\s*\d+$/i.test(page.title.trim()) && !/^Drawing\s*\d+$/i.test(page.title.trim())) {
+        input.value = page.title.toUpperCase();
+      } else if (mediaList.length > 0) {
+        const candIdx = Math.min(currentPageIndex, mediaList.length - 1);
+        const cand = mediaList[candIdx] || mediaList[0];
+        input.value = cleanFileName(cand.name || cand.fileName).toUpperCase();
+        select.value = cand.id;
+      }
+    }
+  }
+}
+
+function onQuickMediaPickerChange() {
+  const select = document.getElementById("quick-media-picker-select");
+  const input = document.getElementById("quick-media-name-input");
+  if (!select || !input) return;
+
+  const mediaId = select.value;
+  if (!mediaId) return;
+
+  const mediaList = currentProject.media || [];
+  const item = mediaList.find(m => m.id === mediaId);
+  if (item) {
+    const cleaned = cleanFileName(item.name || item.fileName);
+    input.value = cleaned.toUpperCase();
+    input.focus();
+    input.select();
+  }
+}
+
+function applyQuickMediaNameToCanvas() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Project is locked!", "warning");
+    return;
+  }
+
+  const input = document.getElementById("quick-media-name-input");
+  const rawVal = input ? input.value.trim() : "";
+  if (!rawVal) {
+    showToast("Please enter or select an item name first.", "info");
+    return;
+  }
+
+  const page = currentProject.pages ? currentProject.pages[currentPageIndex] : null;
+  if (!page || page.page_type === "blank_verso") {
+    showToast("Cannot set title on a blank verso page.", "warning");
+    return;
+  }
+
+  recordHistoryState(`Set Item Title "${rawVal}"`);
+
+  const formattedTitle = rawVal.toUpperCase();
+  const cleanPageTitle = cleanTitleString(rawVal);
+  page.title = cleanPageTitle;
+
+  const projFont = currentProject.settings?.default_font_family || "Fredoka";
+  const projOutline = currentProject.settings?.default_font_mode !== "solid";
+  const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
+  const projColor = currentProject.settings?.default_text_color || (projOutline ? "#ffffff" : "#111827");
+  const autoSize = calculateAutoTitleFontSize(formattedTitle, 40);
+
+  let titleElem = page.elements ? page.elements.find(e => e.type === "title") : null;
+  if (!titleElem) {
+    titleElem = {
+      id: `elem_title_${Date.now()}`,
+      type: "title",
+      x: 235,
+      y: 70,
+      w: 240,
+      h: 80,
+      text: formattedTitle,
+      font_size: autoSize,
+      color: projColor,
+      is_outline: projOutline,
+      stroke_color: projStroke,
+      font_family: projFont,
+      letter_spacing: 2
+    };
+    if (!page.elements) page.elements = [];
+    page.elements.push(titleElem);
+  } else {
+    titleElem.text = formattedTitle;
+    titleElem.font_size = autoSize;
+  }
+
+  renumberPages();
+  syncContentsPage();
+  loadPageIntoCanvas(currentPageIndex);
+  renderTimeline();
+  setActiveElement(titleElem.id);
+  updatePropertiesInspector();
+  markProjectDirty();
+
+  showToast(`✨ Applied Title "${formattedTitle}" (Auto-sized: ${autoSize}pt)!`, "success");
 }
 
 function onPropChange() {
