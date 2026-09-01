@@ -367,26 +367,42 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         elif req_path == "/api/generators/maze":
+            count = int(req_data.get("count", 1))
             width = int(req_data.get("width", 15))
             height = int(req_data.get("height", 20))
-            maze = MazeGenerator.generate_maze(width=width, height=height)
-
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "success", "maze": maze}).encode("utf-8"))
-            return
+            if count > 1:
+                mazes = MazeGenerator.generate_bulk(count=count, width=width, height=height)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "count": len(mazes), "mazes": mazes}).encode("utf-8"))
+                return
+            else:
+                maze = MazeGenerator.generate_maze(width=width, height=height)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "maze": maze}).encode("utf-8"))
+                return
 
         elif req_path == "/api/generators/word_search":
-            words = req_data.get("words", ["APPLE", "BANANA", "ORANGE", "MANGO", "GRAPES", "BERRY"])
+            count = int(req_data.get("count", 1))
             grid_size = int(req_data.get("grid_size", 12))
-            ws = WordSearchGenerator.generate_puzzle(words=words, grid_size=grid_size)
-
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"status": "success", "word_search": ws}).encode("utf-8"))
-            return
+            if count > 1:
+                puzzles = WordSearchGenerator.generate_bulk(count=count, grid_size=grid_size)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "count": len(puzzles), "puzzles": puzzles}).encode("utf-8"))
+                return
+            else:
+                words = req_data.get("words", ["APPLE", "BANANA", "ORANGE", "MANGO", "GRAPES", "BERRY"])
+                ws = WordSearchGenerator.generate_puzzle(words=words, grid_size=grid_size)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "word_search": ws}).encode("utf-8"))
+                return
 
         self.send_response(404)
         self.end_headers()

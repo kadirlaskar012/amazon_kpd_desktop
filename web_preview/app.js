@@ -1640,21 +1640,23 @@ async function submitCreateProject() {
     const perPageSelect = document.getElementById("modal-sudoku-per-page");
     const diff = diffSelect ? diffSelect.value : "medium";
     const perPage = parseInt(perPageSelect ? perPageSelect.value : "1");
+    const totalPuzzlesNeeded = count * perPage;
 
     try {
       const resp = await fetch("/api/generators/sudoku", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: count, difficulty: diff })
+        body: JSON.stringify({ count: totalPuzzlesNeeded, difficulty: diff })
       });
       const data = await resp.json();
       const puzzles = data.puzzles || [];
 
-      let currentIdx = 0;
-      let pageNum = 1;
-      while (currentIdx < puzzles.length) {
-        const chunk = puzzles.slice(currentIdx, currentIdx + perPage);
-        const pTitle = chunk.length > 1 ? `Sudoku ${chunk[0].id.replace("sudoku_", "#")} - ${chunk[chunk.length - 1].id.replace("sudoku_", "#")}` : `Sudoku ${chunk[0].id.replace("sudoku_", "#")}`;
+      for (let i = 0; i < count; i++) {
+        const pageNum = i + 1;
+        const chunk = puzzles.slice(i * perPage, (i + 1) * perPage);
+        const pTitle = chunk.length > 1 
+          ? `Sudoku ${chunk[0].id.replace("sudoku_", "#")} - ${chunk[chunk.length - 1].id.replace("sudoku_", "#")}` 
+          : `Sudoku ${chunk[0] ? chunk[0].id.replace("sudoku_", "#") : `#${pageNum.toString().padStart(4, '0')}`}`;
         
         const elems = [
           { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
@@ -1669,8 +1671,6 @@ async function submitCreateProject() {
           puzzles: chunk,
           elements: elems
         });
-        currentIdx += perPage;
-        pageNum++;
       }
     } catch (e) {
       console.error("Error generating Sudoku puzzles:", e);
@@ -1680,20 +1680,22 @@ async function submitCreateProject() {
     const gridSelect = document.getElementById("modal-ttt-grid-size");
     const perPage = parseInt(perPageSelect ? perPageSelect.value : "4");
     const gridSize = parseInt(gridSelect ? gridSelect.value : "3");
+    const totalGamesNeeded = count * perPage;
 
     try {
       const resp = await fetch("/api/generators/tic_tac_toe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ total_games: count, games_per_page: perPage, grid_size: gridSize })
+        body: JSON.stringify({ total_games: totalGamesNeeded, games_per_page: perPage, grid_size: gridSize })
       });
       const data = await resp.json();
       const tttPages = data.pages || [];
 
-      tttPages.forEach((pData, idx) => {
-        const pageNum = idx + 1;
-        const firstG = pData.games[0].game_number;
-        const lastG = pData.games[pData.games.length - 1].game_number;
+      for (let i = 0; i < count; i++) {
+        const pageNum = i + 1;
+        const pData = tttPages[i] || { games: [] };
+        const firstG = (pData.games && pData.games[0]) ? pData.games[0].game_number : ((i * perPage) + 1);
+        const lastG = (pData.games && pData.games.length) ? pData.games[pData.games.length - 1].game_number : ((i + 1) * perPage);
         const pTitle = firstG !== lastG ? `Games #${firstG} - #${lastG}` : `Game #${firstG}`;
 
         pagesList.push({
@@ -1707,9 +1709,69 @@ async function submitCreateProject() {
             { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
           ]
         });
-      });
+      }
     } catch (e) {
       console.error("Error generating Tic-Tac-Toe games:", e);
+    }
+  } else if (bType === "maze") {
+    try {
+      const resp = await fetch("/api/generators/maze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: count, width: 15, height: 20 })
+      });
+      const data = await resp.json();
+      const mazes = data.mazes || [data.maze];
+
+      for (let i = 0; i < count; i++) {
+        const pageNum = i + 1;
+        const m = mazes[i] || mazes[0];
+        const pTitle = `Maze #${pageNum.toString().padStart(3, '0')}`;
+
+        pagesList.push({
+          page_number: pageNum,
+          page_type: "content",
+          title: pTitle,
+          layout: "maze",
+          maze: m,
+          elements: [
+            { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 26, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      }
+    } catch (e) {
+      console.error("Error generating Mazes:", e);
+    }
+  } else if (bType === "word_search") {
+    try {
+      const resp = await fetch("/api/generators/word_search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: count, grid_size: 12 })
+      });
+      const data = await resp.json();
+      const wsPuzzles = data.puzzles || [data.word_search];
+
+      for (let i = 0; i < count; i++) {
+        const pageNum = i + 1;
+        const ws = wsPuzzles[i] || wsPuzzles[0];
+        const pTitle = ws.title || `Word Search #${pageNum.toString().padStart(3, '0')}`;
+
+        pagesList.push({
+          page_number: pageNum,
+          page_type: "content",
+          title: pTitle,
+          layout: "word_search",
+          word_search: ws,
+          elements: [
+            { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      }
+    } catch (e) {
+      console.error("Error generating Word Searches:", e);
     }
   }
 
@@ -2369,6 +2431,127 @@ function loadPageIntoCanvas(index) {
     layer.appendChild(container);
   }
 
+  // If page has Maze attached, render vector Maze on canvas
+  if (page.maze) {
+    const m = page.maze;
+    const wrapper = document.createElement("div");
+    wrapper.className = "canvas-maze-wrapper";
+
+    const cvs = document.createElement("canvas");
+    cvs.width = 420;
+    cvs.height = 480;
+    cvs.className = "canvas-maze-canvas";
+    wrapper.appendChild(cvs);
+
+    const ctx = cvs.getContext("2d");
+    const mw = m.width || 15;
+    const mh = m.height || 20;
+    const pad = 12;
+    const cellW = (420 - (pad * 2)) / mw;
+    const cellH = (480 - (pad * 2)) / mh;
+    const grid = m.grid || [];
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, 420, 480);
+
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 2.0;
+
+    for (let r = 0; r < mh; r++) {
+      for (let c = 0; c < mw; c++) {
+        const x = pad + (c * cellW);
+        const y = pad + (r * cellH);
+        const cellMask = (grid[r] && grid[r][c] !== undefined) ? grid[r][c] : 0;
+
+        // Top wall: if not North (1)
+        if ((cellMask & 1) === 0) {
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + cellW, y);
+          ctx.stroke();
+        }
+        // Right wall: if not East (2)
+        if ((cellMask & 2) === 0) {
+          ctx.beginPath();
+          ctx.moveTo(x + cellW, y);
+          ctx.lineTo(x + cellW, y + cellH);
+          ctx.stroke();
+        }
+        // Bottom wall: if not South (4)
+        if ((cellMask & 4) === 0) {
+          ctx.beginPath();
+          ctx.moveTo(x, y + cellH);
+          ctx.lineTo(x + cellW, y + cellH);
+          ctx.stroke();
+        }
+        // Left wall: if not West (8)
+        if ((cellMask & 8) === 0) {
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, y + cellH);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Start & Finish labels
+    ctx.font = "bold 11px 'Plus Jakarta Sans', sans-serif";
+    ctx.fillStyle = "#16a34a";
+    ctx.fillText("START ▶", pad + 4, pad + 14);
+
+    ctx.fillStyle = "#dc2626";
+    ctx.fillText("◀ FINISH", 420 - pad - 60, 480 - pad - 6);
+
+    layer.appendChild(wrapper);
+  }
+
+  // If page has Word Search attached, render 12x12 grid and word badge list
+  if (page.word_search) {
+    const ws = page.word_search;
+    const wrapper = document.createElement("div");
+    wrapper.className = "canvas-ws-wrapper";
+
+    if (ws.theme) {
+      const themeDiv = document.createElement("div");
+      themeDiv.className = "canvas-ws-theme";
+      themeDiv.innerText = `Topic: ${ws.theme}`;
+      wrapper.appendChild(themeDiv);
+    }
+
+    const gridDiv = document.createElement("div");
+    gridDiv.className = "canvas-ws-grid";
+    const gSize = ws.grid_size || 12;
+    gridDiv.style.gridTemplateColumns = `repeat(${gSize}, 1fr)`;
+    gridDiv.style.gridTemplateRows = `repeat(${gSize}, 1fr)`;
+
+    const grid = ws.grid || [];
+    for (let r = 0; r < gSize; r++) {
+      for (let c = 0; c < gSize; c++) {
+        const cell = document.createElement("div");
+        cell.className = "canvas-ws-cell";
+        cell.innerText = (grid[r] && grid[r][c]) ? grid[r][c] : "";
+        gridDiv.appendChild(cell);
+      }
+    }
+    wrapper.appendChild(gridDiv);
+
+    // Word list
+    const words = ws.words || [];
+    if (words.length > 0) {
+      const wlDiv = document.createElement("div");
+      wlDiv.className = "canvas-ws-wordlist";
+      words.forEach(w => {
+        const b = document.createElement("div");
+        b.className = "canvas-ws-word-badge";
+        b.innerText = w;
+        wlDiv.appendChild(b);
+      });
+      wrapper.appendChild(wlDiv);
+    }
+
+    layer.appendChild(wrapper);
+  }
+
   const pageReadout = document.getElementById("page-num-readout");
   if (pageReadout) {
     const pageTypeTag = page.page_type === "front_matter_disclaimer" 
@@ -2851,6 +3034,62 @@ async function addNewPage() {
     } catch (e) {
       console.error(e);
     }
+  } else if (bType === "maze") {
+    recordHistoryState("Add Maze Page");
+    showToast("⚡ Generating new solvable Maze...", "info");
+
+    try {
+      const resp = await fetch("/api/generators/maze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: 1, width: 15, height: 20 })
+      });
+      const data = await resp.json();
+      const m = data.maze || (data.mazes && data.mazes[0]);
+      const pTitle = `Maze #${newPageNum.toString().padStart(3, '0')}`;
+
+      currentProject.pages.push({
+        page_number: newPageNum,
+        page_type: "content",
+        title: pTitle,
+        layout: "maze",
+        maze: m,
+        elements: [
+          { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 26, color: "#0f172a", is_outline: false },
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  } else if (bType === "word_search") {
+    recordHistoryState("Add Word Search Page");
+    showToast("⚡ Generating themed Word Search puzzle...", "info");
+
+    try {
+      const resp = await fetch("/api/generators/word_search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: 1, grid_size: 12 })
+      });
+      const data = await resp.json();
+      const ws = data.word_search || (data.puzzles && data.puzzles[0]);
+      const pTitle = ws ? (ws.title || `Word Search #${newPageNum.toString().padStart(3, '0')}`) : `Word Search #${newPageNum}`;
+
+      currentProject.pages.push({
+        page_number: newPageNum,
+        page_type: "content",
+        title: pTitle,
+        layout: "word_search",
+        word_search: ws,
+        elements: [
+          { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    } catch (e) {
+      console.error(e);
+    }
   } else {
     // Coloring Book
     recordHistoryState("Add Drawing Page");
@@ -2930,7 +3169,7 @@ function deleteCurrentPage() {
   showToast(`🗑 Deleted Page ${deletedNum} & Auto-Renumbered Remaining Pages!`, "info");
 }
 
-// Timeline Ribbon - Displays clean working canvases (Sudoku, Tic-Tac-Toe, or Drawing)
+// Timeline Ribbon - Displays clean working canvases (Sudoku, Tic-Tac-Toe, Maze, Word Search, or Drawing)
 function renderTimeline() {
   const strip = document.getElementById("thumbnails-strip");
   if (!strip) return;
@@ -2952,6 +3191,12 @@ function renderTimeline() {
     } else if (page.games || page.layout === "tic_tac_toe" || bType === "tic_tac_toe") {
       pageLabel = `Game Page ${idx + 1}`;
       previewContent = `<span style="font-size:16px;">⭕</span>`;
+    } else if (page.maze || page.layout === "maze" || bType === "maze") {
+      pageLabel = `Maze ${idx + 1}`;
+      previewContent = `<span style="font-size:16px;">🌀</span>`;
+    } else if (page.word_search || page.layout === "word_search" || bType === "word_search") {
+      pageLabel = `Word Search ${idx + 1}`;
+      previewContent = `<span style="font-size:16px;">🔤</span>`;
     } else {
       pageLabel = `Drawing ${idx + 1}`;
       const mainEl = page.elements ? page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src) : null;

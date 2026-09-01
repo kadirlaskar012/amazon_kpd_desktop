@@ -100,3 +100,34 @@ class WordSearchGenerator:
             "words": [pw["word"] for pw in placed_words],
             "placed_details": placed_words
         }
+
+    THEMES = [
+        ("ANIMALS", ["LION", "TIGER", "BEAR", "ZEBRA", "GIRAFFE", "ELEPHANT", "MONKEY", "PANDA"]),
+        ("FRUITS", ["APPLE", "BANANA", "ORANGE", "MANGO", "GRAPES", "CHERRY", "PEACH", "BERRY"]),
+        ("SPACE", ["SUN", "MOON", "STAR", "PLANET", "COMET", "GALAXY", "ROCKET", "ORBIT"]),
+        ("OCEAN", ["SHARK", "WHALE", "DOLPHIN", "OCTOPUS", "CORAL", "TURTLE", "JELLYFISH"]),
+        ("SPORTS", ["SOCCER", "TENNIS", "HOCKEY", "CRICKET", "RUNNING", "SWIMMING", "BOXING"]),
+        ("WEATHER", ["RAIN", "STORM", "CLOUDS", "SUNNY", "WINDY", "SNOW", "THUNDER", "FOG"]),
+        ("COLORS", ["RED", "BLUE", "GREEN", "YELLOW", "PURPLE", "ORANGE", "VIOLET", "PINK"]),
+        ("NATURE", ["FOREST", "RIVER", "VALLEY", "DESERT", "ISLAND", "CANYON", "MOUNTAIN"]),
+        ("BIRDS", ["EAGLE", "PARROT", "FALCON", "ROBIN", "OWL", "SWAN", "HAWK", "PIGEON"]),
+        ("VEHICLES", ["TRUCK", "AIRPLANE", "TRAIN", "BICYCLE", "SUBWAY", "BOAT", "SCOOTER"])
+    ]
+
+    @classmethod
+    def generate_bulk(
+        cls,
+        count: int = 10,
+        grid_size: int = 12
+    ) -> List[Dict[str, Any]]:
+        """Generates a batch of unique word search puzzles with rotating themes."""
+        puzzles = []
+        for i in range(count):
+            theme_name, words = cls.THEMES[i % len(cls.THEMES)]
+            p_id = f"ws_{i + 1:04d}"
+            puzzle = cls.generate_puzzle(words=words, grid_size=grid_size, puzzle_id=p_id)
+            puzzle["theme"] = theme_name
+            puzzle["title"] = f"Word Search #{i + 1:03d}: {theme_name.title()}"
+            puzzles.append(puzzle)
+        return puzzles
+

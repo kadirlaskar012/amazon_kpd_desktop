@@ -89,3 +89,18 @@ class MazeGenerator:
                         seen.add((nx, ny))
                         queue.append(path + [(nx, ny)])
         return []
+
+    @classmethod
+    def generate_bulk(
+        cls,
+        count: int = 10,
+        width: int = 15,
+        height: int = 20
+    ) -> List[Dict[str, Any]]:
+        """Generates a batch of unique mazes with sequential IDs."""
+        mazes = []
+        for i in range(count):
+            m_id = f"maze_{i + 1:04d}"
+            m = cls.generate_maze(width=width, height=height, maze_id=m_id)
+            mazes.append(m)
+        return mazes

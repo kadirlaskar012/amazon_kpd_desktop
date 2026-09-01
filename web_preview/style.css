@@ -2528,4 +2528,89 @@ kbd {
   color: #334155;
 }
 
+/* MAZE CANVAS RENDERER */
+.canvas-maze-wrapper {
+  position: absolute;
+  top: 85px;
+  left: 45px;
+  width: 420px;
+  height: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.canvas-maze-canvas {
+  width: 100%;
+  height: 480px;
+  background: #ffffff;
+  border: 2px solid #0f172a;
+  border-radius: 4px;
+}
+
+/* WORD SEARCH CANVAS RENDERER */
+.canvas-ws-wrapper {
+  position: absolute;
+  top: 80px;
+  left: 35px;
+  width: 440px;
+  height: 540px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.canvas-ws-theme {
+  font-size: 13px;
+  font-weight: 800;
+  color: #475569;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.canvas-ws-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(12, 1fr);
+  width: 360px;
+  height: 360px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+}
+
+.canvas-ws-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Plus Jakarta Sans', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  user-select: none;
+}
+
+.canvas-ws-wordlist {
+  margin-top: 14px;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+}
+
+.canvas-ws-word-badge {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: 1px;
+}
+
+
 

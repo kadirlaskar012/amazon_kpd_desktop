@@ -34,6 +34,12 @@ class KDPPdfExporter:
         has_bleed = bool(settings.get("has_bleed", True))
         bleed_pt = float(settings.get("bleed_pt", 9.0)) if has_bleed else 0.0
 
+        b_type = project_data.get("book_type", "coloring_book")
+        if "single_sided" in settings:
+            single_sided = bool(settings["single_sided"])
+        elif b_type in ("sudoku", "tic_tac_toe", "maze", "word_search", "puzzle_book", "activity_book"):
+            single_sided = False
+
         # Physical page dimensions including bleed
         page_w = trim_w + (bleed_pt * 2)
         page_h = trim_h + (bleed_pt * 2)
@@ -518,6 +524,115 @@ class KDPPdfExporter:
                     c.setFont("Helvetica-Bold", 7.5)
                     c.setFillColor(colors.HexColor("#334155"))
                     c.drawCentredString(gx + (card_w / 2.0), gy + 12, g.get("winner_label", "Winner: [ X ]  [ O ]  [ Tie ]"))
+
+            # 5. If page has Maze attached, render vector labyrinth
+            maze = page.get("maze")
+            if maze:
+                m_id_str = maze.get("id", "maze_1").replace("maze_", "#")
+                c.setFont("Helvetica-Bold", 18)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 55 - bleed_pt, f"MAZE PUZZLE {m_id_str}")
+
+                mw = maze.get("width", 15)
+                mh = maze.get("height", 20)
+                grid = maze.get("grid", [])
+
+                avail_w = trim_w - 90
+                avail_h = trim_h - 150
+                cell_s = min(avail_w / mw, avail_h / mh)
+                
+                maze_box_w = cell_s * mw
+                maze_box_h = cell_s * mh
+                
+                mx = (page_w - maze_box_w) / 2.0
+                my = page_h - 85 - bleed_pt - maze_box_h
+
+                c.setStrokeColor(colors.HexColor("#0f172a"))
+                c.setLineWidth(1.8)
+
+                for r in range(mh):
+                    for col in range(mw):
+                        cx = mx + (col * cell_s)
+                        cy = my + ((mh - 1 - r) * cell_s)
+                        cell_mask = grid[r][col] if r < len(grid) and col < len(grid[r]) else 0
+
+                        # Top wall: if not North (1)
+                        if (cell_mask & 1) == 0:
+                            c.line(cx, cy + cell_s, cx + cell_s, cy + cell_s)
+                        # Right wall: if not East (2)
+                        if (cell_mask & 2) == 0:
+                            c.line(cx + cell_s, cy, cx + cell_s, cy + cell_s)
+                        # Bottom wall: if not South (4)
+                        if (cell_mask & 4) == 0:
+                            c.line(cx, cy, cx + cell_s, cy)
+                        # Left wall: if not West (8)
+                        if (cell_mask & 8) == 0:
+                            c.line(cx, cy, cx, cy + cell_s)
+
+                # Start & Finish markers
+                c.setFont("Helvetica-Bold", 9)
+                c.setFillColor(colors.HexColor("#16a34a"))
+                c.drawString(mx + 4, my + maze_box_h - cell_s + 4, "START")
+                c.setFillColor(colors.HexColor("#dc2626"))
+                c.drawRightString(mx + maze_box_w - 4, my + 4, "FINISH")
+
+            # 6. If page has Word Search attached, render 12x12 grid and word bank
+            ws = page.get("word_search")
+            if ws:
+                theme = ws.get("theme", "Vocabulary").title()
+                ws_id = ws.get("id", "ws_1").replace("ws_", "#")
+                
+                c.setFont("Helvetica-Bold", 18)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 50 - bleed_pt, f"WORD SEARCH {ws_id}")
+
+                c.setFont("Helvetica", 11)
+                c.setFillColor(colors.HexColor("#475569"))
+                c.drawCentredString(page_w / 2.0, page_h - 70 - bleed_pt, f"Topic: {theme}")
+
+                g_size = ws.get("grid_size", 12)
+                grid = ws.get("grid", [])
+                
+                grid_sz = min(trim_w - 80, 360)
+                cell_sz = grid_sz / g_size
+                gx = (page_w - grid_sz) / 2.0
+                gy = page_h - 100 - bleed_pt - grid_sz
+
+                # Draw outer frame
+                c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                c.setLineWidth(1.0)
+                c.roundRect(gx - 8, gy - 8, grid_sz + 16, grid_sz + 16, radius=6, fill=0, stroke=1)
+
+                # Draw Letters
+                for r in range(g_size):
+                    for col in range(g_size):
+                        cx = gx + (col * cell_sz)
+                        cy = gy + ((g_size - 1 - r) * cell_sz)
+                        ch = grid[r][col] if r < len(grid) and col < len(grid[r]) else ""
+                        if ch:
+                            c.setFont("Helvetica-Bold", cell_sz * 0.55)
+                            c.setFillColor(colors.HexColor("#0f172a"))
+                            c.drawCentredString(cx + (cell_sz / 2.0), cy + (cell_sz / 2.0) - (cell_sz * 0.18), ch)
+
+                # Word Bank below
+                words = ws.get("words", [])
+                if words:
+                    c.setFont("Helvetica-Bold", 10)
+                    c.setFillColor(colors.HexColor("#0f172a"))
+                    c.drawCentredString(page_w / 2.0, gy - 28, "FIND THESE WORDS:")
+
+                    num_w = len(words)
+                    cols = 4 if num_w >= 8 else 3
+                    w_col_w = (page_w - 80) / cols
+                    
+                    c.setFont("Helvetica-Bold", 9)
+                    c.setFillColor(colors.HexColor("#334155"))
+                    for i, w in enumerate(words):
+                        wc = i % cols
+                        wr = i // cols
+                        wx = 40 + (wc * w_col_w) + (w_col_w / 2.0)
+                        wy = gy - 48 - (wr * 16)
+                        c.drawCentredString(wx, wy, f"[  ] {w}")
 
             c.showPage()
 
