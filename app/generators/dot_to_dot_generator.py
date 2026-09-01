@@ -25,12 +25,12 @@ class DotToDotGenerator:
         dot_count: int = 35,
         canvas_w: int = 420,
         canvas_h: int = 460,
-        margin: int = 30,
+        margin: int = 25,
         faint_guide: bool = True
     ) -> Dict[str, Any]:
         """
-        Extracts primary contour from image and generates N sequentially ordered dots.
-        Returns dictionary containing dots list, connections, and metadata.
+        Extracts primary outer silhouette from image and generates N sequentially ordered dots.
+        Guarantees 1:1 pixel-perfect overlay with the background image.
         """
         # 1. Decode image to numpy array
         if isinstance(image_input, str) and image_input.startswith("data:image"):
@@ -46,56 +46,68 @@ class DotToDotGenerator:
             pil_img = pil_img.convert("RGB")
 
         np_img = np.array(pil_img)
+        img_h, img_w = np_img.shape[:2]
         gray = cv2.cvtColor(np_img, cv2.COLOR_RGB2GRAY)
 
-        # 2. Binary thresholding & edge detection
+        # 2. Binary thresholding to isolate artwork foreground
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        _, binary = cv2.threshold(blurred, 235, 255, cv2.THRESH_BINARY_INV)
+
+        # 3. Morphological Closing to seal sketches & FloodFill Solid Silhouette
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+        closed_lines = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+
+        flood_mask = np.zeros((img_h + 2, img_w + 2), np.uint8)
+        filled = closed_lines.copy()
+        cv2.floodFill(filled, flood_mask, (0, 0), 255)
         
-        # Adaptive thresholding to capture clean outlines
-        thresh = cv2.adaptiveThreshold(
-            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 4
-        )
+        # Silhouette: Invert filled background and merge with lines
+        silhouette = cv2.bitwise_not(filled)
+        silhouette = cv2.bitwise_or(silhouette, closed_lines)
+        silhouette = cv2.morphologyEx(silhouette, cv2.MORPH_CLOSE, kernel)
 
-        # 3. Find primary outer/salient contours
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        # 4. Find the Single Main Outer Continuous Contour
+        contours, _ = cv2.findContours(silhouette, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        if not contours:
+            contours, _ = cv2.findContours(closed_lines, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
         if not contours:
-            # Fallback to Canny edges if adaptive threshold fails
-            edges = cv2.Canny(blurred, 50, 150)
-            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
-        if not contours:
-            # Fallback to preset if image has no detectable contours
             return cls.generate_preset("star", dot_count=dot_count, canvas_w=canvas_w, canvas_h=canvas_h)
 
-        # Pick the longest continuous contour
-        primary_contour = max(contours, key=lambda cnt: cv2.arcLength(cnt, True), default=None)
+        primary_contour = max(contours, key=lambda cnt: cv2.contourArea(cnt), default=None)
         if primary_contour is None or len(primary_contour) < 5:
             return cls.generate_preset("star", dot_count=dot_count, canvas_w=canvas_w, canvas_h=canvas_h)
 
-        # 4. Parametric Arc-Length Equidistant Sampling
-        pts = primary_contour.reshape(-1, 2).astype(np.float32)
-        total_len = cv2.arcLength(primary_contour, closed=True)
-        if total_len <= 0:
-            total_len = 1.0
+        # Smooth polygon slightly to avoid pixel staircase noise
+        peri = cv2.arcLength(primary_contour, True)
+        approx = cv2.approxPolyDP(primary_contour, epsilon=0.003 * peri, closed=True)
+        pts = approx.reshape(-1, 2).astype(np.float32)
 
-        # Calculate cumulative distance array
+        # 5. Enforce Clockwise Progression & Top-Start (min_y)
+        # Check orientation via shoelace / contour area
+        if cv2.contourArea(pts, oriented=True) > 0:
+            pts = pts[::-1] # Reverse to clockwise
+
+        # Find top-most point to start (min_y)
+        min_y_idx = int(np.argmin(pts[:, 1]))
+        if min_y_idx != 0:
+            pts = np.roll(pts, -min_y_idx, axis=0)
+
+        # 6. Parametric Arc-Length Equidistant Sampling
         dists = [0.0]
         for i in range(1, len(pts)):
             d = np.linalg.norm(pts[i] - pts[i - 1])
             dists.append(dists[-1] + d)
         
-        # Add closing distance
+        # Closing segment distance
         dists.append(dists[-1] + np.linalg.norm(pts[0] - pts[-1]))
         pts_closed = np.vstack([pts, pts[0]])
 
-        # Resample N equidistant points
         sampled_pts = []
         step = dists[-1] / max(dot_count, 3)
 
         for k in range(dot_count):
             target_d = k * step
-            # Find segment in dists
             idx = np.searchsorted(dists, target_d)
             idx = min(idx, len(pts_closed) - 1)
             
@@ -112,37 +124,27 @@ class DotToDotGenerator:
 
         sampled_pts = np.array(sampled_pts, dtype=np.float32)
 
-        # 5. Normalize and scale to Canvas Dimensions with Margins
-        min_x, min_y = np.min(sampled_pts, axis=0)
-        max_x, max_y = np.max(sampled_pts, axis=0)
-        w = max_x - min_x
-        h = max_y - min_y
-
-        if w <= 0: w = 1.0
-        if h <= 0: h = 1.0
-
+        # 7. 1:1 Pixel-Perfect Canvas Coordinate Scaling
         avail_w = canvas_w - (margin * 2)
         avail_h = canvas_h - (margin * 2)
-        scale = min(avail_w / w, avail_h / h)
+        scale = min(avail_w / img_w, avail_h / img_h)
 
-        # Center within canvas
-        offset_x = margin + (avail_w - (w * scale)) / 2.0
-        offset_y = margin + (avail_h - (h * scale)) / 2.0
+        scaled_img_w = round(img_w * scale, 1)
+        scaled_img_h = round(img_h * scale, 1)
+        img_x = round(margin + (avail_w - scaled_img_w) / 2.0, 1)
+        img_y = round(margin + (avail_h - scaled_img_h) / 2.0, 1)
 
-        scaled_pts = []
-        for p in sampled_pts:
-            sx = float(offset_x + (p[0] - min_x) * scale)
-            sy = float(offset_y + (p[1] - min_y) * scale)
-            scaled_pts.append((sx, sy))
-
-        # 6. Calculate Centroid & Outward Normal Label Offsets
-        center_x = float(margin + avail_w / 2.0)
-        center_y = float(margin + avail_h / 2.0)
+        # Centroid for normal vector label offsets
+        center_x = img_x + (scaled_img_w / 2.0)
+        center_y = img_y + (scaled_img_h / 2.0)
 
         dots = []
-        for i, (sx, sy) in enumerate(scaled_pts):
+        for i, p in enumerate(sampled_pts):
             dot_num = i + 1
-            # Vector from center to dot
+            sx = round(img_x + (p[0] * scale), 1)
+            sy = round(img_y + (p[1] * scale), 1)
+
+            # Normal vector from center to point
             vx = sx - center_x
             vy = sy - center_y
             norm = math.hypot(vx, vy)
@@ -152,14 +154,14 @@ class DotToDotGenerator:
                 nx = vx / norm
                 ny = vy / norm
 
-            # Label offset by 14px outward
-            label_x = round(sx + (nx * 14.0), 1)
-            label_y = round(sy + (ny * 14.0), 1)
+            # Label offset 13px outward
+            label_x = round(sx + (nx * 13.0), 1)
+            label_y = round(sy + (ny * 13.0), 1)
 
             dots.append({
                 "num": dot_num,
-                "x": round(sx, 1),
-                "y": round(sy, 1),
+                "x": sx,
+                "y": sy,
                 "label_x": label_x,
                 "label_y": label_y,
                 "is_start": (dot_num == 1)
@@ -171,7 +173,14 @@ class DotToDotGenerator:
             "dots": dots,
             "canvas_w": canvas_w,
             "canvas_h": canvas_h,
+            "image_bounds": {
+                "x": img_x,
+                "y": img_y,
+                "width": scaled_img_w,
+                "height": scaled_img_h
+            },
             "faint_guide": faint_guide,
+            "show_lines": False,
             "has_reference": True
         }
 

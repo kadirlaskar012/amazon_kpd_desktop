@@ -3492,9 +3492,11 @@ function updatePropertiesInspector() {
       const countInput = document.getElementById("prop-dot-count");
       const countVal = document.getElementById("prop-dot-count-val");
       const guideBox = document.getElementById("prop-dot-faint-guide");
+      const linesBox = document.getElementById("prop-dot-show-lines");
       if (countInput) countInput.value = count;
       if (countVal) countVal.innerText = `${count} Dots`;
       if (guideBox) guideBox.checked = (pData?.faint_guide !== false);
+      if (linesBox) linesBox.checked = Boolean(pData?.show_lines);
     }
   } else if (elem.type === "main_image" || elem.type === "ref_image") {
     if (textGroup) textGroup.style.display = "none";
@@ -3518,11 +3520,19 @@ function renderDotToDotSvgHtml(pData, width = 440, height = 440, page = null) {
 
   const dots = pData.dots;
   const showGuide = pData.faint_guide !== false;
+  const showLines = Boolean(pData.show_lines);
   const refImg = page?.elements?.find(e => e.type === "ref_image" || e.type === "main_image")?.image_src || pData.image_src;
 
   let guideSvg = "";
   if (showGuide && refImg) {
-    guideSvg = `<image href="${refImg}" x="25" y="25" width="${width - 50}" height="${height - 50}" opacity="0.10" preserveAspectRatio="xMidYMid meet" />`;
+    const b = pData.image_bounds || { x: 25, y: 25, width: width - 50, height: height - 50 };
+    guideSvg = `<image href="${refImg}" x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height}" opacity="0.14" preserveAspectRatio="none" />`;
+  }
+
+  let polylineSvg = "";
+  if (showLines && dots.length > 1) {
+    const ptsStr = dots.map(d => `${d.x},${d.y}`).join(" ") + ` ${dots[0].x},${dots[0].y}`;
+    polylineSvg = `<polyline points="${ptsStr}" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-dasharray="4,4" opacity="0.65" />`;
   }
 
   // Generate SVG circles and numbered labels
@@ -3549,6 +3559,7 @@ function renderDotToDotSvgHtml(pData, width = 440, height = 440, page = null) {
     <div class="dot-to-dot-canvas-wrapper" style="width:100%; height:100%; position:relative;">
       <svg viewBox="0 0 ${width} ${height}" class="dot-to-dot-svg" style="width:100%; height:100%; display:block; overflow:visible;">
         ${guideSvg}
+        ${polylineSvg}
         ${dotsSvg}
       </svg>
     </div>
@@ -3579,6 +3590,17 @@ async function toggleDotToDotGuide(isChecked) {
   markProjectDirty();
 }
 
+async function toggleDotToDotLines(isChecked) {
+  const page = currentProject.pages ? currentProject.pages[currentPageIndex] : null;
+  if (!page) return;
+
+  if (page.dot_to_dot) {
+    page.dot_to_dot.show_lines = isChecked;
+  }
+  loadPageIntoCanvas(currentPageIndex);
+  markProjectDirty();
+}
+
 async function resampleCurrentDotToDot() {
   const page = currentProject.pages ? currentProject.pages[currentPageIndex] : null;
   if (!page) return;
@@ -3587,6 +3609,8 @@ async function resampleCurrentDotToDot() {
   const count = countInput ? parseInt(countInput.value) : 35;
   const guideBox = document.getElementById("prop-dot-faint-guide");
   const isGuide = guideBox ? guideBox.checked : true;
+  const linesBox = document.getElementById("prop-dot-show-lines");
+  const isLines = linesBox ? linesBox.checked : false;
 
   const pData = page.dot_to_dot;
   const refImg = page.elements?.find(e => (e.type === "ref_image" || e.type === "main_image") && e.image_src)?.image_src || pData?.image_src;
@@ -3606,6 +3630,7 @@ async function resampleCurrentDotToDot() {
     const data = await resp.json();
     if (data.puzzle) {
       page.dot_to_dot = data.puzzle;
+      page.dot_to_dot.show_lines = isLines;
       if (refImg) page.dot_to_dot.image_src = refImg;
       loadPageIntoCanvas(currentPageIndex);
       markProjectDirty();
