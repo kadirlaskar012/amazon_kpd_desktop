@@ -1,5 +1,5 @@
 /**
- * KDP Book Production Studio - Project Scaffolding, Directory Persistence & Isolated Media Library
+ * KDP Book Production Studio - Project Scaffolding, Auto-Save Protection & Keyboard Shortcuts
  */
 
 let defaultRootLocation = "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects";
@@ -72,31 +72,308 @@ let currentProject = {
   ]
 };
 
-let recentProjectsList = [
-  {
-    name: "My Jungle Coloring Book",
-    path: "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects\\My_Jungle_Coloring_Book",
-    page_count: 4,
-    media_count: 0
-  }
-];
-
+let recentProjectsList = [];
 let currentPageIndex = 0;
 let activeElementId = null;
 let currentZoom = 1.0;
 let showGuides = true;
 let snapToGuides = true;
 
+// Auto-Save System State
+let isDirty = false;
+let autoSaveTimer = null;
+let renameTargetType = "page"; // "page" or "element" or "project"
+
 // UI Initialization
 document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
+  setupGlobalKeyboardShortcuts();
   fetchDefaultLocation();
+  restoreAutoSavedProject();
   fetchRecentProjects();
   syncActiveProjectUI();
   setupCanvasInteractions();
+
+  // Background Auto-Save Cron (Every 10 seconds)
+  setInterval(() => {
+    if (isDirty) {
+      saveProject(false);
+    }
+  }, 10000);
 });
 
-// Fetch default save location from Python server
+// ==========================================
+// Auto-Save & Crash-Recovery System
+// ==========================================
+function markProjectDirty() {
+  isDirty = true;
+  updateAutoSaveIndicator(true);
+
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  // Debounced auto-save after 1.5 seconds of inactivity
+  autoSaveTimer = setTimeout(() => {
+    saveProject(false);
+  }, 1500);
+}
+
+function updateAutoSaveIndicator(saving) {
+  const ind = document.getElementById("autosave-indicator");
+  const txt = document.getElementById("autosave-text");
+  if (!ind || !txt) return;
+
+  if (saving) {
+    ind.classList.add("saving");
+    txt.innerText = "Saving...";
+  } else {
+    ind.classList.remove("saving");
+    txt.innerText = "Auto-saved";
+  }
+}
+
+function saveProject(isManual = false) {
+  currentProject.updated_at = new Date().toISOString();
+  
+  // 1. Save to LocalStorage for instant browser crash recovery
+  try {
+    localStorage.setItem("kdp_autosave_current_project", JSON.stringify(currentProject));
+    if (currentProject.folder_name) {
+      localStorage.setItem(`kdp_project_${currentProject.folder_name}`, JSON.stringify(currentProject));
+    }
+  } catch (e) {
+    console.warn("LocalStorage save error:", e);
+  }
+
+  // 2. Persist to Physical Disk in project folder (project.json)
+  fetch("/api/projects/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(currentProject)
+  })
+  .then(() => {
+    isDirty = false;
+    updateAutoSaveIndicator(false);
+    if (isManual) {
+      showToast(`💾 Saved "${currentProject.name}" to disk!`, "success");
+    }
+  })
+  .catch(() => {
+    isDirty = false;
+    updateAutoSaveIndicator(false);
+    if (isManual) {
+      showToast(`💾 Saved "${currentProject.name}" locally!`, "success");
+    }
+  });
+}
+
+function restoreAutoSavedProject() {
+  try {
+    const saved = localStorage.getItem("kdp_autosave_current_project");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.name && parsed.pages && parsed.pages.length > 0) {
+        currentProject = parsed;
+        console.log("Restored project from auto-save state:", currentProject.name);
+      }
+    }
+  } catch (e) {
+    console.warn("Could not restore auto-save:", e);
+  }
+}
+
+// ==========================================
+// Keyboard Shortcuts Engine (F2, Del, Arrows, Ctrl+S, Ctrl+D, Enter, etc.)
+// ==========================================
+function setupGlobalKeyboardShortcuts() {
+  window.addEventListener("keydown", (e) => {
+    const activeTagName = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+    const isInputActive = activeTagName === "input" || activeTagName === "textarea" || activeTagName === "select";
+
+    // 1. Ctrl + S / Cmd + S -> Manual Save
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      saveProject(true);
+      return;
+    }
+
+    // 2. Ctrl + D -> Duplicate Element or Page
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {
+      e.preventDefault();
+      if (activeElementId) {
+        duplicateActiveElement();
+      } else {
+        duplicateCurrentPage();
+      }
+      return;
+    }
+
+    // 3. F2 -> Rename Title Element or Page
+    if (e.key === "F2") {
+      e.preventDefault();
+      const activeElem = getActiveElement();
+      if (activeElem && activeElem.type === "title") {
+        openRenameModal("element");
+      } else {
+        openRenameModal("page");
+      }
+      return;
+    }
+
+    // 4. Escape -> Close Modals or Deselect Element
+    if (e.key === "Escape") {
+      const openModal = document.querySelector(".modal-overlay.active");
+      if (openModal) {
+        openModal.classList.remove("active");
+      } else if (activeElementId) {
+        setActiveElement(null);
+      }
+      return;
+    }
+
+    // If typing in a text field, do not trigger canvas hotkeys
+    if (isInputActive) {
+      return;
+    }
+
+    // 5. Delete / Backspace -> Delete Selected Element
+    if (e.key === "Delete" || e.key === "Backspace") {
+      if (activeElementId) {
+        e.preventDefault();
+        deleteActiveElement();
+        return;
+      }
+    }
+
+    // 6. Arrow Keys -> Nudge Selected Element (1px or 10px with Shift)
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+      const elem = getActiveElement();
+      if (elem) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1; // 10px fast nudge, 1px fine nudge
+
+        if (e.key === "ArrowUp") elem.y = Math.max(0, elem.y - step);
+        if (e.key === "ArrowDown") elem.y = Math.min(660 - elem.h, elem.y + step);
+        if (e.key === "ArrowLeft") elem.x = Math.max(0, elem.x - step);
+        if (e.key === "ArrowRight") elem.x = Math.min(510 - elem.w, elem.x + step);
+
+        applyElementStyles(elem);
+        updatePropertiesInspector();
+        markProjectDirty();
+        return;
+      }
+    }
+
+    // 7. [ and ] or PageUp/PageDown -> Previous / Next Page
+    if (e.key === "[" || e.key === "PageUp") {
+      e.preventDefault();
+      if (currentPageIndex > 0) {
+        selectPage(currentPageIndex - 1);
+        showToast(`Page ${currentPageIndex + 1}`, "info");
+      }
+      return;
+    }
+    if (e.key === "]" || e.key === "PageDown") {
+      e.preventDefault();
+      if (currentPageIndex < currentProject.pages.length - 1) {
+        selectPage(currentPageIndex + 1);
+        showToast(`Page ${currentPageIndex + 1}`, "info");
+      }
+      return;
+    }
+
+    // 8. Hotkeys: G (Guides), S (Snap), T (Add Text), B (Add Border)
+    if (e.key.toLowerCase() === "g") {
+      toggleGuides();
+    } else if (e.key.toLowerCase() === "s" && !e.ctrlKey) {
+      toggleSnap();
+    } else if (e.key.toLowerCase() === "t") {
+      addNewTextElement();
+    } else if (e.key.toLowerCase() === "b") {
+      addNewBorderElement();
+    }
+  });
+}
+
+// ==========================================
+// Rename Modal Logic (F2 Shortcut)
+// ==========================================
+function openRenameModal(type = "page") {
+  renameTargetType = type;
+  const modal = document.getElementById("rename-modal");
+  const title = document.getElementById("rename-modal-title");
+  const label = document.getElementById("rename-modal-label");
+  const input = document.getElementById("rename-modal-input");
+
+  if (!modal || !input) return;
+
+  if (type === "page") {
+    const page = currentProject.pages[currentPageIndex];
+    title.innerText = `✏️ Rename Page ${page.page_number}`;
+    label.innerText = "Enter new page title:";
+    input.value = page.title || `Page ${page.page_number}`;
+  } else if (type === "element") {
+    const elem = getActiveElement();
+    title.innerText = `✏️ Rename Text Element`;
+    label.innerText = "Enter text content:";
+    input.value = elem ? (elem.text || "") : "";
+  } else if (type === "project") {
+    title.innerText = `✏️ Rename Book Project`;
+    label.innerText = "Enter project name:";
+    input.value = currentProject.name;
+  }
+
+  modal.classList.add("active");
+  setTimeout(() => {
+    input.focus();
+    input.select();
+  }, 50);
+}
+
+function submitRenameModal() {
+  const input = document.getElementById("rename-modal-input");
+  const val = input ? input.value.trim() : "";
+  if (!val) {
+    closeModal("rename-modal");
+    return;
+  }
+
+  if (renameTargetType === "page") {
+    const page = currentProject.pages[currentPageIndex];
+    if (page) {
+      page.title = val;
+      // Also update any title element on the page
+      const titleElem = page.elements.find(e => e.type === "title");
+      if (titleElem) titleElem.text = val.toUpperCase();
+      renderTimeline();
+      loadPageIntoCanvas(currentPageIndex);
+      showToast(`✏️ Renamed page to "${val}"!`, "success");
+    }
+  } else if (renameTargetType === "element") {
+    const elem = getActiveElement();
+    if (elem) {
+      elem.text = val;
+      const node = document.getElementById(elem.id);
+      if (node) node.innerText = val;
+      updatePropertiesInspector();
+      showToast(`✏️ Updated text to "${val}"!`, "success");
+    }
+  } else if (renameTargetType === "project") {
+    currentProject.name = val;
+    syncActiveProjectUI();
+    showToast(`✏️ Renamed project to "${val}"!`, "success");
+  }
+
+  markProjectDirty();
+  closeModal("rename-modal");
+}
+
+function openShortcutsModal() {
+  const modal = document.getElementById("shortcuts-modal");
+  if (modal) modal.classList.add("active");
+}
+
+// ==========================================
+// Project File API & Default Location
+// ==========================================
 function fetchDefaultLocation() {
   fetch("/api/default_location")
     .then(r => r.json())
@@ -111,7 +388,6 @@ function fetchDefaultLocation() {
     .catch(() => {});
 }
 
-// Fetch list of projects in the directory
 function fetchRecentProjects() {
   fetch("/api/projects")
     .then(r => r.json())
@@ -329,6 +605,7 @@ function finishProjectSetup(proj) {
   fetchRecentProjects();
   switchTab("canvas");
 
+  markProjectDirty();
   showToast(`✨ Created Project "${proj.name}" in ${proj.folder_name}!`, "success");
 }
 
@@ -338,11 +615,12 @@ function openProjectByPath(path) {
     currentProject.name = found.name;
     currentProject.project_dir = found.path;
     currentProject.folder_name = found.path.split("\\").pop();
-    currentProject.media = []; // isolated
+    currentProject.media = [];
   }
   closeModal("open-folder-modal");
   syncActiveProjectUI();
   switchTab("canvas");
+  markProjectDirty();
   showToast(`📂 Opened Project "${currentProject.name}"!`, "info");
 }
 
@@ -399,6 +677,7 @@ function handleMediaLibraryUpload(event) {
         renderMediaLibrary();
         switchDrawerTab("media");
         syncActiveProjectUI();
+        markProjectDirty();
         showToast(`📁 Uploaded ${files.length} image(s) into "${currentProject.folder_name}/assets"!`, "success");
 
         // If an image slot was selected on canvas, auto-populate
@@ -541,6 +820,7 @@ function applyMediaToSlot(mediaId, slotType) {
     showToast(`⚡ Filled Reference, Drawing, and Title with "${item.name}"!`, "success");
   }
 
+  markProjectDirty();
   loadPageIntoCanvas(currentPageIndex);
   renderTimeline();
 }
@@ -621,6 +901,7 @@ function applyPageLayout(layoutKey) {
   updateLayoutCardsActiveState(layoutKey);
   loadPageIntoCanvas(currentPageIndex);
   renderTimeline();
+  markProjectDirty();
   showToast(`Applied "${getLayoutName(layoutKey)}" layout!`, "success");
 }
 
@@ -790,6 +1071,7 @@ function setupCanvasInteractions() {
       elem.y = Math.max(0, Math.min(660 - elem.h, elemStart.y + dy));
       applyElementStyles(elem);
       updatePropertiesInspector();
+      markProjectDirty();
     } else if (isResizing) {
       if (activeHandle === "br") {
         elem.w = Math.max(30, elemStart.w + dx);
@@ -810,6 +1092,7 @@ function setupCanvasInteractions() {
       }
       applyElementStyles(elem);
       updatePropertiesInspector();
+      markProjectDirty();
     }
   });
 
@@ -905,6 +1188,7 @@ function onPropChange() {
   }
 
   applyElementStyles(elem);
+  markProjectDirty();
 }
 
 // Alignment Functions
@@ -929,6 +1213,7 @@ function alignActive(mode) {
 
   applyElementStyles(elem);
   updatePropertiesInspector();
+  markProjectDirty();
   showToast(`Aligned element: ${mode.replace('_', ' ')}`, "info");
 }
 
@@ -953,7 +1238,8 @@ function addNewTextElement() {
   page.elements.push(newElem);
   loadPageIntoCanvas(currentPageIndex);
   setActiveElement(newId);
-  showToast("Added vector text element", "info");
+  markProjectDirty();
+  showToast("Added vector text element (T)", "info");
 }
 
 function addNewBorderElement() {
@@ -973,7 +1259,8 @@ function addNewBorderElement() {
   page.elements.push(newElem);
   loadPageIntoCanvas(currentPageIndex);
   setActiveElement(newId);
-  showToast("Added decorative border frame", "info");
+  markProjectDirty();
+  showToast("Added decorative border frame (B)", "info");
 }
 
 function duplicateActiveElement() {
@@ -985,7 +1272,8 @@ function duplicateActiveElement() {
   page.elements.push(clone);
   loadPageIntoCanvas(currentPageIndex);
   setActiveElement(clone.id);
-  showToast("Duplicated element", "info");
+  markProjectDirty();
+  showToast("Duplicated element (Ctrl+D)", "info");
 }
 
 function deleteActiveElement() {
@@ -995,7 +1283,8 @@ function deleteActiveElement() {
   page.elements = page.elements.filter(e => e.id !== activeElementId);
   setActiveElement(null);
   loadPageIntoCanvas(currentPageIndex);
-  showToast("Deleted element", "info");
+  markProjectDirty();
+  showToast("Deleted element (Del)", "info");
 }
 
 // Page Actions
@@ -1014,6 +1303,7 @@ function addNewPage() {
   });
   renderTimeline();
   selectPage(currentProject.pages.length - 1);
+  markProjectDirty();
   showToast(`Added Page ${num}`, "success");
 }
 
@@ -1028,6 +1318,7 @@ function duplicateCurrentPage() {
   currentProject.pages.splice(currentPageIndex + 1, 0, clone);
   renderTimeline();
   selectPage(currentPageIndex + 1);
+  markProjectDirty();
   showToast(`Duplicated page to Page ${currentPageIndex + 1}`, "success");
 }
 
@@ -1041,6 +1332,7 @@ function deleteCurrentPage() {
   const target = Math.max(0, currentPageIndex - 1);
   renderTimeline();
   selectPage(target);
+  markProjectDirty();
   showToast(`Deleted Page ${deletedNum}`, "info");
 }
 
@@ -1130,6 +1422,7 @@ function handleBatchImagesUpload(event) {
         renderMediaLibrary();
         renderTimeline();
         syncActiveProjectUI();
+        markProjectDirty();
         selectPage(currentProject.pages.length - files.length);
         switchTab("canvas");
         showToast(`🎉 Batch Generated ${files.length} KDP Coloring Pages!`, "success");
@@ -1166,22 +1459,9 @@ function fitCanvasView() {
 }
 
 function saveSettings() {
+  markProjectDirty();
   showToast("Settings applied & saved successfully!", "success");
   switchTab("canvas");
-}
-
-function saveProject() {
-  fetch("/api/projects/save", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(currentProject)
-  })
-  .then(() => {
-    showToast(`💾 Project "${currentProject.name}" saved to disk!`, "success");
-  })
-  .catch(() => {
-    showToast(`💾 Project "${currentProject.name}" saved locally!`, "success");
-  });
 }
 
 // Toast Notifications

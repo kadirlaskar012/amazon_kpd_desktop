@@ -44,11 +44,19 @@
       </nav>
 
       <div class="top-actions">
+        <!-- Live Auto-Save Indicator -->
+        <div class="autosave-status-pill" id="autosave-indicator" title="Automatic disk persistence is active">
+          <span class="pulse-dot"></span>
+          <span id="autosave-text">Auto-saved</span>
+        </div>
+
         <div class="project-pill" id="current-project-pill" onclick="switchTab('dashboard')" title="Click to Switch Project on Dashboard">
           <span class="status-dot"></span>
-          <span id="nav-project-name">No Project Loaded</span>
+          <span id="nav-project-name">My Jungle Coloring Book</span>
         </div>
-        <button class="btn btn-primary" id="btn-save-project" onclick="saveProject()">💾 Save Project</button>
+
+        <button class="btn btn-outline btn-sm" onclick="openShortcutsModal()" title="Keyboard Shortcuts Reference">⌨️ Keys</button>
+        <button class="btn btn-primary" id="btn-save-project" onclick="saveProject(true)">💾 Save (Ctrl+S)</button>
       </div>
     </header>
 
@@ -61,7 +69,7 @@
           <div class="hero-left">
             <div class="hero-tag">⚡ Automated Children's Book Creator</div>
             <h1>KDP Book Production Studio</h1>
-            <p>Create dedicated local book projects with automated directory scaffolding, isolated media storage, physical point canvas editing, and KDP print compliance.</p>
+            <p>Create dedicated local book projects with automated directory scaffolding, isolated media storage, physical point canvas editing, and crash-resilient auto-save protection.</p>
             <div class="hero-buttons">
               <button class="btn btn-lg btn-primary" id="dash-new-btn" onclick="openNewProjectModal()">✨ Create New Project</button>
               <button class="btn btn-lg btn-outline" id="dash-open-btn" onclick="openExistingFolderModal()">📂 Open Existing Project</button>
@@ -100,7 +108,7 @@
                 </div>
               </div>
               <div class="proj-banner-actions">
-                <button class="btn btn-primary full-width" onclick="switchTab('canvas')">Open Canvas Editor ➔</button>
+                <button class="btn btn-primary full-width" onclick="switchTab('canvas')">Open Canvas Editor (Tab 3) ➔</button>
               </div>
             </div>
           </div>
@@ -143,16 +151,16 @@
               <div class="form-row-dual">
                 <div>
                   <label>Width (in)</label>
-                  <input type="number" id="setting-width" class="form-control" value="8.5" step="0.125">
+                  <input type="number" id="setting-width" class="form-control" value="8.5" step="0.125" oninput="markProjectDirty()">
                 </div>
                 <div>
                   <label>Height (in)</label>
-                  <input type="number" id="setting-height" class="form-control" value="11.0" step="0.125">
+                  <input type="number" id="setting-height" class="form-control" value="11.0" step="0.125" oninput="markProjectDirty()">
                 </div>
               </div>
               <div class="form-row">
                 <label class="checkbox-label">
-                  <input type="checkbox" id="setting-bleed" checked>
+                  <input type="checkbox" id="setting-bleed" checked onchange="markProjectDirty()">
                   <span><strong>Enable Full Page Bleed (+0.125 in outer trim)</strong></span>
                 </label>
               </div>
@@ -163,21 +171,21 @@
               <div class="form-row-dual">
                 <div>
                   <label>Top Margin (in)</label>
-                  <input type="number" id="setting-top-m" class="form-control" value="0.375" step="0.05">
+                  <input type="number" id="setting-top-m" class="form-control" value="0.375" step="0.05" oninput="markProjectDirty()">
                 </div>
                 <div>
                   <label>Bottom Margin (in)</label>
-                  <input type="number" id="setting-bot-m" class="form-control" value="0.375" step="0.05">
+                  <input type="number" id="setting-bot-m" class="form-control" value="0.375" step="0.05" oninput="markProjectDirty()">
                 </div>
               </div>
               <div class="form-row-dual">
                 <div>
                   <label>Inside Gutter (Binding)</label>
-                  <input type="number" id="setting-inside-m" class="form-control" value="0.500" step="0.05">
+                  <input type="number" id="setting-inside-m" class="form-control" value="0.500" step="0.05" oninput="markProjectDirty()">
                 </div>
                 <div>
                   <label>Outside Margin (in)</label>
-                  <input type="number" id="setting-outside-m" class="form-control" value="0.375" step="0.05">
+                  <input type="number" id="setting-outside-m" class="form-control" value="0.375" step="0.05" oninput="markProjectDirty()">
                 </div>
               </div>
               <div class="info-banner">
@@ -313,15 +321,15 @@
 
           <!-- Left Mini Toolbar (Shortcuts) -->
           <div class="canvas-toolbar">
-            <button class="tool-btn active" title="Select Tool" id="tool-select">↖</button>
-            <button class="tool-btn" title="Add Text" onclick="addNewTextElement()">🔤</button>
-            <button class="tool-btn" title="Add Border Frame" onclick="addNewBorderElement()">⬜</button>
+            <button class="tool-btn active" title="Select Tool (V)" id="tool-select">↖</button>
+            <button class="tool-btn" title="Add Text (T)" onclick="addNewTextElement()">🔤</button>
+            <button class="tool-btn" title="Add Border Frame (B)" onclick="addNewBorderElement()">⬜</button>
             <div class="tool-sep"></div>
-            <button class="tool-btn" title="Fit to View" onclick="fitCanvasView()">⛶</button>
-            <button class="tool-btn" title="Zoom In" onclick="changeZoom(0.1)">+</button>
-            <button class="tool-btn" title="Zoom Out" onclick="changeZoom(-0.1)">−</button>
-            <button class="tool-btn active" id="toggle-guides-btn" title="Toggle Guides" onclick="toggleGuides()">👁</button>
-            <button class="tool-btn active" id="toggle-snap-btn" title="Toggle Snapping" onclick="toggleSnap()">🧲</button>
+            <button class="tool-btn" title="Fit to View (Ctrl+0)" onclick="fitCanvasView()">⛶</button>
+            <button class="tool-btn" title="Zoom In (Ctrl++)" onclick="changeZoom(0.1)">+</button>
+            <button class="tool-btn" title="Zoom Out (Ctrl+-)" onclick="changeZoom(-0.1)">−</button>
+            <button class="tool-btn active" id="toggle-guides-btn" title="Toggle Guides (G)" onclick="toggleGuides()">👁</button>
+            <button class="tool-btn active" id="toggle-snap-btn" title="Toggle Snapping (S)" onclick="toggleSnap()">🧲</button>
           </div>
 
           <!-- Canvas Viewport -->
@@ -415,7 +423,7 @@
 
               <!-- Text Specific Properties -->
               <div class="prop-group" id="prop-text-group" style="display: none;">
-                <div class="group-title">Typography & Text</div>
+                <div class="group-title">Typography & Text (F2 to Rename)</div>
                 <div class="prop-field">
                   <label>Text Content</label>
                   <input type="text" id="prop-text-content" oninput="onPropChange()">
@@ -454,8 +462,8 @@
 
               <div class="prop-group">
                 <div class="group-title">Element Actions</div>
-                <button class="btn btn-sm btn-outline full-width" onclick="duplicateActiveElement()">⎘ Duplicate Element</button>
-                <button class="btn btn-sm btn-danger full-width mt-2" onclick="deleteActiveElement()">🗑 Delete Element</button>
+                <button class="btn btn-sm btn-outline full-width" onclick="duplicateActiveElement()" title="Ctrl+D">⎘ Duplicate (Ctrl+D)</button>
+                <button class="btn btn-sm btn-danger full-width mt-2" onclick="deleteActiveElement()" title="Delete / Backspace">🗑 Delete (Del)</button>
               </div>
             </div>
           </aside>
@@ -464,11 +472,12 @@
         <!-- Bottom Page Timeline Ribbon -->
         <div class="page-timeline-ribbon">
           <div class="timeline-header">
-            <span class="timeline-title">📖 Pages Timeline</span>
+            <span class="timeline-title">📖 Pages Timeline (Press F2 to Rename Page)</span>
             <div class="timeline-actions">
               <button class="btn btn-sm btn-primary" onclick="addNewPage()">➕ Add Page</button>
               <button class="btn btn-sm btn-secondary" onclick="triggerBatchUpload()">⚡ Batch Import</button>
-              <button class="btn btn-sm" onclick="duplicateCurrentPage()">⎘ Duplicate</button>
+              <button class="btn btn-sm" onclick="openRenameModal('page')" title="Rename Page (F2)">✏️ Rename (F2)</button>
+              <button class="btn btn-sm" onclick="duplicateCurrentPage()" title="Duplicate Page">⎘ Duplicate</button>
               <button class="btn btn-sm btn-danger" onclick="deleteCurrentPage()">🗑 Delete</button>
             </div>
           </div>
@@ -497,7 +506,7 @@
             </div>
 
             <div class="check-item pass">
-              <div class="check-icon">✓</div>
+              <div class="check-info">✓</div>
               <div class="check-info">
                 <h4>Full Bleed Envelope Valid</h4>
                 <p>Outer bleed boundary is set to +0.125 in (9.0 pt) satisfying Amazon KDP color/interior guidelines.</p>
@@ -563,7 +572,7 @@
 
     </main>
 
-    <!-- MODAL 1: CREATE NEW BOOK WIZARD WITH CUSTOM FOLDER LOCATION -->
+    <!-- MODAL 1: CREATE NEW BOOK WIZARD -->
     <div class="modal-overlay" id="new-project-modal">
       <div class="modal-card" style="width: 580px;">
         <div class="modal-header">
@@ -650,6 +659,54 @@
         </div>
         <div class="modal-footer">
           <button class="btn btn-outline" onclick="closeModal('open-folder-modal')">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 3: RENAME DIALOG (F2 SHORTCUT) -->
+    <div class="modal-overlay" id="rename-modal">
+      <div class="modal-card" style="width: 440px;">
+        <div class="modal-header">
+          <h3 id="rename-modal-title">✏️ Rename Title</h3>
+          <button class="close-btn" onclick="closeModal('rename-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label id="rename-modal-label">Enter new name:</label>
+            <input type="text" id="rename-modal-input" class="form-control" onkeydown="if(event.key==='Enter') submitRenameModal()">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('rename-modal')">Cancel (Esc)</button>
+          <button class="btn btn-primary" onclick="submitRenameModal()">Save (Enter)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 4: KEYBOARD SHORTCUTS CHEATSHEET -->
+    <div class="modal-overlay" id="shortcuts-modal">
+      <div class="modal-card" style="width: 520px;">
+        <div class="modal-header">
+          <h3>⌨️ Keyboard Shortcuts Reference</h3>
+          <button class="close-btn" onclick="closeModal('shortcuts-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="shortcuts-grid">
+            <div class="sc-row"><kbd>Delete</kbd> / <kbd>Backspace</kbd> <span>Delete Selected Element</span></div>
+            <div class="sc-row"><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <span>Nudge Element (1 pt)</span></div>
+            <div class="sc-row"><kbd>Shift</kbd> + <kbd>Arrow</kbd> <span>Fast Nudge Element (10 pt)</span></div>
+            <div class="sc-row"><kbd>F2</kbd> <span>Rename Page / Title Element</span></div>
+            <div class="sc-row"><kbd>Ctrl</kbd> + <kbd>S</kbd> <span>Save Project to Disk</span></div>
+            <div class="sc-row"><kbd>Ctrl</kbd> + <kbd>D</kbd> <span>Duplicate Selected Element</span></div>
+            <div class="sc-row"><kbd>Enter</kbd> <span>Confirm Action / Dialog</span></div>
+            <div class="sc-row"><kbd>Escape</kbd> <span>Deselect Element / Close Modal</span></div>
+            <div class="sc-row"><kbd>[</kbd> / <kbd>]</kbd> <span>Previous Page / Next Page</span></div>
+            <div class="sc-row"><kbd>G</kbd> <span>Toggle Print Guides (Bleed/Safe)</span></div>
+            <div class="sc-row"><kbd>S</kbd> <span>Toggle Guide Snapping</span></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="closeModal('shortcuts-modal')">Got it!</button>
         </div>
       </div>
     </div>
