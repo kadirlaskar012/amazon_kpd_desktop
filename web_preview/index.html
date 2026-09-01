@@ -340,6 +340,26 @@
                 </select>
               </div>
 
+              <!-- Media Selection & Batch Operations Bar -->
+              <div class="media-toolbar-row" style="display: flex; justify-content: space-between; align-items: center; margin: 6px 0 10px 0; padding: 6px 8px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; margin-bottom: 0;">
+                    <input type="checkbox" id="media-select-all-cb" onchange="toggleSelectAllMedia(this.checked)" style="cursor: pointer; width: 13px; height: 13px;">
+                    <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">Select All</span>
+                  </label>
+                  <span class="badge" id="media-selected-count-badge" style="font-size: 9.5px; padding: 2px 6px; display: none; background: rgba(99, 102, 241, 0.2); color: var(--primary);">0 selected</span>
+                </div>
+
+                <div style="display: flex; gap: 4px;">
+                  <button class="btn btn-xs btn-danger" id="media-bulk-delete-btn" style="display: none; padding: 3px 8px; font-size: 10.5px;" onclick="deleteSelectedMedia()" title="Delete Selected Images">
+                    🗑 Delete (<span id="media-bulk-count">0</span>)
+                  </button>
+                  <button class="btn btn-xs btn-outline" style="padding: 3px 8px; font-size: 10.5px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="clearAllMedia()" title="Clear all uploaded media from this project">
+                    🧹 Clear All
+                  </button>
+                </div>
+              </div>
+
               <div class="media-helper-note">
                 💡 <strong>Click any box on canvas</strong> (Reference or Drawing) then click an uploaded image below to insert it!
               </div>

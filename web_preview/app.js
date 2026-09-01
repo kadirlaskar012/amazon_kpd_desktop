@@ -2380,6 +2380,140 @@ function calculateAutoTitleFontSize(text, baseSize = 40) {
   return Math.min(baseSize, 22);
 }
 
+// ==========================================
+// Media Selection, Deletion & Clear All Engine
+// ==========================================
+let selectedMediaIds = new Set();
+
+function toggleMediaSelection(mediaId, isChecked) {
+  if (isChecked) {
+    selectedMediaIds.add(mediaId);
+  } else {
+    selectedMediaIds.delete(mediaId);
+  }
+  updateMediaSelectionUI();
+}
+
+function toggleSelectAllMedia(isChecked) {
+  const projectMedia = currentProject.media || [];
+  if (isChecked) {
+    projectMedia.forEach(m => selectedMediaIds.add(m.id));
+  } else {
+    selectedMediaIds.clear();
+  }
+  renderMediaLibrary();
+}
+
+function updateMediaSelectionUI() {
+  const count = selectedMediaIds.size;
+  const badge = document.getElementById("media-selected-count-badge");
+  const bulkBtn = document.getElementById("media-bulk-delete-btn");
+  const bulkCount = document.getElementById("media-bulk-count");
+  const selectAllCb = document.getElementById("media-select-all-cb");
+  const totalMedia = (currentProject.media || []).length;
+
+  if (badge) {
+    badge.style.display = count > 0 ? "inline-block" : "none";
+    badge.innerText = `${count} selected`;
+  }
+  if (bulkBtn) {
+    bulkBtn.style.display = count > 0 ? "inline-flex" : "none";
+  }
+  if (bulkCount) {
+    bulkCount.innerText = count;
+  }
+  if (selectAllCb) {
+    selectAllCb.checked = totalMedia > 0 && count === totalMedia;
+    selectAllCb.indeterminate = count > 0 && count < totalMedia;
+  }
+
+  // Update card selected classes
+  document.querySelectorAll(".media-card").forEach(card => {
+    const cb = card.querySelector(".media-card-checkbox");
+    if (cb && selectedMediaIds.has(cb.dataset.id)) {
+      card.classList.add("selected");
+      cb.checked = true;
+    } else if (cb) {
+      card.classList.remove("selected");
+      cb.checked = false;
+    }
+  });
+}
+
+function deleteSingleMedia(mediaId) {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot delete: Project is locked!", "warning");
+    return;
+  }
+
+  const projectMedia = currentProject.media || [];
+  const item = projectMedia.find(m => m.id === mediaId);
+  if (!item) return;
+
+  if (!confirm(`Delete image "${item.name}" from the project media library?`)) {
+    return;
+  }
+
+  recordHistoryState(`Delete Media "${item.name}"`);
+  currentProject.media = projectMedia.filter(m => m.id !== mediaId);
+  selectedMediaIds.delete(mediaId);
+
+  renderMediaLibrary();
+  syncActiveProjectUI();
+  markProjectDirty();
+  showToast(`🗑 Deleted "${item.name}"!`, "info");
+}
+
+function deleteSelectedMedia() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot delete: Project is locked!", "warning");
+    return;
+  }
+
+  const count = selectedMediaIds.size;
+  if (count === 0) return;
+
+  if (!confirm(`Are you sure you want to delete ${count} selected image(s)?`)) {
+    return;
+  }
+
+  recordHistoryState(`Delete ${count} Media Files`);
+  const projectMedia = currentProject.media || [];
+  currentProject.media = projectMedia.filter(m => !selectedMediaIds.has(m.id));
+  selectedMediaIds.clear();
+
+  renderMediaLibrary();
+  syncActiveProjectUI();
+  markProjectDirty();
+  showToast(`🗑 Deleted ${count} image(s) from media library!`, "info");
+}
+
+function clearAllMedia() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot clear: Project is locked!", "warning");
+    return;
+  }
+
+  const projectMedia = currentProject.media || [];
+  if (projectMedia.length === 0) {
+    showToast("Media library is already empty.", "info");
+    return;
+  }
+
+  if (!confirm(`⚠️ Clear ALL ${projectMedia.length} image(s) from this project's media library?`)) {
+    return;
+  }
+
+  recordHistoryState("Clear All Media");
+  currentProject.media = [];
+  selectedMediaIds.clear();
+
+  renderMediaLibrary();
+  syncActiveProjectUI();
+  markProjectDirty();
+  showToast("🧹 All media cleared from project!", "info");
+}
+
 function renderMediaLibrary() {
   const container = document.getElementById("media-items-list");
   if (!container) return;
@@ -2399,6 +2533,7 @@ function renderMediaLibrary() {
         </p>
       </div>
     `;
+    updateMediaSelectionUI();
     return;
   }
 
@@ -2415,18 +2550,23 @@ function renderMediaLibrary() {
   }
 
   sortedMedia.forEach(item => {
+    const isSelected = selectedMediaIds.has(item.id);
     const card = document.createElement("div");
-    card.className = "media-card";
+    card.className = `media-card ${isSelected ? 'selected' : ''}`;
 
     card.innerHTML = `
-      <div class="media-card-top" onclick="handleMediaCardClick('${item.id}')" style="cursor: pointer;">
-        <div class="media-card-thumb">
+      <div class="media-card-top">
+        <input type="checkbox" class="media-card-checkbox" data-id="${item.id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleMediaSelection('${item.id}', this.checked)">
+        <div class="media-card-thumb" onclick="handleMediaCardClick('${item.id}')" style="cursor: pointer;">
           <img src="${item.dataUrl}">
         </div>
-        <div class="media-card-meta">
+        <div class="media-card-meta" onclick="handleMediaCardClick('${item.id}')" style="cursor: pointer;">
           <div class="media-name" title="${item.name}">${item.name}</div>
           <div class="media-tag">${item.sizeKb} KB • ${currentProject.folder_name}</div>
         </div>
+        <button class="media-card-delete-btn" onclick="event.stopPropagation(); deleteSingleMedia('${item.id}')" title="Delete this image">
+          🗑
+        </button>
       </div>
       <div class="media-action-buttons">
         <button class="btn-action-pill ref-btn" onclick="applyMediaToSlot('${item.id}', 'ref')">
@@ -2447,6 +2587,7 @@ function renderMediaLibrary() {
     container.appendChild(card);
   });
 
+  updateMediaSelectionUI();
   populateQuickMediaPicker();
 }
 

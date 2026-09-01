@@ -1062,6 +1062,7 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
   transition: all 0.15s ease;
 }
 
@@ -1070,15 +1071,29 @@ kbd {
   background-color: var(--bg-card-hover);
 }
 
+.media-card.selected {
+  border-color: var(--primary);
+  background-color: rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
 .media-card-top {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
+.media-card-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: #6366f1;
+  flex-shrink: 0;
+}
+
 .media-card-thumb {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   background-color: #ffffff;
   border-radius: 4px;
   display: flex;
@@ -1103,7 +1118,7 @@ kbd {
 
 .media-name {
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11.5px;
   color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
@@ -1111,9 +1126,28 @@ kbd {
 }
 
 .media-tag {
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--secondary);
   font-weight: 600;
+}
+
+.media-card-delete-btn {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.media-card-delete-btn:hover {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+  transform: scale(1.08);
 }
 
 .media-action-buttons {
