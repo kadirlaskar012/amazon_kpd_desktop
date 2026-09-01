@@ -22,12 +22,6 @@ class KDPPdfExporter:
     ) -> Path:
         """
         Generates a multi-page PDF document matching Amazon KDP specifications.
-        
-        Args:
-            project_data: Full project dictionary with settings and pages array.
-            output_path: Destination path for the .pdf file.
-            single_sided: If True, automatically inserts blank back pages (Verso) after coloring pages to prevent marker bleed-through.
-            blank_page_note: If True, adds a small subtle note on blank pages.
         """
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -52,7 +46,6 @@ class KDPPdfExporter:
 
         pages = project_data.get("pages", [])
         if not pages:
-            # Fallback single page
             c.setFillColor(colors.white)
             c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
             c.showPage()
@@ -69,12 +62,24 @@ class KDPPdfExporter:
                 c.drawCentredString(page_w / 2.0, 40 * scale_y, "[ Blank page for color bleed-through protection ]")
             c.showPage()
 
+        # Check if project already has explicit blank pages in currentProject.pages
+        has_explicit_blank_pages = any(p.get("page_type") == "blank_verso" for p in pages)
+
         for idx, page in enumerate(pages):
             page_type = page.get("page_type", "content")
             
             # 1. Fill page with pure white
             c.setFillColor(colors.white)
             c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+
+            # If it's a dedicated blank page
+            if page_type == "blank_verso":
+                if blank_page_note:
+                    c.setFont("Helvetica-Oblique", 8 * scale_y)
+                    c.setFillColor(colors.HexColor("#cbd5e1"))
+                    c.drawCentredString(page_w / 2.0, 40 * scale_y, "[ Blank page for color bleed-through protection ]")
+                c.showPage()
+                continue
 
             # 2. Draw Elements on this page
             elements = page.get("elements", [])
@@ -88,14 +93,12 @@ class KDPPdfExporter:
                 x = (elem_x * scale_x) + bleed_pt
                 w = elem_w * scale_x
                 h = elem_h * scale_y
-                # Canvas (0,0) is top-left; PDF (0,0) is bottom-left
                 y = page_h - (elem_y * scale_y) - h - bleed_pt
 
                 if elem_type in ("ref_image", "main_image"):
                     img_src = elem.get("image_src")
                     if img_src and isinstance(img_src, str):
                         try:
-                            # Handle base64 DataURL
                             if "," in img_src:
                                 header, encoded = img_src.split(",", 1)
                                 img_bytes = base64.b64decode(encoded)
@@ -106,7 +109,6 @@ class KDPPdfExporter:
                                 img = None
 
                             if img:
-                                # Convert RGBA to RGB for standard PDF printing
                                 if img.mode in ("RGBA", "LA", "P"):
                                     bg = Image.new("RGB", img.size, (255, 255, 255))
                                     if img.mode == "P":
@@ -123,32 +125,52 @@ class KDPPdfExporter:
                         except Exception as e:
                             print(f"Error rendering image to PDF: {e}")
                     else:
-                        # Draw clean placeholder outline so box isn't missing
-                        c.setStrokeColor(colors.HexColor("#94a3b8"))
-                        c.setLineWidth(0.8)
-                        c.setDash(3, 3)
-                        c.roundRect(x, y, w, h, radius=4, fill=0, stroke=1)
+                        # Draw subtle reference/drawing guide box if empty
+                        c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                        c.setLineWidth(1.0)
+                        c.setDash(4, 3)
+                        c.roundRect(x, y, w, h, radius=6, fill=0, stroke=1)
                         c.setDash()
-                        txt_label = elem.get("text") or ("Reference Box" if elem_type == "ref_image" else "Drawing Box")
+                        txt_label = elem.get("text") or ("Ref Image" if elem_type == "ref_image" else "Coloring Drawing")
                         if txt_label and not "click to" in txt_label.lower():
-                            c.setFont("Helvetica", 9 * scale_y)
+                            c.setFont("Helvetica", 10 * scale_y)
                             c.setFillColor(colors.HexColor("#94a3b8"))
                             c.drawCentredString(x + (w / 2.0), y + (h / 2.0) - 4, txt_label)
 
                 elif elem_type == "title":
                     text = elem.get("text", "")
                     if text:
-                        font_size = float(elem.get("font_size", 24)) * scale_y
+                        font_size = float(elem.get("font_size", 28)) * scale_y
                         alignment = elem.get("alignment", "center")
-                        c.setFont("Helvetica-Bold", font_size)
-                        c.setFillColor(colors.HexColor(elem.get("color", "#111827")))
+                        is_outline = elem.get("is_outline", True)
+                        
                         text_y = y + (h / 2.0) - (font_size / 3.0)
-                        if alignment == "left":
-                            c.drawString(x, text_y, text)
-                        elif alignment == "right":
-                            c.drawRightString(x + w, text_y, text)
+
+                        if is_outline:
+                            # Outlined hollow text suitable for kids coloring
+                            c.setFont("Helvetica-Bold", font_size)
+                            c.setStrokeColor(colors.HexColor("#0f172a"))
+                            c.setFillColor(colors.white)
+                            c.setLineWidth(1.8 * scale_y)
+                            c._code.append("2 Tr\n")  # Fill and stroke outline
+
+                            if alignment == "left":
+                                c.drawString(x, text_y, text)
+                            elif alignment == "right":
+                                c.drawRightString(x + w, text_y, text)
+                            else:
+                                c.drawCentredString(x + (w / 2.0), text_y, text)
+
+                            c._code.append("0 Tr\n")  # Reset to normal fill
                         else:
-                            c.drawCentredString(x + (w / 2.0), text_y, text)
+                            c.setFont("Helvetica-Bold", font_size)
+                            c.setFillColor(colors.HexColor(elem.get("color", "#111827")))
+                            if alignment == "left":
+                                c.drawString(x, text_y, text)
+                            elif alignment == "right":
+                                c.drawRightString(x + w, text_y, text)
+                            else:
+                                c.drawCentredString(x + (w / 2.0), text_y, text)
 
                 elif elem_type == "border":
                     c.setStrokeColor(colors.HexColor("#111827"))
@@ -158,26 +180,19 @@ class KDPPdfExporter:
                 elif elem_type == "tracing":
                     c.setStrokeColor(colors.HexColor("#9ca3af"))
                     c.setLineWidth(0.8)
-                    # Top guide line
                     c.line(x, y + h, x + w, y + h)
-                    # Mid dashed guide line
                     c.setDash(4, 3)
                     c.line(x, y + (h / 2.0), x + w, y + (h / 2.0))
-                    # Bottom guide line
                     c.setDash()
                     c.line(x, y, x + w, y)
 
             c.showPage()
 
-            # 3. Amazon KDP Single-Sided Blank Page Insertion Rule:
-            # For coloring/activity books, insert a blank back page after each content page
-            # (Front matter pages like Disclaimer/Copyright and Contents can also have blank backs if desired)
-            if single_sided:
+            # If project didn't already have explicit blank pages in array, auto insert on export
+            if single_sided and not has_explicit_blank_pages:
                 if page_type == "content":
                     render_blank_page(f"Back of Page {page.get('page_number', idx + 1)}")
                 elif page_type in ("front_matter_disclaimer", "front_matter_contents"):
-                    # Front matter: Amazon KDP traditionally has Page 1 (Title/Disclaimer) on Right, Page 2 Blank on Left
-                    # Only insert blank back if the next page isn't already another front matter item
                     is_last_front_matter = (idx + 1 < len(pages) and pages[idx + 1].get("page_type") == "content")
                     if is_last_front_matter:
                         render_blank_page("Front Matter Verso Blank")

@@ -289,79 +289,40 @@
               <p class="drawer-section-desc">Click any layout to apply to the current active page:</p>
 
               <div class="layouts-grid" id="layouts-template-list">
-                <!-- Layout 1: Top Reference + Bottom Large Drawing -->
-                <div class="layout-card active" data-layout="top_ref" onclick="applyPageLayout('top_ref')">
-                  <div class="layout-mini-preview preview-top-ref">
-                    <div class="mini-box mini-ref">Ref</div>
-                    <div class="mini-box mini-main">Drawing Box</div>
-                    <div class="mini-box mini-txt">Title</div>
+                <!-- Layout 1: Primary Standard KDP Coloring Layout (Top-Left Ref + Big Outline Title + 75% Drawing) -->
+                <div class="layout-card active" data-layout="kdp_top_ref" onclick="applyPageLayout('kdp_top_ref')">
+                  <div class="layout-mini-preview" style="display: flex; flex-direction: column; gap: 4px; padding: 4px;">
+                    <div style="display: flex; gap: 4px; height: 32px;">
+                      <div class="mini-box mini-ref" style="width: 35%; height: 100%;">🐶 Ref</div>
+                      <div class="mini-box mini-txt" style="width: 65%; height: 100%; font-size: 8px; font-weight: 900;">DOG</div>
+                    </div>
+                    <div class="mini-box mini-main" style="flex: 1; height: 50px;">🎨 75% Big Drawing Area</div>
                   </div>
                   <div class="layout-info">
-                    <div class="layout-title">Top Ref + Big Drawing</div>
-                    <div class="layout-sub">Classic coloring workbook</div>
+                    <div class="layout-title">Standard KDP Coloring</div>
+                    <div class="layout-sub">Top-Left Ref • Big Title • 75% Art</div>
                   </div>
                 </div>
 
-                <!-- Layout 2: Full Page Drawing (No Reference) -->
+                <!-- Layout 2: Full Page Big Drawing -->
                 <div class="layout-card" data-layout="full_page" onclick="applyPageLayout('full_page')">
                   <div class="layout-mini-preview preview-full-page">
-                    <div class="mini-box mini-main full">Full Drawing Area</div>
-                    <div class="mini-box mini-txt">Bottom Title</div>
+                    <div class="mini-box mini-main full">Full Drawing Area (100%)</div>
                   </div>
                   <div class="layout-info">
                     <div class="layout-title">Full Page Drawing</div>
-                    <div class="layout-sub">Maximum coloring space</div>
+                    <div class="layout-sub">Maximum coloring canvas</div>
                   </div>
                 </div>
 
-                <!-- Layout 3: Side-by-Side (Left Ref + Right Drawing) -->
-                <div class="layout-card" data-layout="side_by_side" onclick="applyPageLayout('side_by_side')">
-                  <div class="layout-mini-preview preview-side-by-side">
-                    <div class="mini-box mini-ref left">Ref</div>
-                    <div class="mini-box mini-main right">Drawing</div>
+                <!-- Layout 3: Blank Back Page -->
+                <div class="layout-card" data-layout="blank_page" onclick="applyPageLayout('blank_page')">
+                  <div class="layout-mini-preview" style="display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 1px dashed #cbd5e1;">
+                    <div style="font-size: 8px; color: #94a3b8; text-align: center;">⚪ Blank Back (Bleed-Proof)</div>
                   </div>
                   <div class="layout-info">
-                    <div class="layout-title">Side-by-Side Split</div>
-                    <div class="layout-sub">Left color / Right outline</div>
-                  </div>
-                </div>
-
-                <!-- Layout 4: Top Title + Center Art -->
-                <div class="layout-card" data-layout="top_title" onclick="applyPageLayout('top_title')">
-                  <div class="layout-mini-preview preview-top-title">
-                    <div class="mini-box mini-txt top">HEADING TITLE</div>
-                    <div class="mini-box mini-main center">Center Drawing</div>
-                  </div>
-                  <div class="layout-info">
-                    <div class="layout-title">Top Title + Center Art</div>
-                    <div class="layout-sub">Standard KDP storybook</div>
-                  </div>
-                </div>
-
-                <!-- Layout 5: Color & Write / Trace Lines -->
-                <div class="layout-card" data-layout="color_and_trace" onclick="applyPageLayout('color_and_trace')">
-                  <div class="layout-mini-preview preview-trace">
-                    <div class="mini-box mini-ref small-top">Ref</div>
-                    <div class="mini-box mini-main mid">Coloring</div>
-                    <div class="mini-lines">───── Tracing Lines ─────</div>
-                  </div>
-                  <div class="layout-info">
-                    <div class="layout-title">Color & Handwriting</div>
-                    <div class="layout-sub">Drawing + 3-line tracing grid</div>
-                  </div>
-                </div>
-
-                <!-- Layout 6: 2x2 Grid (4 Activity Panels) -->
-                <div class="layout-card" data-layout="grid_4" onclick="applyPageLayout('grid_4')">
-                  <div class="layout-mini-preview preview-grid-4">
-                    <div class="mini-box mini-q">1</div>
-                    <div class="mini-box mini-q">2</div>
-                    <div class="mini-box mini-q">3</div>
-                    <div class="mini-box mini-q">4</div>
-                  </div>
-                  <div class="layout-info">
-                    <div class="layout-title">2 × 2 Quadrant Grid</div>
-                    <div class="layout-sub">4 Mini illustrations</div>
+                    <div class="layout-title">Blank Back Page (Verso)</div>
+                    <div class="layout-sub">Amazon KDP bleed protection</div>
                   </div>
                 </div>
               </div>
