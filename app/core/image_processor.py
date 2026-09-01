@@ -70,8 +70,9 @@ class KDPImageProcessor:
     @classmethod
     def clean_lineart_background(cls, pil_img: Image.Image, threshold: int = 220) -> Image.Image:
         """
-        Scans pixels and turns gray/off-white background into pure #FFFFFF,
-        while boosting the contrast of dark line art.
+        Scans pixels and turns gray/off-white background into pure #FFFFFF.
+        If the image is colored, preserves 100% of original colors.
+        If the image is black & white lineart, sharpens and deepens dark lines.
         """
         if pil_img.mode != "RGBA":
             pil_img = pil_img.convert("RGBA")
@@ -80,23 +81,30 @@ class KDPImageProcessor:
         rgb = np_img[:, :, :3]
         alpha = np_img[:, :, 3]
 
-        # Convert to grayscale for luminance detection
+        # Convert to grayscale & HSV to check for color content
         gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+        hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+        sat = hsv[:, :, 1]
 
-        # Any pixel lighter than threshold is set to pure white (255, 255, 255)
-        is_bg = (gray >= threshold) | (alpha < 30)
+        # Detect if image has noticeable color
+        has_color = bool(np.mean(sat > 25) > 0.01)
 
-        # Apply soft contrast curve to line art
-        gray_float = gray.astype(np.float32) / 255.0
-        enhanced_gray = np.clip(np.power(gray_float, 1.4) * 255.0, 0, 255).astype(np.uint8)
-
-        # Construct clean RGB
-        clean_rgb = np.stack([enhanced_gray, enhanced_gray, enhanced_gray], axis=2)
-        clean_rgb[is_bg] = [255, 255, 255]
+        if has_color:
+            # Color Preservation Mode: Keep full vibrant RGB colors
+            # Only pixels that are both bright AND low-saturation (or transparent) are treated as background
+            is_bg = ((gray >= threshold) & (sat < 35)) | (alpha < 30)
+            clean_rgb = rgb.copy()
+            clean_rgb[is_bg] = [255, 255, 255]
+        else:
+            # Black & White Line Art Mode: Enhance line contrast and brighten background
+            is_bg = (gray >= threshold) | (alpha < 30)
+            gray_float = gray.astype(np.float32) / 255.0
+            enhanced_gray = np.clip(np.power(gray_float, 1.4) * 255.0, 0, 255).astype(np.uint8)
+            clean_rgb = np.stack([enhanced_gray, enhanced_gray, enhanced_gray], axis=2)
+            clean_rgb[is_bg] = [255, 255, 255]
 
         # Full opaque alpha
         clean_alpha = np.full_like(alpha, 255)
-
         clean_rgba = np.dstack([clean_rgb, clean_alpha])
         return Image.fromarray(clean_rgba, mode="RGBA")
 

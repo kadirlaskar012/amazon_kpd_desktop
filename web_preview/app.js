@@ -283,6 +283,17 @@ function cleanTitleString(str) {
     .replace(/\b\w/g, c => c.toUpperCase());
 }
 
+function extractFirstWordCaps(rawName) {
+  if (!rawName) return "UNTITLED";
+  let clean = rawName.replace(/\.[^/.]+$/, "");
+  clean = clean.replace(/^(page\s*[\-_]*)?\d+[\s_\.\-]+/i, "");
+  clean = clean.replace(/[_\-]+/g, " ").trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  const firstWord = parts.length > 0 ? parts[0] : clean;
+  const stripped = firstWord.replace(/[\-_]?(color|colour|outline|drawing|lineart|bw|art)$/i, "");
+  return (stripped || firstWord).toUpperCase();
+}
+
 function cleanFileName(filename) {
   let name = filename.replace(/\.[^/.]+$/, "");
   name = name.replace(/^(page\s*[\-_]*)?\d+[\s_\.\-]+/i, "");
@@ -608,6 +619,12 @@ function exportProjectPdf() {
   openExportPdfModal();
 }
 
+function toggleFrontMatterEditor() {
+  const ed = document.getElementById("export-fm-text-editor");
+  if (!ed) return;
+  ed.style.display = (ed.style.display === "none" || !ed.style.display) ? "block" : "none";
+}
+
 function openExportPdfModal() {
   const modal = document.getElementById("export-pdf-modal");
   if (!modal) return;
@@ -628,6 +645,34 @@ function openExportPdfModal() {
     pathLabel.innerText = `📁 ${currentProject.project_dir}\\exports\\${filename}`;
   }
 
+  const bType = currentProject.book_type || "coloring_book";
+  const isColoring = (bType === "coloring_book");
+
+  // Show/Hide coloring-specific front matter page checkboxes
+  const contentsBox = document.getElementById("exp-fm-contents-box");
+  const belongsBox = document.getElementById("exp-fm-belongs-box");
+  const colorTestBox = document.getElementById("exp-fm-color-test-box");
+  if (contentsBox) contentsBox.style.display = isColoring ? "flex" : "none";
+  if (belongsBox) belongsBox.style.display = isColoring ? "flex" : "none";
+  if (colorTestBox) colorTestBox.style.display = isColoring ? "flex" : "none";
+
+  if (!isColoring) {
+    if (document.getElementById("exp-fm-contents")) document.getElementById("exp-fm-contents").checked = false;
+    if (document.getElementById("exp-fm-belongs")) document.getElementById("exp-fm-belongs").checked = false;
+    if (document.getElementById("exp-fm-color-test")) document.getElementById("exp-fm-color-test").checked = false;
+  } else {
+    if (document.getElementById("exp-fm-contents")) document.getElementById("exp-fm-contents").checked = true;
+    if (document.getElementById("exp-fm-belongs")) document.getElementById("exp-fm-belongs").checked = true;
+    if (document.getElementById("exp-fm-color-test")) document.getElementById("exp-fm-color-test").checked = true;
+  }
+
+  // Pre-fill text customization inputs
+  const authorIn = document.getElementById("exp-fm-text-author");
+  if (authorIn) authorIn.value = currentProject.author || "Creative Kids Studio";
+
+  const pubIn = document.getElementById("exp-fm-text-publisher");
+  if (pubIn) pubIn.value = currentProject.front_matter_config?.publisher_name || "KDP Creative Publishing";
+
   updateExportModalPreview();
   modal.classList.add("active");
 }
@@ -641,18 +686,32 @@ function updateExportModalPreview() {
   const singleSided = document.getElementById("exp-opt-single-sided") ? document.getElementById("exp-opt-single-sided").checked : true;
   const blankNote = document.getElementById("exp-opt-blank-note") ? document.getElementById("exp-opt-blank-note").checked : false;
 
+  const incDisclaimer = document.getElementById("exp-fm-disclaimer") ? document.getElementById("exp-fm-disclaimer").checked : true;
+  const incContents = document.getElementById("exp-fm-contents") ? document.getElementById("exp-fm-contents").checked : false;
+  const incBelongs = document.getElementById("exp-fm-belongs") ? document.getElementById("exp-fm-belongs").checked : false;
+  const incColorTest = document.getElementById("exp-fm-color-test") ? document.getElementById("exp-fm-color-test").checked : false;
+
   const contentPages = (currentProject.pages || []).filter(p => p.page_type !== "blank_verso" && !p.page_type?.startsWith("front_matter_"));
 
-  // Build compiled full KDP book pages
-  let exportPages = [
-    { page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", badge: "Page 1 • Disclaimer" },
-    { page_type: "front_matter_contents", title: "Table of Contents", badge: "Page 2 • Contents" },
-    { page_type: "front_matter_belongs_to", title: "Belongs To Page", badge: "Page 3 • Belongs To" },
-    { page_type: "front_matter_color_test", title: "Color Test Palette", badge: "Page 4 • Color Test" }
-  ];
+  // Build compiled full KDP book pages dynamically based on ticked checkboxes
+  let exportPages = [];
+  if (incDisclaimer) {
+    exportPages.push({ page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", badge: `Page ${exportPages.length + 1} • Disclaimer` });
+  }
+  if (incContents) {
+    exportPages.push({ page_type: "front_matter_contents", title: "Table of Contents", badge: `Page ${exportPages.length + 1} • Contents` });
+  }
+  if (incBelongs) {
+    exportPages.push({ page_type: "front_matter_belongs_to", title: "Belongs To Page", badge: `Page ${exportPages.length + 1} • Belongs To` });
+  }
+  if (incColorTest) {
+    exportPages.push({ page_type: "front_matter_color_test", title: "Color Test Palette", badge: `Page ${exportPages.length + 1} • Color Test` });
+  }
+
+  const fmCount = exportPages.length;
 
   contentPages.forEach((p, idx) => {
-    const drawPageNum = 5 + (idx * (singleSided ? 2 : 1));
+    const drawPageNum = fmCount + 1 + (idx * (singleSided ? 2 : 1));
     exportPages.push({
       ...p,
       doc_page_number: drawPageNum,
@@ -726,6 +785,18 @@ function executePdfExport(openInBrowser = true) {
   const singleSided = document.getElementById("exp-opt-single-sided") ? document.getElementById("exp-opt-single-sided").checked : true;
   const blankNote = document.getElementById("exp-opt-blank-note") ? document.getElementById("exp-opt-blank-note").checked : false;
 
+  const fmOptions = {
+    include_disclaimer: document.getElementById("exp-fm-disclaimer")?.checked ?? true,
+    include_contents: document.getElementById("exp-fm-contents")?.checked ?? false,
+    include_belongs: document.getElementById("exp-fm-belongs")?.checked ?? false,
+    include_color_test: document.getElementById("exp-fm-color-test")?.checked ?? false,
+    author: document.getElementById("exp-fm-text-author")?.value || currentProject.author || "Creative Kids Studio",
+    publisher: document.getElementById("exp-fm-text-publisher")?.value || "KDP Creative Publishing",
+    toc_heading: document.getElementById("exp-fm-text-toc-heading")?.value || "TABLE OF CONTENTS",
+    belongs_title: document.getElementById("exp-fm-text-belongs-title")?.value || "THIS COLORING BOOK",
+    subtext: document.getElementById("exp-fm-text-subtext")?.value || "Color with joy, love and your wild imagination!"
+  };
+
   showToast("⚙️ Generating 300 DPI Amazon KDP PDF...", "info");
 
   // Save current project state first
@@ -734,7 +805,8 @@ function executePdfExport(openInBrowser = true) {
   const payload = {
     ...currentProject,
     single_sided: singleSided,
-    blank_page_note: blankNote
+    blank_page_note: blankNote,
+    front_matter_options: fmOptions
   };
 
   fetch("/api/projects/export_pdf", {
@@ -755,15 +827,14 @@ function executePdfExport(openInBrowser = true) {
         a.download = data.filename;
         document.body.appendChild(a);
         a.click();
-        a.remove();
+        document.body.removeChild(a);
       }
     } else {
-      showToast(`⚠️ PDF Export failed: ${data.error || 'Unknown error'}`, "danger");
+      showToast("❌ PDF generation failed: " + (data.error || "Unknown error"), "error");
     }
   })
   .catch(err => {
-    closeModal("export-pdf-modal");
-    showToast(`⚠️ PDF Export error: ${err.message}`, "danger");
+    showToast("❌ Error: " + err.message, "error");
   });
 }
 
@@ -2161,8 +2232,9 @@ function applyMediaToSlot(mediaId, slotType) {
     showToast(`🎨 Set "${item.name}" as Drawing Image!`, "success");
   } 
   else if (slotType === "title") {
+    const firstWordCaps = extractFirstWordCaps(item.name || item.fileName);
     let titleElem = page.elements.find(e => e.type === "title");
-    const autoSize = calculateAutoTitleFontSize(item.name, 40);
+    const autoSize = calculateAutoTitleFontSize(firstWordCaps, 40);
     const projFont = currentProject.settings?.default_font_family || "Fredoka";
     const projOutline = currentProject.settings?.default_font_mode !== "solid";
     const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
@@ -2174,12 +2246,13 @@ function applyMediaToSlot(mediaId, slotType) {
     } else {
       titleElem.font_size = autoSize;
     }
-    titleElem.text = item.name.toUpperCase();
-    page.title = item.name;
+    titleElem.text = firstWordCaps;
+    page.title = cleanTitleString(firstWordCaps);
     setActiveElement(titleElem.id);
-    showToast(`🔤 Set Title to "${item.name.toUpperCase()}" (Auto-adjusted: ${autoSize}pt)!`, "success");
+    showToast(`🔤 Set Title to "${firstWordCaps}" (Auto-adjusted: ${autoSize}pt)!`, "success");
   } 
   else if (slotType === "all") {
+    const firstWordCaps = extractFirstWordCaps(item.name || item.fileName);
     let refElem = page.elements.find(e => e.type === "ref_image");
     if (refElem) {
       refElem.image_src = imgSrc;
@@ -2192,11 +2265,11 @@ function applyMediaToSlot(mediaId, slotType) {
     }
     let titleElem = page.elements.find(e => e.type === "title");
     if (titleElem) {
-      titleElem.text = item.name.toUpperCase();
-      titleElem.font_size = calculateAutoTitleFontSize(item.name, 40);
+      titleElem.text = firstWordCaps;
+      titleElem.font_size = calculateAutoTitleFontSize(firstWordCaps, 40);
     }
-    page.title = item.name;
-    showToast(`⚡ Filled Reference, Drawing, and Title with "${item.name}"!`, "success");
+    page.title = cleanTitleString(firstWordCaps);
+    showToast(`⚡ Applied "${firstWordCaps}" (Ref + Drawing + Title)!`, "success");
   }
 
   renumberPages();

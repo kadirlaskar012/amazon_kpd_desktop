@@ -434,28 +434,7 @@
                 </div>
               </div>
 
-              <!-- Quick Title from Media Name Box -->
-              <div class="prop-group" id="prop-quick-media-title-group">
-                <div class="group-title">🏷️ Item Title from Media File</div>
-                <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
-                  Pick uploaded media name, edit below, and click Apply to set title on canvas:
-                </p>
-                <div class="prop-field">
-                  <label>Choose Media File</label>
-                  <select id="quick-media-picker-select" class="form-control" onchange="onQuickMediaPickerChange()">
-                    <option value="">-- Select Uploaded Media --</option>
-                  </select>
-                </div>
-                <div class="prop-field" style="margin-top: 6px;">
-                  <label>Editable Item Name</label>
-                  <div style="display: flex; gap: 4px;">
-                    <input type="text" id="quick-media-name-input" class="form-control" placeholder="e.g. DOG, LION, CAT" style="font-weight: 700; text-transform: uppercase;">
-                    <button class="btn btn-sm btn-primary" onclick="applyQuickMediaNameToCanvas()" style="white-space: nowrap; padding: 0 10px;">
-                      ➕ Apply
-                    </button>
-                  </div>
-                </div>
-              </div>
+
 
               <!-- Image Specific Properties -->
               <div class="prop-group" id="prop-image-group" style="display: none;">
@@ -920,6 +899,61 @@
                 <input type="checkbox" id="exp-opt-blank-note" onchange="updateExportModalPreview()">
                 <span style="font-size: 12px; color: var(--text-muted);">Add subtle watermark on blank pages <em>"[ Blank page for color bleed-through protection ]"</em></span>
               </label>
+            </div>
+          <!-- Important Front Matter Pages Selector & Text Customizer -->
+          <div class="export-options-box" style="margin-top: 14px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+            <div style="font-size: 13px; font-weight: 700; color: #ffffff; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+              <span>📑 Important Front Matter Pages (Tick to Include in PDF):</span>
+              <button class="btn btn-xs btn-outline" type="button" onclick="toggleFrontMatterEditor()">✏️ Edit Front Matter Texts</button>
+            </div>
+            <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 12px;">
+              Select which opening pages to include in the exported book and customize their text:
+            </p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <label class="checkbox-label" style="background: var(--bg-card); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);">
+                <input type="checkbox" id="exp-fm-disclaimer" checked onchange="updateExportModalPreview()">
+                <span>📜 <strong>Page 1: Disclaimer & Copyright</strong></span>
+              </label>
+              <label class="checkbox-label" style="background: var(--bg-card); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);" id="exp-fm-contents-box">
+                <input type="checkbox" id="exp-fm-contents" checked onchange="updateExportModalPreview()">
+                <span>📑 <strong>Page 2: Table of Contents</strong></span>
+              </label>
+              <label class="checkbox-label" style="background: var(--bg-card); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);" id="exp-fm-belongs-box">
+                <input type="checkbox" id="exp-fm-belongs" checked onchange="updateExportModalPreview()">
+                <span>🎁 <strong>Page 3: Belongs To Page</strong></span>
+              </label>
+              <label class="checkbox-label" style="background: var(--bg-card); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);" id="exp-fm-color-test-box">
+                <input type="checkbox" id="exp-fm-color-test" checked onchange="updateExportModalPreview()">
+                <span>🎨 <strong>Page 4: Color Test Palette</strong></span>
+              </label>
+            </div>
+
+            <!-- Expandable Text Customizer -->
+            <div id="export-fm-text-editor" style="display: none; margin-top: 12px; padding: 12px; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border);">
+              <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">✏️ Customize Text on Front Matter Pages:</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label style="font-size: 11px;">Author Name</label>
+                  <input type="text" id="exp-fm-text-author" class="form-control" style="font-size: 12px; padding: 5px;" value="Creative Kids Studio" oninput="updateExportModalPreview()">
+                </div>
+                <div>
+                  <label style="font-size: 11px;">Publisher Name</label>
+                  <input type="text" id="exp-fm-text-publisher" class="form-control" style="font-size: 12px; padding: 5px;" value="KDP Creative Publishing" oninput="updateExportModalPreview()">
+                </div>
+                <div>
+                  <label style="font-size: 11px;">Table of Contents Heading</label>
+                  <input type="text" id="exp-fm-text-toc-heading" class="form-control" style="font-size: 12px; padding: 5px;" value="TABLE OF CONTENTS" oninput="updateExportModalPreview()">
+                </div>
+                <div>
+                  <label style="font-size: 11px;">Belongs To Header</label>
+                  <input type="text" id="exp-fm-text-belongs-title" class="form-control" style="font-size: 12px; padding: 5px;" value="THIS COLORING BOOK" oninput="updateExportModalPreview()">
+                </div>
+                <div style="grid-column: 1 / -1;">
+                  <label style="font-size: 11px;">Belongs To / Color Test Subtitle</label>
+                  <input type="text" id="exp-fm-text-subtext" class="form-control" style="font-size: 12px; padding: 5px;" value="Color with joy, love and your wild imagination!" oninput="updateExportModalPreview()">
+                </div>
+              </div>
             </div>
           </div>
 
