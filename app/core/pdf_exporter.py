@@ -1,7 +1,8 @@
 """
 Amazon KDP PDF Exporter Engine.
 Generates 100% compliant 300 DPI Print-Ready PDF/X files for Amazon KDP Paperback & Hardcover.
-Supports Single-Sided Coloring Book rules (Auto-insert blank back pages), exact trim, bleed, vector typography, and graphics.
+Strictly renders the exact pages provided in the canvas workspace.
+Supports Single-Sided Coloring Book rules (insert blank back page after each drawing page).
 """
 
 import io
@@ -21,7 +22,8 @@ class KDPPdfExporter:
         blank_page_note: bool = False
     ) -> Path:
         """
-        Generates a multi-page PDF document matching Amazon KDP specifications.
+        Generates a multi-page PDF document matching exact Amazon KDP specifications.
+        Renders EXACTLY the pages from the project without adding unrequested extra pages.
         """
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -44,8 +46,8 @@ class KDPPdfExporter:
         scale_x = trim_w / canvas_ref_w
         scale_y = trim_h / canvas_ref_h
 
-        pages = project_data.get("pages", [])
-        if not pages:
+        raw_pages = project_data.get("pages", [])
+        if not raw_pages:
             c.setFillColor(colors.white)
             c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
             c.showPage()
@@ -56,16 +58,31 @@ class KDPPdfExporter:
             """Renders a pure blank KDP back page to prevent color bleed-through."""
             c.setFillColor(colors.white)
             c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
-            if blank_page_note and page_label:
+            if blank_page_note:
                 c.setFont("Helvetica-Oblique", 8 * scale_y)
                 c.setFillColor(colors.HexColor("#cbd5e1"))
                 c.drawCentredString(page_w / 2.0, 40 * scale_y, "[ Blank page for color bleed-through protection ]")
             c.showPage()
 
-        # Check if project already has explicit blank pages in currentProject.pages
-        has_explicit_blank_pages = any(p.get("page_type") == "blank_verso" for p in pages)
+        # Build the final page list to export:
+        # If the pages array already has blank_verso pages, use them as-is.
+        # Otherwise, if single_sided is True, insert a blank page after each content drawing page.
+        has_explicit_blank_pages = any(p.get("page_type") == "blank_verso" for p in raw_pages)
 
-        for idx, page in enumerate(pages):
+        final_pages_to_render = []
+        for idx, p in enumerate(raw_pages):
+            p_type = p.get("page_type", "content")
+            final_pages_to_render.append(p)
+
+            if single_sided and not has_explicit_blank_pages:
+                if p_type == "content":
+                    final_pages_to_render.append({
+                        "page_type": "blank_verso",
+                        "title": f"Blank Back of Page {p.get('page_number', idx + 1)}",
+                        "elements": []
+                    })
+
+        for page in final_pages_to_render:
             page_type = page.get("page_type", "content")
             
             # 1. Fill page with pure white
@@ -187,15 +204,6 @@ class KDPPdfExporter:
                     c.line(x, y, x + w, y)
 
             c.showPage()
-
-            # If project didn't already have explicit blank pages in array, auto insert on export
-            if single_sided and not has_explicit_blank_pages:
-                if page_type == "content":
-                    render_blank_page(f"Back of Page {page.get('page_number', idx + 1)}")
-                elif page_type in ("front_matter_disclaimer", "front_matter_contents"):
-                    is_last_front_matter = (idx + 1 < len(pages) and pages[idx + 1].get("page_type") == "content")
-                    if is_last_front_matter:
-                        render_blank_page("Front Matter Verso Blank")
 
         c.save()
         return output_path

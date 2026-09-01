@@ -664,11 +664,32 @@ function updateExportModalPreview() {
   const singleSided = document.getElementById("exp-opt-single-sided") ? document.getElementById("exp-opt-single-sided").checked : true;
   const blankNote = document.getElementById("exp-opt-blank-note") ? document.getElementById("exp-opt-blank-note").checked : false;
 
-  const pages = currentProject.pages || [];
-  let html = "";
-  let totalOutputPages = pages.length;
+  const rawPages = currentProject.pages || [];
+  const hasExplicitBlank = rawPages.some(p => p.page_type === "blank_verso");
 
-  pages.forEach((p, idx) => {
+  // Build exact list of export pages
+  let exportPages = [];
+  rawPages.forEach((p, idx) => {
+    const isBlank = p.page_type === "blank_verso";
+    if (isBlank) {
+      if (singleSided) {
+        exportPages.push(p);
+      }
+    } else {
+      exportPages.push(p);
+      if (singleSided && !hasExplicitBlank && p.page_type === "content") {
+        exportPages.push({
+          page_type: "blank_verso",
+          title: "Blank Back Page",
+          elements: []
+        });
+      }
+    }
+  });
+
+  let html = "";
+  exportPages.forEach((p, idx) => {
+    const docPageNum = idx + 1;
     const isDisclaimer = p.page_type === "front_matter_disclaimer";
     const isContents = p.page_type === "front_matter_contents";
     const isBlank = p.page_type === "blank_verso";
@@ -676,7 +697,7 @@ function updateExportModalPreview() {
     if (isBlank) {
       html += `
         <div class="export-page-card blank-verso">
-          <div class="export-page-badge verso">Page ${p.page_number} • Blank Back</div>
+          <div class="export-page-badge verso">Page ${docPageNum} • Blank Back</div>
           <div class="export-page-thumb" style="background:#f8fafc;">
             <span style="font-size:10px;color:#94a3b8;text-align:center;padding:6px;">
               ${blankNote ? '🛡️ Bleed-Safe Blank' : '⚪ Blank White Page'}
@@ -686,24 +707,24 @@ function updateExportModalPreview() {
         </div>
       `;
     } else {
-      const mainEl = p.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src);
+      const mainEl = (p.elements || []).find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src);
       const thumbImg = mainEl 
         ? `<img src="${mainEl.image_src}">` 
         : `<span style="font-size:24px;">${isDisclaimer ? '📜' : (isContents ? '📋' : '🎨')}</span>`;
 
       html += `
         <div class="export-page-card">
-          <div class="export-page-badge recto">Page ${p.page_number} • ${isDisclaimer ? 'Disclaimer' : (isContents ? 'Contents' : 'Drawing')}</div>
+          <div class="export-page-badge recto">Page ${docPageNum} • ${isDisclaimer ? 'Disclaimer' : (isContents ? 'Contents' : 'Drawing')}</div>
           <div class="export-page-thumb">${thumbImg}</div>
-          <div class="export-page-title">${p.title || `Page ${p.page_number}`}</div>
+          <div class="export-page-title">${p.title || `Page ${docPageNum}`}</div>
         </div>
       `;
     }
   });
 
   container.innerHTML = html;
-  if (totalLabel) totalLabel.innerText = `${totalOutputPages} Total PDF Pages`;
-  if (countLabel) countLabel.innerText = `${totalOutputPages} Pages`;
+  if (totalLabel) totalLabel.innerText = `${exportPages.length} Total PDF Pages`;
+  if (countLabel) countLabel.innerText = `${exportPages.length} Pages`;
 }
 
 function executePdfExport(openInBrowser = true) {
@@ -711,6 +732,9 @@ function executePdfExport(openInBrowser = true) {
   const blankNote = document.getElementById("exp-opt-blank-note") ? document.getElementById("exp-opt-blank-note").checked : false;
 
   showToast("⚙️ Generating 300 DPI Amazon KDP PDF...", "info");
+
+  // Save current project state first
+  saveProject(false);
 
   const payload = {
     ...currentProject,
@@ -746,6 +770,47 @@ function executePdfExport(openInBrowser = true) {
     closeModal("export-pdf-modal");
     showToast(`⚠️ PDF Export error: ${err.message}`, "danger");
   });
+}
+
+function formatProjectForKDP() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    return;
+  }
+
+  recordHistoryState("Format for Amazon KDP");
+
+  const oldPages = currentProject.pages || [];
+  const frontMatter = oldPages.filter(p => p.page_type === "front_matter_disclaimer" || p.page_type === "front_matter_contents");
+  const contentPages = oldPages.filter(p => p.page_type === "content");
+
+  if (contentPages.length === 0) {
+    showToast("No drawing pages found to format.", "info");
+    return;
+  }
+
+  const newPages = [];
+  frontMatter.forEach(fm => newPages.push(fm));
+
+  contentPages.forEach((cp, idx) => {
+    newPages.push(cp);
+    newPages.push({
+      page_number: newPages.length + 1,
+      page_type: "blank_verso",
+      title: "Blank Page",
+      layout: "blank_page",
+      elements: []
+    });
+  });
+
+  currentProject.pages = newPages;
+  renumberPages();
+  syncActiveProjectUI();
+  loadPageIntoCanvas(currentPageIndex);
+  renderTimeline();
+  markProjectDirty();
+
+  showToast(`🛡️ Inserted Blank Back Pages behind all ${contentPages.length} Drawing Pages!`, "success");
 }
 
 // ==========================================
