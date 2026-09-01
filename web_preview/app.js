@@ -2593,12 +2593,6 @@ function executeMediaDeleteAction() {
   pendingMediaDeleteAction = null;
 }
 
-  renderMediaLibrary();
-  syncActiveProjectUI();
-  markProjectDirty();
-  showToast("🧹 All media cleared from project!", "info");
-}
-
 function renderMediaLibrary() {
   const container = document.getElementById("media-items-list");
   if (!container) return;
