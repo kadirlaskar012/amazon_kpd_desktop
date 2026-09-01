@@ -1,7 +1,7 @@
 """
 Amazon KDP PDF Exporter Engine.
 Generates 100% compliant 300 DPI Print-Ready PDF/X files for Amazon KDP Paperback & Hardcover.
-Automatically compiles Front Matter (Disclaimer, Contents with Auto Item List, Belongs To, Color Test Palette)
+Includes ultra-crisp, elegant typography for Front Matter (Disclaimer, Contents with Auto Item List, Belongs To, Color Test Palette)
 and Single-Sided Coloring Pages with alternating Blank Back Pages for bleed protection.
 """
 
@@ -47,9 +47,17 @@ class KDPPdfExporter:
         scale_x = trim_w / canvas_ref_w
         scale_y = trim_h / canvas_ref_h
 
-        # Extract only the actual working drawing/content pages
+        # Extract only the actual working drawing/content pages (ignore front matter or blank keys)
         raw_pages = project_data.get("pages", [])
-        content_pages = [p for p in raw_pages if p.get("page_type") not in ("blank_verso", "front_matter_disclaimer", "front_matter_contents", "front_matter_belongs_to", "front_matter_color_test")]
+        content_pages = []
+        for p in raw_pages:
+            p_type = p.get("page_type", "content")
+            p_title = (p.get("title") or "").lower()
+            if p_type in ("blank_verso", "front_matter_disclaimer", "front_matter_contents", "front_matter_belongs_to", "front_matter_color_test"):
+                continue
+            if "disclaimer" in p_title or "table of contents" in p_title or "belongs to" in p_title or "color test" in p_title:
+                continue
+            content_pages.append(p)
         
         if not content_pages and raw_pages:
             content_pages = raw_pages
@@ -62,9 +70,9 @@ class KDPPdfExporter:
             c.setFillColor(colors.white)
             c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
             if blank_page_note:
-                c.setFont("Helvetica-Oblique", 8 * scale_y)
-                c.setFillColor(colors.HexColor("#cbd5e1"))
-                c.drawCentredString(page_w / 2.0, 40 * scale_y, "[ Blank page for color bleed-through protection ]")
+                c.setFont("Helvetica-Oblique", 8.5)
+                c.setFillColor(colors.HexColor("#94a3b8"))
+                c.drawCentredString(page_w / 2.0, 35 + bleed_pt, "[ Blank page to protect against color bleed-through ]")
             c.showPage()
 
         # =========================================================================
@@ -75,46 +83,62 @@ class KDPPdfExporter:
             c.setFillColor(colors.white)
             c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
 
-            # Outer decorative border
+            # Elegant decorative double inner border
             c.setStrokeColor(colors.HexColor("#0f172a"))
             c.setLineWidth(1.5)
-            c.roundRect(30 * scale_x + bleed_pt, 25 * scale_y + bleed_pt, 450 * scale_x, 610 * scale_y, radius=6, fill=0, stroke=1)
+            c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
+            c.setStrokeColor(colors.HexColor("#cbd5e1"))
+            c.setLineWidth(0.75)
+            c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
 
-            c.setFont("Helvetica-Bold", 24 * scale_y)
+            # Book Title
+            c.setFont("Helvetica-Bold", 20)
             c.setFillColor(colors.HexColor("#0f172a"))
-            c.drawCentredString(page_w / 2.0, page_h - (65 * scale_y) - bleed_pt, book_title)
+            c.drawCentredString(page_w / 2.0, page_h - 100 - bleed_pt, book_title)
 
-            c.setFont("Helvetica", 12 * scale_y)
+            # Subtitle
+            c.setFont("Helvetica", 10.5)
             c.setFillColor(colors.HexColor("#475569"))
-            c.drawCentredString(page_w / 2.0, page_h - (95 * scale_y) - bleed_pt, "First Edition  •  Amazon KDP Publication")
+            c.drawCentredString(page_w / 2.0, page_h - 125 - bleed_pt, "First Edition  •  Amazon KDP Publication")
 
-            c.setFont("Helvetica-Bold", 13 * scale_y)
+            # Small decorative divider line
+            c.setStrokeColor(colors.HexColor("#e2e8f0"))
+            c.setLineWidth(1.0)
+            c.line(page_w / 2.0 - 50, page_h - 150 - bleed_pt, page_w / 2.0 + 50, page_h - 150 - bleed_pt)
+
+            # Copyright
+            c.setFont("Helvetica-Bold", 11)
             c.setFillColor(colors.HexColor("#1e293b"))
-            c.drawCentredString(page_w / 2.0, page_h - (175 * scale_y) - bleed_pt, f"Copyright © 2026 by {author_name}")
+            c.drawCentredString(page_w / 2.0, page_h - 220 - bleed_pt, f"Copyright © 2026 by {author_name}")
 
-            c.setFont("Helvetica-Bold", 11 * scale_y)
+            c.setFont("Helvetica", 10)
             c.setFillColor(colors.HexColor("#334155"))
-            c.drawCentredString(page_w / 2.0, page_h - (205 * scale_y) - bleed_pt, "All Rights Reserved.")
+            c.drawCentredString(page_w / 2.0, page_h - 240 - bleed_pt, "All Rights Reserved.")
 
+            # Legal Disclaimer lines
             disclaimer_lines = [
                 "No part of this publication may be reproduced, distributed, or transmitted in any form",
                 "or by any means, including photocopying, recording, or other electronic or mechanical methods,",
-                "without the prior written permission of the publisher and copyright owner.",
-                "For permissions requests, contact the publisher.",
+                "without the prior written permission of the publisher, except in the case of brief quotations",
+                "embodied in critical reviews and certain other noncommercial uses permitted by copyright law."
             ]
-            c.setFont("Helvetica", 9.5 * scale_y)
+            c.setFont("Helvetica", 8.5)
             c.setFillColor(colors.HexColor("#64748b"))
             for i, line in enumerate(disclaimer_lines):
-                c.drawCentredString(page_w / 2.0, page_h - ((255 + (i * 22)) * scale_y) - bleed_pt, line)
+                c.drawCentredString(page_w / 2.0, page_h - 300 - (i * 16) - bleed_pt, line)
 
-            c.setFont("Helvetica-Bold", 10.5 * scale_y)
+            # Publisher Info
+            c.setFont("Helvetica-Bold", 9.5)
             c.setFillColor(colors.HexColor("#334155"))
-            c.drawCentredString(page_w / 2.0, page_h - (390 * scale_y) - bleed_pt, f"Published by: {author_name}")
-            c.drawCentredString(page_w / 2.0, page_h - (415 * scale_y) - bleed_pt, "ISBN-13: 978-X-XXXXX-XXX-X")
+            c.drawCentredString(page_w / 2.0, page_h - 450 - bleed_pt, f"Published by: {author_name}")
+            
+            c.setFont("Helvetica", 9)
+            c.setFillColor(colors.HexColor("#475569"))
+            c.drawCentredString(page_w / 2.0, page_h - 470 - bleed_pt, "ISBN-13: 978-X-XXXXX-XXX-X")
 
-            c.setFont("Helvetica", 9 * scale_y)
+            c.setFont("Helvetica-Oblique", 8.5)
             c.setFillColor(colors.HexColor("#94a3b8"))
-            c.drawCentredString(page_w / 2.0, page_h - (470 * scale_y) - bleed_pt, "Printed in the United States of America • Amazon KDP Distribution")
+            c.drawCentredString(page_w / 2.0, page_h - 540 - bleed_pt, "Printed in the United States of America  •  Amazon KDP Distribution")
             c.showPage()
 
             # --- PAGE 2: TABLE OF CONTENTS (AUTO ITEM LIST) ---
@@ -124,54 +148,71 @@ class KDPPdfExporter:
             # Outer border
             c.setStrokeColor(colors.HexColor("#0f172a"))
             c.setLineWidth(1.5)
-            c.roundRect(30 * scale_x + bleed_pt, 25 * scale_y + bleed_pt, 450 * scale_x, 610 * scale_y, radius=6, fill=0, stroke=1)
+            c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
+            c.setStrokeColor(colors.HexColor("#cbd5e1"))
+            c.setLineWidth(0.75)
+            c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
 
-            c.setFont("Helvetica-Bold", 22 * scale_y)
+            # Header
+            c.setFont("Helvetica-Bold", 18)
             c.setFillColor(colors.HexColor("#0f172a"))
-            c.drawCentredString(page_w / 2.0, page_h - (60 * scale_y) - bleed_pt, "TABLE OF CONTENTS")
+            c.drawCentredString(page_w / 2.0, page_h - 90 - bleed_pt, "TABLE OF CONTENTS")
 
-            c.setFont("Helvetica", 11 * scale_y)
+            c.setFont("Helvetica", 10)
             c.setFillColor(colors.HexColor("#64748b"))
-            c.drawCentredString(page_w / 2.0, page_h - (85 * scale_y) - bleed_pt, "Complete list of coloring pages & illustrations in this book")
+            c.drawCentredString(page_w / 2.0, page_h - 115 - bleed_pt, "Complete list of coloring illustrations in this book")
 
-            # Auto Item List Generator (Drawing 1 -> Page 5, Drawing 2 -> Page 7...)
-            start_y = page_h - (130 * scale_y) - bleed_pt
-            c.setFont("Helvetica-Bold", 11 * scale_y)
-            c.setFillColor(colors.HexColor("#1e293b"))
+            c.setStrokeColor(colors.HexColor("#e2e8f0"))
+            c.setLineWidth(1.0)
+            c.line(page_w / 2.0 - 60, page_h - 135 - bleed_pt, page_w / 2.0 + 60, page_h - 135 - bleed_pt)
 
-            max_items_to_print = min(20, len(content_pages))
+            # Item List
+            start_y = page_h - 170 - bleed_pt
+            max_items_to_print = min(22, len(content_pages))
+            
+            left_margin = 65 + bleed_pt
+            right_margin = page_w - 65 - bleed_pt
+
             for idx in range(max_items_to_print):
                 cp = content_pages[idx]
-                item_title = cp.get("title") or f"Coloring Page {idx + 1}"
+                item_title = cp.get("title") or f"Illustration {idx + 1}"
                 
-                # If page has a title element, use that text
+                # Check for explicit title element
                 for el in cp.get("elements", []):
                     if el.get("type") == "title" and el.get("text"):
                         item_title = el.get("text").title()
                         break
 
                 calc_page_num = 5 + (idx * 2) if single_sided else 5 + idx
-                item_y = start_y - (idx * 23 * scale_y)
+                item_y = start_y - (idx * 22)
 
-                # Left item name
+                # Draw Left Text
+                c.setFont("Helvetica-Bold", 9.5)
+                c.setFillColor(colors.HexColor("#1e293b"))
                 left_str = f"{idx + 1}.  {item_title}"
-                c.drawString(65 * scale_x + bleed_pt, item_y, left_str)
+                c.drawString(left_margin, item_y, left_str)
 
-                # Right page num
+                # Draw Right Text
+                c.setFont("Helvetica-Bold", 9.5)
+                c.setFillColor(colors.HexColor("#475569"))
                 right_str = f"Page {calc_page_num}"
-                c.drawRightString(page_w - (65 * scale_x) - bleed_pt, item_y, right_str)
+                c.drawRightString(right_margin, item_y, right_str)
 
-                # Dot Leader between left and right
-                dot_start_x = (65 * scale_x) + bleed_pt + c.stringWidth(left_str, "Helvetica-Bold", 11 * scale_y) + 10
-                dot_end_x = page_w - (65 * scale_x) - bleed_pt - c.stringWidth(right_str, "Helvetica-Bold", 11 * scale_y) - 10
-                if dot_end_x > dot_start_x:
-                    c.setFont("Helvetica", 9 * scale_y)
-                    c.setFillColor(colors.HexColor("#94a3b8"))
-                    dots_w = c.stringWidth(". ", "Helvetica", 9 * scale_y)
-                    num_dots = int((dot_end_x - dot_start_x) / dots_w)
-                    c.drawString(dot_start_x, item_y, ". " * num_dots)
-                    c.setFont("Helvetica-Bold", 11 * scale_y)
-                    c.setFillColor(colors.HexColor("#1e293b"))
+                # Crisp Dot Leader between left and right
+                c.setFont("Helvetica", 8)
+                c.setFillColor(colors.HexColor("#94a3b8"))
+                
+                name_w = c.stringWidth(left_str, "Helvetica-Bold", 9.5)
+                page_w_num = c.stringWidth(right_str, "Helvetica-Bold", 9.5)
+                
+                dot_start = left_margin + name_w + 12
+                dot_end = right_margin - page_w_num - 12
+                
+                if dot_end > dot_start:
+                    dot_unit_w = c.stringWidth(" . ", "Helvetica", 8)
+                    num_dots = int((dot_end - dot_start) / dot_unit_w)
+                    if num_dots > 0:
+                        c.drawString(dot_start, item_y, " . " * num_dots)
 
             c.showPage()
 
@@ -181,30 +222,33 @@ class KDPPdfExporter:
 
             c.setStrokeColor(colors.HexColor("#0f172a"))
             c.setLineWidth(1.5)
-            c.roundRect(30 * scale_x + bleed_pt, 25 * scale_y + bleed_pt, 450 * scale_x, 610 * scale_y, radius=6, fill=0, stroke=1)
+            c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
+            c.setStrokeColor(colors.HexColor("#cbd5e1"))
+            c.setLineWidth(0.75)
+            c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
 
-            c.setFont("Helvetica-Bold", 20 * scale_y)
-            c.setFillColor(colors.HexColor("#1e293b"))
-            c.drawCentredString(page_w / 2.0, page_h - (90 * scale_y) - bleed_pt, "THIS COLORING BOOK")
+            c.setFont("Helvetica-Bold", 16)
+            c.setFillColor(colors.HexColor("#334155"))
+            c.drawCentredString(page_w / 2.0, page_h - 130 - bleed_pt, "THIS COLORING BOOK")
 
-            # Big Outlined BELONGS TO
-            c.setFont("Helvetica-Bold", 36 * scale_y)
+            # Outlined BELONGS TO
+            c.setFont("Helvetica-Bold", 32)
             c.setStrokeColor(colors.HexColor("#0f172a"))
             c.setFillColor(colors.white)
-            c.setLineWidth(2.2 * scale_y)
+            c.setLineWidth(1.6)
             c._code.append("2 Tr\n")
-            c.drawCentredString(page_w / 2.0, page_h - (150 * scale_y) - bleed_pt, "BELONGS TO:")
+            c.drawCentredString(page_w / 2.0, page_h - 190 - bleed_pt, "BELONGS TO:")
             c._code.append("0 Tr\n")
 
-            # Name writing line
-            c.setStrokeColor(colors.HexColor("#64748b"))
-            c.setLineWidth(1.5)
-            line_y = page_h - (240 * scale_y) - bleed_pt
-            c.line(70 * scale_x + bleed_pt, line_y, page_w - (70 * scale_x) - bleed_pt, line_y)
+            # Clean writing line
+            c.setStrokeColor(colors.HexColor("#94a3b8"))
+            c.setLineWidth(1.2)
+            line_y = page_h - 300 - bleed_pt
+            c.line(80 + bleed_pt, line_y, page_w - 80 - bleed_pt, line_y)
 
-            c.setFont("Helvetica-Oblique", 13 * scale_y)
-            c.setFillColor(colors.HexColor("#475569"))
-            c.drawCentredString(page_w / 2.0, page_h - (340 * scale_y) - bleed_pt, "Color with joy, love and your wild imagination!")
+            c.setFont("Helvetica-Oblique", 11)
+            c.setFillColor(colors.HexColor("#64748b"))
+            c.drawCentredString(page_w / 2.0, page_h - 420 - bleed_pt, "Color with joy, love and your wild imagination!")
             c.showPage()
 
             # --- PAGE 4: COLOR TEST PALETTE ---
@@ -213,29 +257,33 @@ class KDPPdfExporter:
 
             c.setStrokeColor(colors.HexColor("#0f172a"))
             c.setLineWidth(1.5)
-            c.roundRect(30 * scale_x + bleed_pt, 25 * scale_y + bleed_pt, 450 * scale_x, 610 * scale_y, radius=6, fill=0, stroke=1)
+            c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
+            c.setStrokeColor(colors.HexColor("#cbd5e1"))
+            c.setLineWidth(0.75)
+            c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
 
-            c.setFont("Helvetica-Bold", 24 * scale_y)
-            c.setStrokeColor(colors.HexColor("#0f172a"))
-            c.setFillColor(colors.white)
-            c.setLineWidth(1.8 * scale_y)
-            c._code.append("2 Tr\n")
-            c.drawCentredString(page_w / 2.0, page_h - (65 * scale_y) - bleed_pt, "COLOR TEST PALETTE")
-            c._code.append("0 Tr\n")
+            c.setFont("Helvetica-Bold", 22)
+            c.setFillColor(colors.HexColor("#0f172a"))
+            c.drawCentredString(page_w / 2.0, page_h - 85 - bleed_pt, "COLOR TEST PALETTE")
 
-            c.setFont("Helvetica", 11 * scale_y)
+            c.setFont("Helvetica", 10)
             c.setFillColor(colors.HexColor("#64748b"))
-            c.drawCentredString(page_w / 2.0, page_h - (95 * scale_y) - bleed_pt, "Test your pencils, markers, and crayons here before coloring!")
+            c.drawCentredString(page_w / 2.0, page_h - 110 - bleed_pt, "Test your pencils, markers, and crayons here before coloring!")
+
+            c.setStrokeColor(colors.HexColor("#e2e8f0"))
+            c.setLineWidth(1.0)
+            c.line(page_w / 2.0 - 60, page_h - 125 - bleed_pt, page_w / 2.0 + 60, page_h - 125 - bleed_pt)
 
             # 12 Swatch Boxes Grid (4 rows x 3 cols)
             grid_cols = 3
             grid_rows = 4
-            swatch_w = 110 * scale_x
-            swatch_h = 75 * scale_y
-            spacing_x = 25 * scale_x
-            spacing_y = 25 * scale_y
-            grid_start_x = 65 * scale_x + bleed_pt
-            grid_start_y = page_h - (140 * scale_y) - bleed_pt - swatch_h
+            swatch_w = 120
+            swatch_h = 85
+            spacing_x = 24
+            spacing_y = 24
+            grid_total_w = (grid_cols * swatch_w) + ((grid_cols - 1) * spacing_x)
+            grid_start_x = (page_w - grid_total_w) / 2.0
+            grid_start_y = page_h - 160 - bleed_pt - swatch_h
 
             box_idx = 1
             for r in range(grid_rows):
@@ -249,9 +297,9 @@ class KDPPdfExporter:
                     c.roundRect(bx, by, swatch_w, swatch_h, radius=6, fill=0, stroke=1)
                     c.setDash()
 
-                    c.setFont("Helvetica-Bold", 9 * scale_y)
+                    c.setFont("Helvetica", 8)
                     c.setFillColor(colors.HexColor("#94a3b8"))
-                    c.drawString(bx + 8, by + swatch_h - 14, f"Color {box_idx}")
+                    c.drawString(bx + 8, by + swatch_h - 12, f"Color {box_idx}")
                     box_idx += 1
 
             c.showPage()
@@ -322,7 +370,9 @@ class KDPPdfExporter:
                 elif elem_type == "title":
                     text = elem.get("text", "")
                     if text:
-                        font_size = float(elem.get("font_size", 40)) * scale_y
+                        raw_size = float(elem.get("font_size", 38))
+                        # Clean font sizing
+                        font_size = raw_size * scale_y * 0.95
                         alignment = elem.get("alignment", "center")
                         is_outline = elem.get("is_outline", True)
                         
@@ -332,7 +382,7 @@ class KDPPdfExporter:
                             c.setFont("Helvetica-Bold", font_size)
                             c.setStrokeColor(colors.HexColor(elem.get("stroke_color", "#0f172a")))
                             c.setFillColor(colors.white)
-                            c.setLineWidth(2.0 * scale_y)
+                            c.setLineWidth(1.5 * scale_y)
                             c._code.append("2 Tr\n")  # Fill and stroke outline
 
                             if alignment == "left":
@@ -342,7 +392,7 @@ class KDPPdfExporter:
                             else:
                                 c.drawCentredString(x + (w / 2.0), text_y, text)
 
-                            c._code.append("0 Tr\n")
+                            c._code.append("0 Tr\n")  # Reset immediately to avoid affecting other text
                         else:
                             c.setFont("Helvetica-Bold", font_size)
                             c.setFillColor(colors.HexColor(elem.get("color", "#111827")))
