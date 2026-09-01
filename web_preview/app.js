@@ -1,5 +1,5 @@
 /**
- * KDP Book Production Studio - Project Workspace, Lock Protection & Deletion Engine
+ * KDP Book Production Studio - Project Workspace, Lock Protection & Robust Persistence Engine
  */
 
 let defaultRootLocation = "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects";
@@ -91,9 +91,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
   setupGlobalKeyboardShortcuts();
   fetchDefaultLocation();
-  restoreAutoSavedProject();
+  loadInitialProject();
   fetchRecentProjects();
-  syncActiveProjectUI();
   setupCanvasInteractions();
 
   // Background Auto-Save Cron (Every 10 seconds)
@@ -105,10 +104,47 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================
-// Auto-Save & Crash-Recovery System
+// Robust Initial Project Loader & Persistence
 // ==========================================
+function loadInitialProject() {
+  // 1. Instant recovery from local cache
+  try {
+    const cachedData = localStorage.getItem("kdp_active_project_data") || localStorage.getItem("kdp_autosave_current_project");
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      if (parsed && parsed.name && parsed.pages && parsed.pages.length > 0) {
+        currentProject = parsed;
+      }
+    }
+  } catch (e) {
+    console.warn("Local cache read error:", e);
+  }
+
+  // 2. Render UI immediately with cached data
+  syncActiveProjectUI();
+  loadPageIntoCanvas(currentPageIndex);
+  renderTimeline();
+
+  // 3. Sync from backend disk if active path is stored
+  const activePath = localStorage.getItem("kdp_active_project_path") || currentProject.project_dir;
+  if (activePath) {
+    fetch(`/api/projects/load?path=${encodeURIComponent(activePath)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.project && data.project.pages && data.project.pages.length > 0) {
+          currentProject = data.project;
+          syncActiveProjectUI();
+          loadPageIntoCanvas(currentPageIndex);
+          renderTimeline();
+          renderMediaLibrary();
+        }
+      })
+      .catch(() => {});
+  }
+}
+
 function markProjectDirty() {
-  if (currentProject.is_locked) return; // Do not modify locked project
+  if (currentProject.is_locked) return;
   isDirty = true;
   updateAutoSaveIndicator(true);
 
@@ -140,8 +176,10 @@ function saveProject(isManual = false) {
 
   currentProject.updated_at = new Date().toISOString();
   
-  // 1. Save to LocalStorage for instant browser crash recovery
+  // 1. Persist to LocalStorage for zero-loss reload
   try {
+    localStorage.setItem("kdp_active_project_path", currentProject.project_dir);
+    localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
     localStorage.setItem("kdp_autosave_current_project", JSON.stringify(currentProject));
     if (currentProject.folder_name) {
       localStorage.setItem(`kdp_project_${currentProject.folder_name}`, JSON.stringify(currentProject));
@@ -150,7 +188,7 @@ function saveProject(isManual = false) {
     console.warn("LocalStorage save error:", e);
   }
 
-  // 2. Persist to Physical Disk in project folder (project.json)
+  // 2. Persist to Physical Disk (project.json)
   fetch("/api/projects/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -159,6 +197,7 @@ function saveProject(isManual = false) {
   .then(() => {
     isDirty = false;
     updateAutoSaveIndicator(false);
+    fetchRecentProjects();
     if (isManual) {
       showToast(`💾 Saved "${currentProject.name}" to disk!`, "success");
     }
@@ -172,28 +211,23 @@ function saveProject(isManual = false) {
   });
 }
 
-function restoreAutoSavedProject() {
-  try {
-    const saved = localStorage.getItem("kdp_autosave_current_project");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && parsed.name && parsed.pages && parsed.pages.length > 0) {
-        currentProject = parsed;
-      }
-    }
-  } catch (e) {
-    console.warn("Could not restore auto-save:", e);
-  }
-}
-
 // ==========================================
 // Project Lock / Unlock & Deletion Engine
 // ==========================================
 function toggleActiveProjectLock() {
   currentProject.is_locked = !currentProject.is_locked;
   syncActiveProjectUI();
-  saveProject(false);
-  fetchRecentProjects();
+  
+  // Persist lock status to disk
+  fetch("/api/projects/toggle_lock", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path: currentProject.project_dir })
+  }).then(() => {
+    fetchRecentProjects();
+  }).catch(() => {});
+
+  localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
   showToast(currentProject.is_locked ? `🔒 Locked "${currentProject.name}"!` : `🔓 Unlocked "${currentProject.name}"!`, "info");
 }
 
@@ -206,8 +240,9 @@ function toggleProjectLock(path) {
   .then(r => r.json())
   .then(data => {
     if (currentProject.project_dir === path) {
-      currentProject.is_locked = data.is_locked;
+      currentProject.is_locked = Boolean(data.is_locked);
       syncActiveProjectUI();
+      localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
     }
     fetchRecentProjects();
     showToast(data.is_locked ? "🔒 Project Locked!" : "🔓 Project Unlocked!", "info");
@@ -219,7 +254,7 @@ function toggleProjectLock(path) {
 
 function promptDeleteProject(path, name, isLocked) {
   if (isLocked) {
-    showToast(`🔒 Cannot delete "${name}" because it is LOCKED! Please unlock it first.`, "warning");
+    showToast(`🔒 Cannot delete "${name}": Project is LOCKED! Please unlock it first.`, "warning");
     return;
   }
 
@@ -256,10 +291,12 @@ function executeDeleteProject() {
 
     // If active project was deleted, reset workspace
     if (currentProject.project_dir === targetPath) {
+      localStorage.removeItem("kdp_active_project_path");
+      localStorage.removeItem("kdp_active_project_data");
       currentProject = {
-        name: "New Untitled Book",
-        folder_name: "New_Untitled_Book",
-        project_dir: `${defaultRootLocation}\\New_Untitled_Book`,
+        name: "New Book Project",
+        folder_name: "New_Book_Project",
+        project_dir: `${defaultRootLocation}\\New_Book_Project`,
         author: "Author",
         is_locked: false,
         settings: {
@@ -513,30 +550,37 @@ function renderRecentProjects() {
   const container = document.getElementById("recent-projects-list");
   const modalPickList = document.getElementById("modal-project-pick-list");
 
-  const renderItemHtml = (p) => `
-    <div class="recent-item">
-      <div class="recent-icon">${p.is_locked ? '🔒' : '📁'}</div>
-      <div class="recent-info" onclick="openProjectByPath('${p.path.replace(/\\/g, '\\\\')}')">
-        <div class="recent-title">
-          <span>${p.name}</span>
-          ${p.is_locked ? '<span class="badge locked">LOCKED</span>' : '<span class="badge unlocked">UNLOCKED</span>'}
+  const renderItemHtml = (p) => {
+    const isLocked = Boolean(p.is_locked);
+    const lockIcon = isLocked ? "🔒" : "🔓";
+    const lockText = isLocked ? "LOCKED" : "UNLOCKED";
+    const lockBtnLabel = isLocked ? "🔓 Unlock" : "🔒 Lock";
+
+    return `
+      <div class="recent-item">
+        <div class="recent-icon">${lockIcon}</div>
+        <div class="recent-info" onclick="openProjectByPath('${p.path.replace(/\\/g, '\\\\')}')">
+          <div class="recent-title">
+            <span>${p.name}</span>
+            <span class="badge ${isLocked ? 'locked' : 'unlocked'}">${lockIcon} ${lockText}</span>
+          </div>
+          <div class="recent-path">${p.path}</div>
         </div>
-        <div class="recent-path">${p.path}</div>
+        <div class="recent-meta">
+          <span class="badge">${p.page_count || 0} Pages</span>
+          <button class="btn btn-sm btn-primary" onclick="openProjectByPath('${p.path.replace(/\\/g, '\\\\')}')">Open</button>
+          <button class="btn btn-sm btn-outline" onclick="toggleProjectLock('${p.path.replace(/\\/g, '\\\\')}')" title="${isLocked ? 'Unlock Project' : 'Lock Project'}">
+            ${lockBtnLabel}
+          </button>
+          <button class="btn btn-sm btn-danger btn-icon-only ${isLocked ? 'btn-disabled' : ''}" 
+            onclick="promptDeleteProject('${p.path.replace(/\\/g, '\\\\')}', '${p.name.replace(/'/g, "\\'")}', ${isLocked})" 
+            title="${isLocked ? 'Cannot delete locked project' : 'Delete Project Folder'}">
+            🗑
+          </button>
+        </div>
       </div>
-      <div class="recent-meta">
-        <span class="badge">${p.page_count || 0} Pages</span>
-        <button class="btn btn-sm btn-primary" onclick="openProjectByPath('${p.path.replace(/\\/g, '\\\\')}')">Open</button>
-        <button class="btn btn-sm btn-outline btn-icon-only" onclick="toggleProjectLock('${p.path.replace(/\\/g, '\\\\')}')" title="${p.is_locked ? 'Unlock Project' : 'Lock Project'}">
-          ${p.is_locked ? '🔓' : '🔒'}
-        </button>
-        <button class="btn btn-sm btn-danger btn-icon-only ${p.is_locked ? 'btn-disabled' : ''}" 
-          onclick="promptDeleteProject('${p.path.replace(/\\/g, '\\\\')}', '${p.name.replace(/'/g, "\\'")}', ${p.is_locked})" 
-          title="Delete Project Folder">
-          🗑
-        </button>
-      </div>
-    </div>
-  `;
+    `;
+  };
 
   if (container) {
     container.innerHTML = recentProjectsList.length 
@@ -588,7 +632,18 @@ function switchDrawerTab(tabKey) {
 
 // Sync UI with currentProject state
 function syncActiveProjectUI() {
-  document.getElementById("nav-project-name").innerText = `${currentProject.is_locked ? '🔒 ' : ''}${currentProject.name}`;
+  const isLocked = Boolean(currentProject.is_locked);
+  const lockIcon = isLocked ? "🔒" : "🔓";
+  const lockText = isLocked ? "LOCKED" : "UNLOCKED";
+  const lockBtnText = isLocked ? "🔓 Unlock Project" : "🔒 Lock Project";
+
+  // Top Nav Project Pill
+  const navProjName = document.getElementById("nav-project-name");
+  if (navProjName) {
+    navProjName.innerText = `${lockIcon} ${currentProject.name}`;
+  }
+
+  // Active Project Card Banner
   document.getElementById("active-proj-title").innerText = currentProject.name;
   document.getElementById("active-proj-path").innerText = `📁 ${currentProject.project_dir}`;
   document.getElementById("active-proj-meta").innerHTML = `
@@ -597,15 +652,16 @@ function syncActiveProjectUI() {
     <span>Trim: 8.5x11 in</span>
   `;
 
+  // Dynamic Lock Badges and Buttons
   const lockBadge = document.getElementById("active-proj-lock-badge");
   if (lockBadge) {
-    lockBadge.className = `badge ${currentProject.is_locked ? 'locked' : 'unlocked'}`;
-    lockBadge.innerText = currentProject.is_locked ? "🔒 LOCKED" : "🔓 UNLOCKED";
+    lockBadge.className = `badge ${isLocked ? 'locked' : 'unlocked'}`;
+    lockBadge.innerText = `${lockIcon} ${lockText}`;
   }
 
   const lockBtn = document.getElementById("active-lock-toggle-btn");
   if (lockBtn) {
-    lockBtn.innerText = currentProject.is_locked ? "🔓 Unlock Project" : "🔒 Lock Project";
+    lockBtn.innerText = lockBtnText;
   }
 
   document.getElementById("stat-page-count").innerText = currentProject.pages.length;
@@ -729,12 +785,14 @@ function finishProjectSetup(proj) {
   currentPageIndex = 0;
   activeElementId = null;
 
+  localStorage.setItem("kdp_active_project_path", currentProject.project_dir);
+  localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
+
   closeModal("new-project-modal");
   syncActiveProjectUI();
   fetchRecentProjects();
   switchTab("canvas");
 
-  markProjectDirty();
   showToast(`✨ Created Project "${proj.name}" in ${proj.folder_name}!`, "success");
 }
 
@@ -750,11 +808,17 @@ function openProjectByPath(path) {
           currentProject.name = found.name;
           currentProject.project_dir = found.path;
           currentProject.folder_name = found.path.split("\\").pop();
-          currentProject.is_locked = bool(found.is_locked);
+          currentProject.is_locked = Boolean(found.is_locked);
         }
       }
+      currentPageIndex = 0;
+      activeElementId = null;
+      localStorage.setItem("kdp_active_project_path", currentProject.project_dir);
+      localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
+
       closeModal("open-folder-modal");
       syncActiveProjectUI();
+      loadPageIntoCanvas(currentPageIndex);
       switchTab("canvas");
       showToast(`📂 Opened Project "${currentProject.name}"!`, "info");
     })
@@ -1084,6 +1148,12 @@ function getLayoutName(key) {
 // Page Canvas Loader & Elements
 // ==========================================
 function loadPageIntoCanvas(index) {
+  if (!currentProject.pages || currentProject.pages.length === 0) return;
+  
+  if (index >= currentProject.pages.length) {
+    index = currentProject.pages.length - 1;
+  }
+  currentPageIndex = index;
   const page = currentProject.pages[index];
   const layer = document.getElementById("elements-layer");
   if (!layer) return;
@@ -1178,7 +1248,7 @@ function setupCanvasInteractions() {
   if (!stage) return;
 
   stage.addEventListener("mousedown", (e) => {
-    if (currentProject.is_locked) return; // Read-only
+    if (currentProject.is_locked) return;
 
     if (e.target.classList.contains("handle")) {
       isResizing = true;
