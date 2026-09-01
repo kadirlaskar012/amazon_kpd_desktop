@@ -38,39 +38,6 @@ let currentProject = {
   pages: [
     {
       page_number: 1,
-      page_type: "front_matter_disclaimer",
-      title: "Disclaimer & Copyright",
-      layout: "disclaimer_standard",
-      elements: [
-        { id: "elem_disc_frame", type: "border", x: 30, y: 25, w: 450, h: 610 },
-        { id: "elem_disc_title", type: "title", x: 45, y: 65, w: 420, h: 40, text: "MY JUNGLE COLORING BOOK", font_size: 24, color: "#0f172a", is_outline: false },
-        { id: "elem_disc_sub", type: "title", x: 45, y: 110, w: 420, h: 25, text: "First Edition • Premium KDP Edition", font_size: 13, color: "#475569", is_outline: false },
-        { id: "elem_disc_copy", type: "title", x: 45, y: 180, w: 420, h: 25, text: "Copyright © 2026 by Creative Kids Studio", font_size: 14, color: "#1e293b", is_outline: false },
-        { id: "elem_disc_rights", type: "title", x: 45, y: 210, w: 420, h: 20, text: "All rights reserved.", font_size: 12, color: "#475569", is_outline: false },
-        { id: "elem_disc_p1", type: "title", x: 45, y: 260, w: 420, h: 20, text: "No part of this publication may be reproduced, distributed, or transmitted in any form", font_size: 10, color: "#64748b", is_outline: false },
-        { id: "elem_disc_p2", type: "title", x: 45, y: 285, w: 420, h: 20, text: "or by any means, including photocopying, recording, or other electronic methods,", font_size: 10, color: "#64748b", is_outline: false },
-        { id: "elem_disc_p3", type: "title", x: 45, y: 310, w: 420, h: 20, text: "without the prior written permission of the author and publisher.", font_size: 10, color: "#64748b", is_outline: false },
-        { id: "elem_disc_pub", type: "title", x: 45, y: 400, w: 420, h: 20, text: "Published by: KDP Creative Publishing", font_size: 11, color: "#334155", is_outline: false },
-        { id: "elem_disc_isbn", type: "title", x: 45, y: 430, w: 420, h: 20, text: "ISBN-13: 978-X-XXXXX-XXX-X", font_size: 11, color: "#334155", is_outline: false },
-        { id: "elem_disc_contact", type: "title", x: 45, y: 480, w: 420, h: 20, text: "Visit us: www.kdpbooks.com • support@kdpbooks.com", font_size: 10, color: "#64748b", is_outline: false },
-        { id: "elem_disc_kdp", type: "title", x: 45, y: 550, w: 420, h: 20, text: "Printed for Amazon KDP Distribution • First Printing", font_size: 9, color: "#94a3b8", is_outline: false }
-      ]
-    },
-    {
-      page_number: 2,
-      page_type: "front_matter_contents",
-      title: "Table of Contents",
-      layout: "contents_standard",
-      elements: [
-        { id: "elem_cnt_frame", type: "border", x: 30, y: 25, w: 450, h: 610 },
-        { id: "elem_cnt_head", type: "title", x: 45, y: 55, w: 420, h: 35, text: "TABLE OF CONTENTS", font_size: 22, color: "#0f172a", is_outline: false },
-        { id: "elem_cnt_sub", type: "title", x: 45, y: 90, w: 420, h: 20, text: "Explore all the illustrations and coloring pages in this book", font_size: 11, color: "#64748b", is_outline: false },
-        { id: "elem_cnt_item_1", type: "title", x: 65, y: 140, w: 380, h: 24, text: "1. Playful Lion ........................ Page 3", font_size: 12, color: "#1e293b", is_outline: false },
-        { id: "elem_cnt_item_2", type: "title", x: 65, y: 168, w: 380, h: 24, text: "2. Gentle Elephant .................... Page 5", font_size: 12, color: "#1e293b", is_outline: false }
-      ]
-    },
-    {
-      page_number: 3,
       page_type: "content",
       title: "Playful Lion",
       layout: "kdp_top_ref",
@@ -82,37 +49,47 @@ let currentProject = {
       ]
     },
     {
-      page_number: 4,
-      page_type: "blank_verso",
-      title: "Blank Page",
-      layout: "blank_page",
-      elements: []
-    },
-    {
-      page_number: 5,
+      page_number: 2,
       page_type: "content",
       title: "Gentle Elephant",
       layout: "kdp_top_ref",
       elements: [
         { id: "elem_ref_2", type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: "Gentle Elephant Reference", image_src: null },
-        { id: "elem_title_2", type: "title", x: 235, y: 70, w: 240, h: 80, text: "ELEPHANT", font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+        { id: "elem_title_2", type: "title", x: 235, y: 70, w: 240, h: 80, text: "ELEPHANT", font_size: 34, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
         { id: "elem_main_2", type: "main_image", x: 35, y: 220, w: 440, h: 410, text: "Gentle Elephant Drawing", image_src: null },
         { id: "elem_frame_2", type: "border", x: 25, y: 15, w: 460, h: 630 }
       ]
     },
     {
-      page_number: 6,
-      page_type: "blank_verso",
-      title: "Blank Page",
-      layout: "blank_page",
-      elements: []
+      page_number: 3,
+      page_type: "content",
+      title: "Cute Dog",
+      layout: "kdp_top_ref",
+      elements: [
+        { id: "elem_ref_3", type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: "Cute Dog Reference", image_src: null },
+        { id: "elem_title_3", type: "title", x: 235, y: 70, w: 240, h: 80, text: "PUPPY DOG", font_size: 34, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+        { id: "elem_main_3", type: "main_image", x: 35, y: 220, w: 440, h: 410, text: "Cute Dog Drawing", image_src: null },
+        { id: "elem_frame_3", type: "border", x: 25, y: 15, w: 460, h: 630 }
+      ]
+    },
+    {
+      page_number: 4,
+      page_type: "content",
+      title: "Happy Monkey",
+      layout: "kdp_top_ref",
+      elements: [
+        { id: "elem_ref_4", type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: "Happy Monkey Reference", image_src: null },
+        { id: "elem_title_4", type: "title", x: 235, y: 70, w: 240, h: 80, text: "MONKEY", font_size: 34, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+        { id: "elem_main_4", type: "main_image", x: 35, y: 220, w: 440, h: 410, text: "Happy Monkey Drawing", image_src: null },
+        { id: "elem_frame_4", type: "border", x: 25, y: 15, w: 460, h: 630 }
+      ]
     }
   ]
 };
 
 let recentProjectsList = [];
-let currentPageIndex = 2; // Default on first coloring page
-let currentSpreadIndex = 1;
+let currentPageIndex = 0; // Default on first coloring page
+let currentSpreadIndex = 0;
 let activeElementId = null;
 let currentZoom = 1.0;
 let showGuides = true;
@@ -664,35 +641,42 @@ function updateExportModalPreview() {
   const singleSided = document.getElementById("exp-opt-single-sided") ? document.getElementById("exp-opt-single-sided").checked : true;
   const blankNote = document.getElementById("exp-opt-blank-note") ? document.getElementById("exp-opt-blank-note").checked : false;
 
-  const rawPages = currentProject.pages || [];
-  const hasExplicitBlank = rawPages.some(p => p.page_type === "blank_verso");
+  const contentPages = (currentProject.pages || []).filter(p => p.page_type !== "blank_verso" && !p.page_type?.startsWith("front_matter_"));
 
-  // Build exact list of export pages
-  let exportPages = [];
-  rawPages.forEach((p, idx) => {
-    const isBlank = p.page_type === "blank_verso";
-    if (isBlank) {
-      if (singleSided) {
-        exportPages.push(p);
-      }
-    } else {
-      exportPages.push(p);
-      if (singleSided && !hasExplicitBlank && p.page_type === "content") {
-        exportPages.push({
-          page_type: "blank_verso",
-          title: "Blank Back Page",
-          elements: []
-        });
-      }
+  // Build compiled full KDP book pages
+  let exportPages = [
+    { page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", badge: "Page 1 • Disclaimer" },
+    { page_type: "front_matter_contents", title: "Table of Contents", badge: "Page 2 • Contents" },
+    { page_type: "front_matter_belongs_to", title: "Belongs To Page", badge: "Page 3 • Belongs To" },
+    { page_type: "front_matter_color_test", title: "Color Test Palette", badge: "Page 4 • Color Test" }
+  ];
+
+  contentPages.forEach((p, idx) => {
+    const drawPageNum = 5 + (idx * (singleSided ? 2 : 1));
+    exportPages.push({
+      ...p,
+      doc_page_number: drawPageNum,
+      badge: `Page ${drawPageNum} • Drawing ${idx + 1}`
+    });
+
+    if (singleSided) {
+      exportPages.push({
+        page_type: "blank_verso",
+        title: "Blank Back Page",
+        doc_page_number: drawPageNum + 1,
+        badge: `Page ${drawPageNum + 1} • Blank Back`
+      });
     }
   });
 
   let html = "";
   exportPages.forEach((p, idx) => {
     const docPageNum = idx + 1;
+    const isBlank = p.page_type === "blank_verso";
     const isDisclaimer = p.page_type === "front_matter_disclaimer";
     const isContents = p.page_type === "front_matter_contents";
-    const isBlank = p.page_type === "blank_verso";
+    const isBelongsTo = p.page_type === "front_matter_belongs_to";
+    const isColorTest = p.page_type === "front_matter_color_test";
 
     if (isBlank) {
       html += `
@@ -708,13 +692,24 @@ function updateExportModalPreview() {
       `;
     } else {
       const mainEl = (p.elements || []).find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src);
-      const thumbImg = mainEl 
-        ? `<img src="${mainEl.image_src}">` 
-        : `<span style="font-size:24px;">${isDisclaimer ? '📜' : (isContents ? '📋' : '🎨')}</span>`;
+      let thumbImg = "";
+      if (mainEl && mainEl.image_src) {
+        thumbImg = `<img src="${mainEl.image_src}">`;
+      } else if (isDisclaimer) {
+        thumbImg = `<span style="font-size:24px;">📜</span>`;
+      } else if (isContents) {
+        thumbImg = `<span style="font-size:24px;">📋</span>`;
+      } else if (isBelongsTo) {
+        thumbImg = `<span style="font-size:24px;">🏷️</span>`;
+      } else if (isColorTest) {
+        thumbImg = `<span style="font-size:24px;">🧪</span>`;
+      } else {
+        thumbImg = `<span style="font-size:24px;">🎨</span>`;
+      }
 
       html += `
         <div class="export-page-card">
-          <div class="export-page-badge recto">Page ${docPageNum} • ${isDisclaimer ? 'Disclaimer' : (isContents ? 'Contents' : 'Drawing')}</div>
+          <div class="export-page-badge recto">${p.badge || `Page ${docPageNum}`}</div>
           <div class="export-page-thumb">${thumbImg}</div>
           <div class="export-page-title">${p.title || `Page ${docPageNum}`}</div>
         </div>
@@ -821,7 +816,32 @@ function renderSpreadPreview() {
   const indicator = document.getElementById("spread-page-indicator");
   if (!container) return;
 
-  const totalPages = currentProject.pages ? currentProject.pages.length : 0;
+  const contentPages = (currentProject.pages || []).filter(p => p.page_type !== "blank_verso" && !p.page_type?.startsWith("front_matter_"));
+
+  // Build compiled full KDP book pages for realistic spread inspection
+  let compiledSpreadPages = [
+    { page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", page_number: 1, is_front_matter: true },
+    { page_type: "front_matter_contents", title: "Table of Contents", page_number: 2, is_front_matter: true },
+    { page_type: "front_matter_belongs_to", title: "This Book Belongs To", page_number: 3, is_front_matter: true },
+    { page_type: "front_matter_color_test", title: "Color Test Palette", page_number: 4, is_front_matter: true }
+  ];
+
+  contentPages.forEach((p, idx) => {
+    const drawPageNum = 5 + (idx * 2);
+    compiledSpreadPages.push({
+      ...p,
+      page_number: drawPageNum,
+      doc_page_number: drawPageNum
+    });
+    compiledSpreadPages.push({
+      page_type: "blank_verso",
+      title: "Blank Back Page",
+      page_number: drawPageNum + 1,
+      doc_page_number: drawPageNum + 1
+    });
+  });
+
+  const totalPages = compiledSpreadPages.length;
   if (totalPages === 0) {
     container.innerHTML = `<div style="padding:40px;color:#94a3b8;">No pages available in this project.</div>`;
     return;
@@ -830,12 +850,12 @@ function renderSpreadPreview() {
   const leftIdx = currentSpreadIndex * 2;
   const rightIdx = leftIdx + 1;
 
-  const leftPage = currentProject.pages[leftIdx];
-  const rightPage = rightIdx < totalPages ? currentProject.pages[rightIdx] : null;
+  const leftPage = compiledSpreadPages[leftIdx];
+  const rightPage = rightIdx < totalPages ? compiledSpreadPages[rightIdx] : null;
 
   if (indicator) {
     indicator.innerText = rightPage 
-      ? `Spread: Pages ${leftPage.page_number} - ${rightPage.page_number} (of ${totalPages})`
+      ? `Spread: Pages ${leftPage.page_number} - ${rightPage.page_number} (of ${totalPages} Compiled Pages)`
       : `Spread: Page ${leftPage.page_number} (Final Page)`;
   }
 
@@ -859,9 +879,76 @@ function renderSpreadPreview() {
       `;
     }
 
-    const titleEl = page.elements.find(e => e.type === "title");
-    const mainEl = page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src);
-    const refEl = page.elements.find(e => e.type === "ref_image" && e.image_src);
+    if (page.page_type === "front_matter_disclaimer") {
+      return `
+        <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
+          <div class="spread-page-header">Page 1 • Disclaimer & Copyright</div>
+          <div class="spread-inner-content" style="border:1.5px solid #0f172a;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;">
+            <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:6px;">${(currentProject.name || 'COLORING BOOK').toUpperCase()}</div>
+            <div style="font-size:10px;color:#475569;margin-bottom:12px;">First Edition • Amazon KDP Publication</div>
+            <div style="font-size:10px;font-weight:700;color:#1e293b;">Copyright © 2026 by ${currentProject.author || 'Author'}</div>
+            <div style="font-size:8.5px;color:#64748b;margin-top:10px;max-width:200px;">All rights reserved. No reproduction without prior written permission.</div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (page.page_type === "front_matter_contents") {
+      let itemsListHtml = "";
+      contentPages.slice(0, 10).forEach((cp, cIdx) => {
+        const itemP = 5 + (cIdx * 2);
+        itemsListHtml += `<div style="display:flex;justify-content:space-between;font-size:9.5px;margin-bottom:3px;color:#1e293b;"><span>${cIdx + 1}. ${cp.title || 'Drawing'}</span><span>Page ${itemP}</span></div>`;
+      });
+
+      return `
+        <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
+          <div class="spread-page-header">Page 2 • Table of Contents</div>
+          <div class="spread-inner-content" style="border:1.5px solid #0f172a;border-radius:6px;display:flex;flex-direction:column;padding:16px;">
+            <div style="font-size:14px;font-weight:800;text-align:center;color:#0f172a;margin-bottom:4px;">TABLE OF CONTENTS</div>
+            <div style="font-size:9px;text-align:center;color:#64748b;margin-bottom:12px;">Complete illustration list in this book</div>
+            <div style="width:100%;">${itemsListHtml}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (page.page_type === "front_matter_belongs_to") {
+      return `
+        <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
+          <div class="spread-page-header">Page 3 • Belongs To Page</div>
+          <div class="spread-inner-content" style="border:1.5px solid #0f172a;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;">
+            <div style="font-size:13px;font-weight:800;color:#1e293b;">THIS COLORING BOOK</div>
+            <div style="font-size:20px;font-weight:800;color:#ffffff;-webkit-text-stroke:1.5px #0f172a;margin:8px 0;">BELONGS TO:</div>
+            <div style="width:80%;border-bottom:1.5px solid #64748b;margin:15px 0;"></div>
+            <div style="font-size:9px;font-style:italic;color:#64748b;">Color with joy, love and imagination!</div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (page.page_type === "front_matter_color_test") {
+      return `
+        <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
+          <div class="spread-page-header">Page 4 • Color Test Palette</div>
+          <div class="spread-inner-content" style="border:1.5px solid #0f172a;border-radius:6px;display:flex;flex-direction:column;align-items:center;padding:12px;text-align:center;">
+            <div style="font-size:13px;font-weight:800;color:#ffffff;-webkit-text-stroke:1.2px #0f172a;margin-bottom:2px;">COLOR TEST PALETTE</div>
+            <div style="font-size:8.5px;color:#64748b;margin-bottom:10px;">Test pencils and markers here</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;">
+              <div style="border:1px dashed #94a3b8;height:24px;border-radius:3px;"></div>
+              <div style="border:1px dashed #94a3b8;height:24px;border-radius:3px;"></div>
+              <div style="border:1px dashed #94a3b8;height:24px;border-radius:3px;"></div>
+              <div style="border:1px dashed #94a3b8;height:24px;border-radius:3px;"></div>
+              <div style="border:1px dashed #94a3b8;height:24px;border-radius:3px;"></div>
+              <div style="border:1px dashed #94a3b8;height:24px;border-radius:3px;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    const titleEl = (page.elements || []).find(e => e.type === "title");
+    const mainEl = (page.elements || []).find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src);
+    const refEl = (page.elements || []).find(e => e.type === "ref_image" && e.image_src);
 
     const titleText = titleEl ? titleEl.text : (page.title || `PAGE ${page.page_number}`);
     const imgContent = mainEl 
@@ -870,7 +957,7 @@ function renderSpreadPreview() {
 
     return `
       <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
-        <div class="spread-page-header">Page ${page.page_number} • ${page.page_type === 'front_matter_disclaimer' ? 'Disclaimer' : (page.page_type === 'front_matter_contents' ? 'Contents' : 'Drawing')}</div>
+        <div class="spread-page-header">Page ${page.page_number} • Drawing</div>
         <div class="spread-inner-content">
           <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:6px;">
             ${refEl ? `<div style="width:70px;height:55px;border:1px solid #e2e8f0;border-radius:4px;overflow:hidden;"><img src="${refEl.image_src}" style="width:100%;height:100%;object-fit:contain;"></div>` : ''}
@@ -899,8 +986,9 @@ function prevSpreadPage() {
 }
 
 function nextSpreadPage() {
-  const totalPages = currentProject.pages ? currentProject.pages.length : 0;
-  const maxSpread = Math.floor((totalPages - 1) / 2);
+  const contentPages = (currentProject.pages || []).filter(p => p.page_type !== "blank_verso" && !p.page_type?.startsWith("front_matter_"));
+  const totalCompiled = 4 + (contentPages.length * 2);
+  const maxSpread = Math.floor((totalCompiled - 1) / 2);
   if (currentSpreadIndex < maxSpread) {
     currentSpreadIndex++;
     renderSpreadPreview();
@@ -1508,98 +1596,19 @@ function submitCreateProject() {
 
   const pagesList = [];
 
-  // 1. Insert Front Matter (Page 1 Disclaimer + Page 2 Contents)
-  if (autoFrontMatter) {
-    pagesList.push({
-      page_number: 1,
-      page_type: "front_matter_disclaimer",
-      title: "Disclaimer & Copyright",
-      layout: "disclaimer_standard",
-      elements: [
-        { id: "elem_disc_frame", type: "border", x: 30, y: 25, w: 450, h: 610 },
-        { id: "elem_disc_title", type: "title", x: 45, y: 65, w: 420, h: 40, text: projName.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
-        { id: "elem_disc_sub", type: "title", x: 45, y: 110, w: 420, h: 25, text: "First Edition • Premium KDP Edition", font_size: 13, color: "#475569", is_outline: false },
-        { id: "elem_disc_copy", type: "title", x: 45, y: 180, w: 420, h: 25, text: `Copyright © ${new Date().getFullYear()} by Creative Kids Studio`, font_size: 14, color: "#1e293b", is_outline: false },
-        { id: "elem_disc_rights", type: "title", x: 45, y: 210, w: 420, h: 20, text: "All rights reserved.", font_size: 12, color: "#475569", is_outline: false },
-        { id: "elem_disc_p1", type: "title", x: 45, y: 260, w: 420, h: 20, text: "No part of this publication may be reproduced, distributed, or transmitted in any form", font_size: 10, color: "#64748b", is_outline: false },
-        { id: "elem_disc_p2", type: "title", x: 45, y: 285, w: 420, h: 20, text: "or by any means, including photocopying, recording, or other electronic methods,", font_size: 10, color: "#64748b", is_outline: false },
-        { id: "elem_disc_p3", type: "title", x: 45, y: 310, w: 420, h: 20, text: "without the prior written permission of the author and publisher.", font_size: 10, color: "#64748b", is_outline: false },
-        { id: "elem_disc_pub", type: "title", x: 45, y: 400, w: 420, h: 20, text: "Published by: KDP Creative Publishing", font_size: 11, color: "#334155", is_outline: false },
-        { id: "elem_disc_isbn", type: "title", x: 45, y: 430, w: 420, h: 20, text: "ISBN-13: 978-X-XXXXX-XXX-X", font_size: 11, color: "#334155", is_outline: false },
-        { id: "elem_disc_contact", type: "title", x: 45, y: 480, w: 420, h: 20, text: "Visit us: www.kdpbooks.com • support@kdpbooks.com", font_size: 10, color: "#64748b", is_outline: false },
-        { id: "elem_disc_kdp", type: "title", x: 45, y: 550, w: 420, h: 20, text: "Printed for Amazon KDP Distribution • First Printing", font_size: 9, color: "#94a3b8", is_outline: false }
-      ]
-    });
-
-    pagesList.push({
-      page_number: 2,
-      page_type: "front_matter_contents",
-      title: "Table of Contents",
-      layout: "contents_standard",
-      elements: [
-        { id: "elem_cnt_frame", type: "border", x: 30, y: 25, w: 450, h: 610 },
-        { id: "elem_cnt_head", type: "title", x: 45, y: 55, w: 420, h: 35, text: "TABLE OF CONTENTS", font_size: 22, color: "#0f172a", is_outline: false },
-        { id: "elem_cnt_sub", type: "title", x: 45, y: 90, w: 420, h: 20, text: "Explore all the illustrations and coloring pages in this book", font_size: 11, color: "#64748b", is_outline: false }
-      ]
-    });
-
-    // Page 3: This Book Belongs To
-    pagesList.push({
-      page_number: 3,
-      page_type: "front_matter_belongs_to",
-      title: "Belongs To Page",
-      layout: "belongs_to",
-      elements: [
-        { id: "elem_bt_frame", type: "border", x: 30, y: 25, w: 450, h: 610 },
-        { id: "elem_bt_title", type: "title", x: 45, y: 80, w: 420, h: 30, text: "THIS COLORING BOOK", font_size: 22, color: "#1e293b", is_outline: false },
-        { id: "elem_bt_belongs", type: "title", x: 45, y: 135, w: 420, h: 45, text: "BELONGS TO:", font_size: 32, font_family: "Fredoka", color: "#ffffff", is_outline: true },
-        { id: "elem_bt_line", type: "title", x: 45, y: 220, w: 420, h: 30, text: "____________________________________", font_size: 18, color: "#64748b", is_outline: false },
-        { id: "elem_bt_sub", type: "title", x: 45, y: 320, w: 420, h: 25, text: "Color with joy, love and your wild imagination!", font_size: 13, color: "#475569", is_outline: false }
-      ]
-    });
-
-    // Page 4: Color Test Palette
-    pagesList.push({
-      page_number: 4,
-      page_type: "front_matter_color_test",
-      title: "Color Test Palette",
-      layout: "color_test",
-      elements: [
-        { id: "elem_ct_frame", type: "border", x: 30, y: 25, w: 450, h: 610 },
-        { id: "elem_ct_title", type: "title", x: 45, y: 55, w: 420, h: 35, text: "COLOR TEST PALETTE", font_size: 24, font_family: "Fredoka", color: "#ffffff", is_outline: true },
-        { id: "elem_ct_sub", type: "title", x: 45, y: 95, w: 420, h: 20, text: "Test your pencils, markers and crayons here before coloring!", font_size: 11, color: "#64748b", is_outline: false },
-        { id: "elem_ct_hint", type: "title", x: 45, y: 140, w: 420, h: 20, text: "Color Swatch Test Boxes:", font_size: 12, color: "#1e293b", is_outline: false }
-      ]
-    });
-  }
-
-  // 2. Add Content Pages with alternating Blank Back Pages: Drawing -> Blank -> Drawing -> Blank
   for (let i = 0; i < count; i++) {
-    const drawingPageNum = pagesList.length + 1;
     const contentNum = i + 1;
-
-    // Drawing Page (Recto)
     pagesList.push({
-      page_number: drawingPageNum,
+      page_number: contentNum,
       page_type: "content",
       title: `Page ${contentNum}`,
       layout: "kdp_top_ref",
       elements: [
-        { id: `elem_ref_${drawingPageNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${contentNum}`, image_src: null },
-        { id: `elem_title_${drawingPageNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${contentNum}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
-        { id: `elem_main_${drawingPageNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${contentNum}`, image_src: null },
-        { id: `elem_frame_${drawingPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        { id: `elem_ref_${contentNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${contentNum}`, image_src: null },
+        { id: `elem_title_${contentNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${contentNum}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+        { id: `elem_main_${contentNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${contentNum}`, image_src: null },
+        { id: `elem_frame_${contentNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
       ]
-    });
-
-    // Blank Back Page (Verso)
-    const blankPageNum = pagesList.length + 1;
-    pagesList.push({
-      page_number: blankPageNum,
-      page_type: "blank_verso",
-      title: "Blank Page",
-      layout: "blank_page",
-      elements: []
     });
   }
 
@@ -2579,53 +2588,42 @@ function deleteActiveElement() {
   }
 }
 
-// Page Actions - Adds a Drawing Page + its Blank Back Page
+// Page Actions - Adds 1 Drawing Page to the active canvas workspace
 function addNewPage() {
   if (currentProject.is_locked) {
     showToast("🔒 Project is locked!", "warning");
     return;
   }
 
-  recordHistoryState("Add Drawing & Blank Page");
+  recordHistoryState("Add Drawing Page");
 
-  const contentCount = currentProject.pages.filter(p => p.page_type === "content").length + 1;
-  const drawPageNum = currentProject.pages.length + 1;
-  const blankPageNum = currentProject.pages.length + 2;
+  const newPageNum = currentProject.pages.length + 1;
 
   const projFont = currentProject.settings?.default_font_family || "Fredoka";
   const projOutline = currentProject.settings?.default_font_mode !== "solid";
   const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
   const projColor = currentProject.settings?.default_text_color || (projOutline ? "#ffffff" : "#111827");
 
-  // 1. Add Drawing Page
+  // Add Drawing Page
   currentProject.pages.push({
-    page_number: drawPageNum,
+    page_number: newPageNum,
     page_type: "content",
-    title: `Page ${contentCount}`,
+    title: `Drawing ${newPageNum}`,
     layout: "kdp_top_ref",
     elements: [
-      { id: `elem_ref_${drawPageNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${contentCount}`, image_src: null },
-      { id: `elem_title_${drawPageNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `PAGE ${contentCount}`, font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
-      { id: `elem_main_${drawPageNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${contentCount}`, image_src: null },
-      { id: `elem_frame_${drawPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+      { id: `elem_ref_${newPageNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${newPageNum}`, image_src: null },
+      { id: `elem_title_${newPageNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${newPageNum}`, font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
+      { id: `elem_main_${newPageNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${newPageNum}`, image_src: null },
+      { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
     ]
-  });
-
-  // 2. Add Blank Back Page
-  currentProject.pages.push({
-    page_number: blankPageNum,
-    page_type: "blank_verso",
-    title: "Blank Page",
-    layout: "blank_page",
-    elements: []
   });
 
   renumberPages();
   renderTimeline();
-  selectPage(currentProject.pages.length - 2); // Select the new drawing page
+  selectPage(currentProject.pages.length - 1);
   syncActiveProjectUI();
   markProjectDirty();
-  showToast(`Added Drawing Page ${drawPageNum} & Blank Back Page ${blankPageNum}!`, "success");
+  showToast(`➕ Added Drawing Canvas (Page ${newPageNum})!`, "success");
 }
 
 function duplicateCurrentPage() {
@@ -2645,7 +2643,7 @@ function duplicateCurrentPage() {
   selectPage(currentPageIndex + 1);
   syncActiveProjectUI();
   markProjectDirty();
-  showToast(`Duplicated page to Page ${currentPageIndex + 1}`, "success");
+  showToast(`Duplicated to Page ${currentPageIndex + 1}`, "success");
 }
 
 function deleteCurrentPage() {
@@ -2655,7 +2653,7 @@ function deleteCurrentPage() {
   }
 
   if (currentProject.pages.length <= 1) {
-    showToast("A book must contain at least one page.", "info");
+    showToast("A book must contain at least one drawing canvas.", "info");
     return;
   }
 
@@ -2677,7 +2675,7 @@ function deleteCurrentPage() {
   showToast(`🗑 Deleted Page ${deletedNum} & Auto-Renumbered Remaining Pages!`, "info");
 }
 
-// Timeline
+// Timeline Ribbon - Displays clean working drawing canvases
 function renderTimeline() {
   const strip = document.getElementById("thumbnails-strip");
   if (!strip) return;
@@ -2688,33 +2686,15 @@ function renderTimeline() {
     card.className = `thumb-card ${idx === currentPageIndex ? 'active' : ''}`;
     card.onclick = () => selectPage(idx);
 
-    let typeBadge = "";
-    if (page.page_type === "front_matter_disclaimer") {
-      typeBadge = `<div style="font-size:9px;color:var(--warning);font-weight:700;">[Disclaimer]</div>`;
-    } else if (page.page_type === "front_matter_contents") {
-      typeBadge = `<div style="font-size:9px;color:var(--secondary);font-weight:700;">[Contents]</div>`;
-    } else if (page.page_type === "front_matter_belongs_to") {
-      typeBadge = `<div style="font-size:9px;color:#ec4899;font-weight:700;">[Belongs To]</div>`;
-    } else if (page.page_type === "front_matter_color_test") {
-      typeBadge = `<div style="font-size:9px;color:#8b5cf6;font-weight:700;">[Palette]</div>`;
-    } else if (page.page_type === "blank_verso") {
-      typeBadge = `<div style="font-size:9px;color:#94a3b8;font-weight:700;">[Blank Back]</div>`;
-    }
-
-    let previewContent = "";
-    if (page.page_type === "blank_verso") {
-      previewContent = `<span style="font-size:11px;color:#cbd5e1;">⚪ Blank</span>`;
-    } else {
-      const mainEl = page.elements ? page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src) : null;
-      previewContent = mainEl 
-        ? `<img src="${mainEl.image_src}">` 
-        : `<span style="font-size:16px;">${page.page_type === 'front_matter_disclaimer' ? '📜' : (page.page_type === 'front_matter_contents' ? '📋' : (page.page_type === 'front_matter_belongs_to' ? '🏷️' : (page.page_type === 'front_matter_color_test' ? '🧪' : '🎨')))}</span>`;
-    }
+    const mainEl = page.elements ? page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src) : null;
+    const previewContent = mainEl 
+      ? `<img src="${mainEl.image_src}">` 
+      : `<span style="font-size:16px;">🎨</span>`;
 
     card.innerHTML = `
-      <div class="thumb-page-num">Page ${page.page_number} ${typeBadge}</div>
+      <div class="thumb-page-num">Drawing ${idx + 1}</div>
       <div class="thumb-preview-box">${previewContent}</div>
-      <div class="thumb-title">${page.title || 'Page ' + (idx + 1)}</div>
+      <div class="thumb-title">${page.title || 'Drawing ' + (idx + 1)}</div>
     `;
     strip.appendChild(card);
   });
@@ -2731,7 +2711,7 @@ function selectPage(index) {
   updatePropertiesInspector();
 }
 
-// Batch Ingestion - Each Image becomes a Drawing Page followed by a Blank Back Page
+// Batch Ingestion - Each Image becomes a Drawing Page with auto font scaling
 function triggerBatchUpload() {
   if (currentProject.is_locked) {
     showToast("🔒 Cannot batch import: Project is locked!", "warning");
@@ -2751,7 +2731,7 @@ function handleBatchImagesUpload(event) {
   if (!files.length) return;
 
   recordHistoryState(`Batch Import ${files.length} Images`);
-  showToast(`⚡ Processing ${files.length} images into single-sided coloring pages...`, "info");
+  showToast(`⚡ Importing ${files.length} images into canvas editor...`, "info");
 
   const projFont = currentProject.settings?.default_font_family || "Fredoka";
   const projOutline = currentProject.settings?.default_font_mode !== "solid";
@@ -2764,8 +2744,7 @@ function handleBatchImagesUpload(event) {
     reader.onload = (e) => {
       const dataUrl = e.target.result;
       const cleanTitle = cleanFileName(file.name);
-      const drawPageNum = currentProject.pages.length + 1;
-      const blankPageNum = currentProject.pages.length + 2;
+      const autoFontSize = calculateAutoTitleFontSize(cleanTitle, 40);
 
       if (!currentProject.media) currentProject.media = [];
 
@@ -2777,27 +2756,18 @@ function handleBatchImagesUpload(event) {
         sizeKb: Math.round(file.size / 1024)
       });
 
-      // 1. Add Drawing Page
+      // Add Drawing Page
       currentProject.pages.push({
-        page_number: drawPageNum,
+        page_number: currentProject.pages.length + 1,
         page_type: "content",
         title: cleanTitle,
         layout: "kdp_top_ref",
         elements: [
           { id: `elem_ref_${Date.now()}_${idx}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: cleanTitle, image_src: dataUrl },
-          { id: `elem_title_${Date.now()}_${idx}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: cleanTitle.toUpperCase(), font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
+          { id: `elem_title_${Date.now()}_${idx}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: cleanTitle.toUpperCase(), font_size: autoFontSize, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
           { id: `elem_main_${Date.now()}_${idx}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: cleanTitle, image_src: dataUrl },
           { id: `elem_frame_${Date.now()}_${idx}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
         ]
-      });
-
-      // 2. Add Blank Back Page
-      currentProject.pages.push({
-        page_number: blankPageNum,
-        page_type: "blank_verso",
-        title: "Blank Page",
-        layout: "blank_page",
-        elements: []
       });
 
       loadedCount++;
@@ -2807,9 +2777,9 @@ function handleBatchImagesUpload(event) {
         renderTimeline();
         syncActiveProjectUI();
         markProjectDirty();
-        selectPage(currentProject.pages.length - (files.length * 2));
+        selectPage(currentProject.pages.length - files.length);
         switchTab("canvas");
-        showToast(`🎉 Batch Generated ${files.length} Single-Sided Pages with Blank Backs!`, "success");
+        showToast(`🎉 Batch Created ${files.length} Drawing Pages (Title font auto-adjusted)!`, "success");
       }
     };
     reader.readAsDataURL(file);

@@ -198,9 +198,16 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
 
             single_sided = req_data.get("single_sided", True)
             blank_page_note = req_data.get("blank_page_note", False)
+            include_front_matter = req_data.get("include_front_matter", True)
 
             try:
-                KDPPdfExporter.generate_pdf(req_data, out_pdf, single_sided=single_sided, blank_page_note=blank_page_note)
+                KDPPdfExporter.generate_pdf(
+                    req_data, 
+                    out_pdf, 
+                    include_front_matter=include_front_matter, 
+                    single_sided=single_sided, 
+                    blank_page_note=blank_page_note
+                )
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
