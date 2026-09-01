@@ -653,6 +653,42 @@ class KDPPdfExporter:
                         wy = gy - 48 - (wr * 16)
                         c.drawCentredString(wx, wy, f"[  ] {w}")
 
+            # 7. If page has Dot-to-Dot attached, render vector points and number labels
+            dot_data = page.get("dot_to_dot")
+            if dot_data and dot_data.get("dots"):
+                dots = dot_data.get("dots", [])
+                pz_w = dot_data.get("canvas_w", 420)
+                pz_h = dot_data.get("canvas_h", 460)
+
+                target_w = trim_w - 90
+                target_h = trim_h - 180
+                scale_dot = min(target_w / pz_w, target_h / pz_h)
+
+                origin_x = (page_w - (pz_w * scale_dot)) / 2.0
+                origin_y = page_h - 130 - bleed_pt - (pz_h * scale_dot)
+
+                # Draw dots and numbers
+                for d in dots:
+                    num = d.get("num", 1)
+                    dx = origin_x + (d.get("x", 0) * scale_dot)
+                    dy = origin_y + ((pz_h - d.get("y", 0)) * scale_dot)
+                    
+                    lbl_x = origin_x + (d.get("label_x", d.get("x", 0)) * scale_dot)
+                    lbl_y = origin_y + ((pz_h - d.get("label_y", d.get("y", 0))) * scale_dot) - 3
+
+                    if num == 1:
+                        c.setFillColor(colors.HexColor("#0f172a"))
+                        c.circle(dx, dy, 3.8, fill=1, stroke=0)
+                        c.setFont("Helvetica-Bold", 9.0)
+                        c.setFillColor(colors.HexColor("#0f172a"))
+                        c.drawCentredString(dx, dy + 8, "START 1")
+                    else:
+                        c.setFillColor(colors.HexColor("#0f172a"))
+                        c.circle(dx, dy, 2.5, fill=1, stroke=0)
+                        c.setFont("Helvetica-Bold", 7.5)
+                        c.setFillColor(colors.HexColor("#1e293b"))
+                        c.drawCentredString(lbl_x, lbl_y, str(num))
+
             c.showPage()
 
             # Insert Single-Sided Blank Back Page (Verso)

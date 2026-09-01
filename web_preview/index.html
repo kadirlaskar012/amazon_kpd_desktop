@@ -459,6 +459,25 @@
                 <button class="btn btn-sm btn-outline full-width mt-2" onclick="triggerMediaUpload()">📤 Upload Image File...</button>
               </div>
 
+              <!-- Dot-to-Dot Puzzle Specific Properties -->
+              <div class="prop-group" id="prop-dot-group" style="display: none;">
+                <div class="group-title">🔢 Dot-to-Dot Generator Controls</div>
+                <div class="prop-field">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label>Total Numbered Dots</label>
+                    <span id="prop-dot-count-val" style="font-weight: 800; color: #6366f1;">35 Dots</span>
+                  </div>
+                  <input type="range" id="prop-dot-count" min="15" max="80" step="5" value="35" class="form-control" oninput="changeDotToDotCount(this.value)">
+                </div>
+                <div class="prop-field" style="margin-top: 8px;">
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-main);">
+                    <input type="checkbox" id="prop-dot-faint-guide" checked onchange="toggleDotToDotGuide(this.checked)">
+                    <span>Show Faint Outline Guide (10%)</span>
+                  </label>
+                </div>
+                <button class="btn btn-sm btn-primary full-width mt-2" onclick="resampleCurrentDotToDot()">🪄 Re-sample Numbered Dots</button>
+              </div>
+
               <!-- Text Specific Properties -->
               <div class="prop-group" id="prop-text-group" style="display: none;">
                 <div class="group-title">Typography & Font Styler (F2)</div>

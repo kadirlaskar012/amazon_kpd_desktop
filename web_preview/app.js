@@ -1732,6 +1732,10 @@ function onBookTypeChange() {
     if (nameInput) nameInput.value = "Word Search Explorer";
     if (trimSelect) trimSelect.value = "8.5x11";
     if (countLabel) countLabel.innerText = "Total Word Search Puzzles";
+  } else if (bType === "dot_to_dot") {
+    if (nameInput) nameInput.value = "Dot-to-Dot Animal Adventures";
+    if (trimSelect) trimSelect.value = "8.5x11";
+    if (countLabel) countLabel.innerText = "Total Dot Puzzles to Generate";
   } else {
     if (nameInput) nameInput.value = "My Jungle Coloring Book";
     if (trimSelect) trimSelect.value = "8.5x11";
@@ -1815,19 +1819,17 @@ async function submitCreateProject() {
 
       for (let i = 0; i < count; i++) {
         const pageNum = i + 1;
-        const pData = tttPages[i] || { games: [] };
-        const firstG = (pData.games && pData.games[0]) ? pData.games[0].game_number : ((i * perPage) + 1);
-        const lastG = (pData.games && pData.games.length) ? pData.games[pData.games.length - 1].game_number : ((i + 1) * perPage);
-        const pTitle = firstG !== lastG ? `Games #${firstG} - #${lastG}` : `Game #${firstG}`;
+        const pTitle = `Tic-Tac-Toe Page ${pageNum}`;
+        const pageGames = tttPages[i] ? tttPages[i].games : [];
 
         pagesList.push({
           page_number: pageNum,
           page_type: "content",
           title: pTitle,
           layout: "tic_tac_toe",
-          games: pData.games,
+          games: pageGames,
           elements: [
-            { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: "TIC-TAC-TOE", font_size: 26, color: "#0f172a", is_outline: false },
+            { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
             { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
           ]
         });
@@ -1847,15 +1849,15 @@ async function submitCreateProject() {
 
       for (let i = 0; i < count; i++) {
         const pageNum = i + 1;
-        const m = mazes[i] || mazes[0];
-        const pTitle = `Maze #${pageNum.toString().padStart(3, '0')}`;
+        const mz = mazes[i] || mazes[0];
+        const pTitle = `Maze Challenge #${pageNum.toString().padStart(3, '0')}`;
 
         pagesList.push({
           page_number: pageNum,
           page_type: "content",
           title: pTitle,
           layout: "maze",
-          maze: m,
+          maze: mz,
           elements: [
             { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 26, color: "#0f172a", is_outline: false },
             { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
@@ -1894,6 +1896,38 @@ async function submitCreateProject() {
       }
     } catch (e) {
       console.error("Error generating Word Searches:", e);
+    }
+  } else if (bType === "dot_to_dot") {
+    const presets = ["star", "butterfly", "rocket", "dinosaur", "heart", "cat", "airplane", "fish"];
+    try {
+      for (let i = 0; i < count; i++) {
+        const pageNum = i + 1;
+        const presetKey = presets[i % presets.length];
+        const resp = await fetch("/api/generators/dot_to_dot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ preset_name: presetKey, dot_count: 35 })
+        });
+        const data = await resp.json();
+        const pz = data.puzzle || {};
+        const pTitle = pz.title || presetKey.toUpperCase();
+
+        pagesList.push({
+          page_number: pageNum,
+          page_type: "content",
+          title: pTitle,
+          layout: "dot_to_dot",
+          dot_to_dot: pz,
+          elements: [
+            { id: `elem_ref_${pageNum}`, type: "ref_image", x: 35, y: 25, w: 160, h: 150, text: pTitle, image_src: null },
+            { id: `elem_title_${pageNum}`, type: "title", x: 215, y: 55, w: 260, h: 80, text: pTitle.toUpperCase(), font_size: 34, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+            { id: `elem_dot_${pageNum}`, type: "dot_to_dot", x: 35, y: 190, w: 440, h: 440, text: pTitle },
+            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      }
+    } catch (e) {
+      console.error("Error generating Dot-to-Dot presets:", e);
     }
   }
 
@@ -2681,13 +2715,11 @@ function handleMediaCardClick(mediaId) {
   }
 }
 
-function applyMediaToSlot(mediaId, slotType) {
+async function applyMediaToSlot(mediaId, slotType) {
   if (currentProject.is_locked) {
     showToast("🔒 Cannot modify: Project is locked!", "warning");
     return;
   }
-
-  recordHistoryState(`Apply Media (${slotType})`);
 
   const item = (currentProject.media || []).find(m => m.id === mediaId);
   if (!item) return;
@@ -2697,6 +2729,75 @@ function applyMediaToSlot(mediaId, slotType) {
 
   const imgSrc = item.dataUrl;
   const labelText = item.name;
+  const isDotProject = (currentProject.book_type === "dot_to_dot" || page.layout === "dot_to_dot");
+
+  if (isDotProject) {
+    recordHistoryState("Convert Image to Dot-to-Dot");
+    showToast("🪄 Analyzing image contour & generating numbered dots...", "info");
+
+    const firstWordCaps = extractFirstWordCaps(item.name || item.fileName);
+    const dotCount = (page.dot_to_dot && page.dot_to_dot.dot_count) ? page.dot_to_dot.dot_count : 35;
+    const showGuide = page.dot_to_dot ? (page.dot_to_dot.faint_guide !== false) : true;
+
+    try {
+      const resp = await fetch("/api/generators/dot_to_dot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_data: imgSrc,
+          dot_count: dotCount,
+          faint_guide: showGuide
+        })
+      });
+      const data = await resp.json();
+      if (data.puzzle) {
+        page.dot_to_dot = data.puzzle;
+        page.dot_to_dot.image_src = imgSrc;
+        page.layout = "dot_to_dot";
+        page.title = cleanTitleString(firstWordCaps);
+
+        let refElem = page.elements.find(e => e.type === "ref_image");
+        if (!refElem) {
+          refElem = { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 25, w: 160, h: 150, text: firstWordCaps, image_src: imgSrc };
+          page.elements.unshift(refElem);
+        } else {
+          refElem.image_src = imgSrc;
+          refElem.text = firstWordCaps;
+        }
+
+        let titleElem = page.elements.find(e => e.type === "title");
+        if (!titleElem) {
+          titleElem = { id: `elem_title_${Date.now()}`, type: "title", x: 215, y: 55, w: 260, h: 80, text: firstWordCaps, font_size: 34, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 };
+          page.elements.push(titleElem);
+        } else {
+          titleElem.text = firstWordCaps;
+          titleElem.font_size = calculateAutoTitleFontSize(firstWordCaps, 34);
+        }
+
+        let dotElem = page.elements.find(e => e.type === "dot_to_dot" || e.type === "main_image");
+        if (!dotElem) {
+          dotElem = { id: `elem_dot_${Date.now()}`, type: "dot_to_dot", x: 35, y: 190, w: 440, h: 440, text: firstWordCaps };
+          page.elements.push(dotElem);
+        } else {
+          dotElem.type = "dot_to_dot";
+          dotElem.image_src = imgSrc;
+        }
+
+        renumberPages();
+        syncContentsPage();
+        loadPageIntoCanvas(currentPageIndex);
+        renderTimeline();
+        syncActiveProjectUI();
+        markProjectDirty();
+        showToast(`🎉 Converted "${firstWordCaps}" into ${data.puzzle.dot_count} Numbered Dots!`, "success");
+        return;
+      }
+    } catch (err) {
+      console.warn("Dot-to-dot converter fallback:", err);
+    }
+  }
+
+  recordHistoryState(`Apply Media (${slotType})`);
 
   if (slotType === "ref") {
     let refElem = page.elements.find(e => e.type === "ref_image");
@@ -2937,6 +3038,25 @@ function loadPageIntoCanvas(index) {
             <span class="icon">🎨</span>
             <span class="txt">Drawing Area (75%)</span>
             <span class="sub">➕ Click to Upload Artwork</span>
+          </div>
+        `;
+      }
+      elDiv.ondblclick = (e) => {
+        e.stopPropagation();
+        setActiveElement(elem.id);
+        triggerMediaUpload();
+      };
+    } else if (elem.type === "dot_to_dot") {
+      elDiv.classList.add("elem-dot-to-dot-box");
+      const pData = page.dot_to_dot || elem.dot_to_dot;
+      if (pData && pData.dots && pData.dots.length > 0) {
+        elDiv.innerHTML = renderDotToDotSvgHtml(pData, elem.w, elem.h, page);
+      } else {
+        elDiv.innerHTML = `
+          <div class="placeholder-hint" onclick="event.stopPropagation(); setActiveElement('${elem.id}'); triggerMediaUpload();" style="cursor: pointer;" title="Click to Upload Reference Image to Convert to Dot-to-Dot">
+            <span class="icon">🔢</span>
+            <span class="txt">Dot-to-Dot Puzzle Area</span>
+            <span class="sub">➕ Click to Upload Artwork to Convert</span>
           </div>
         `;
       }
@@ -3317,6 +3437,7 @@ function updatePropertiesInspector() {
   const titleBadge = document.getElementById("selected-type-badge");
   const textGroup = document.getElementById("prop-text-group");
   const imgGroup = document.getElementById("prop-image-group");
+  const dotGroup = document.getElementById("prop-dot-group");
 
   if (!elem) {
     if (titleBadge) titleBadge.innerText = "No Selection";
@@ -3326,10 +3447,11 @@ function updatePropertiesInspector() {
     document.getElementById("prop-h").value = "";
     if (textGroup) textGroup.style.display = "none";
     if (imgGroup) imgGroup.style.display = "none";
+    if (dotGroup) dotGroup.style.display = "none";
     return;
   }
 
-  if (titleBadge) titleBadge.innerText = elem.type.toUpperCase();
+  if (titleBadge) titleBadge.innerText = elem.type.toUpperCase().replace(/_/g, " ");
   document.getElementById("prop-x").value = (elem.x / 60.0).toFixed(2);
   document.getElementById("prop-y").value = (elem.y / 60.0).toFixed(2);
   document.getElementById("prop-w").value = (elem.w / 60.0).toFixed(2);
@@ -3338,6 +3460,7 @@ function updatePropertiesInspector() {
   if (elem.type === "title") {
     if (textGroup) textGroup.style.display = "block";
     if (imgGroup) imgGroup.style.display = "none";
+    if (dotGroup) dotGroup.style.display = "none";
     document.getElementById("prop-text-content").value = elem.text || "";
     
     const fontSelect = document.getElementById("prop-font-family");
@@ -3358,16 +3481,139 @@ function updatePropertiesInspector() {
     
     const strokeInput = document.getElementById("prop-stroke-color");
     if (strokeInput) strokeInput.value = elem.stroke_color || "#0f172a";
+  } else if (elem.type === "dot_to_dot") {
+    if (textGroup) textGroup.style.display = "none";
+    if (imgGroup) imgGroup.style.display = "none";
+    if (dotGroup) {
+      dotGroup.style.display = "block";
+      const page = currentProject.pages[currentPageIndex];
+      const pData = page.dot_to_dot || elem.dot_to_dot;
+      const count = pData?.dot_count || 35;
+      const countInput = document.getElementById("prop-dot-count");
+      const countVal = document.getElementById("prop-dot-count-val");
+      const guideBox = document.getElementById("prop-dot-faint-guide");
+      if (countInput) countInput.value = count;
+      if (countVal) countVal.innerText = `${count} Dots`;
+      if (guideBox) guideBox.checked = (pData?.faint_guide !== false);
+    }
   } else if (elem.type === "main_image" || elem.type === "ref_image") {
     if (textGroup) textGroup.style.display = "none";
     if (imgGroup) imgGroup.style.display = "block";
+    if (dotGroup) dotGroup.style.display = "none";
   } else {
     if (textGroup) textGroup.style.display = "none";
     if (imgGroup) imgGroup.style.display = "none";
+    if (dotGroup) dotGroup.style.display = "none";
   }
 
   // Update Media Title Suggester box
   populateQuickMediaPicker();
+}
+
+// ==========================================
+// Dot-to-Dot Puzzle Generator Helpers
+// ==========================================
+function renderDotToDotSvgHtml(pData, width = 440, height = 440, page = null) {
+  if (!pData || !pData.dots || pData.dots.length === 0) return "";
+
+  const dots = pData.dots;
+  const showGuide = pData.faint_guide !== false;
+  const refImg = page?.elements?.find(e => e.type === "ref_image" || e.type === "main_image")?.image_src || pData.image_src;
+
+  let guideSvg = "";
+  if (showGuide && refImg) {
+    guideSvg = `<image href="${refImg}" x="25" y="25" width="${width - 50}" height="${height - 50}" opacity="0.10" preserveAspectRatio="xMidYMid meet" />`;
+  }
+
+  // Generate SVG circles and numbered labels
+  let dotsSvg = "";
+  dots.forEach(d => {
+    const isStart = d.is_start || d.num === 1;
+    if (isStart) {
+      dotsSvg += `
+        <g class="dot-start-marker">
+          <circle cx="${d.x}" cy="${d.y}" r="6.5" fill="#f59e0b" opacity="0.35" />
+          <circle cx="${d.x}" cy="${d.y}" r="4.2" fill="#d97706" />
+          <text x="${d.x}" y="${d.y - 12}" font-family="'Fredoka', sans-serif" font-size="11" font-weight="900" fill="#d97706" text-anchor="middle">★ START (1)</text>
+        </g>
+      `;
+    } else {
+      dotsSvg += `
+        <circle cx="${d.x}" cy="${d.y}" r="3.2" fill="#0f172a" class="canvas-dot-point" />
+        <text x="${d.label_x}" y="${d.label_y}" font-family="'Fredoka', 'Plus Jakarta Sans', sans-serif" font-size="10" font-weight="700" fill="#1e293b" text-anchor="middle" dominant-baseline="central" class="canvas-dot-num">${d.num}</text>
+      `;
+    }
+  });
+
+  return `
+    <div class="dot-to-dot-canvas-wrapper" style="width:100%; height:100%; position:relative;">
+      <svg viewBox="0 0 ${width} ${height}" class="dot-to-dot-svg" style="width:100%; height:100%; display:block; overflow:visible;">
+        ${guideSvg}
+        ${dotsSvg}
+      </svg>
+    </div>
+  `;
+}
+
+async function changeDotToDotCount(val) {
+  const count = parseInt(val);
+  const countVal = document.getElementById("prop-dot-count-val");
+  if (countVal) countVal.innerText = `${count} Dots`;
+
+  const page = currentProject.pages ? currentProject.pages[currentPageIndex] : null;
+  if (!page) return;
+
+  if (page.dot_to_dot) {
+    page.dot_to_dot.dot_count = count;
+  }
+}
+
+async function toggleDotToDotGuide(isChecked) {
+  const page = currentProject.pages ? currentProject.pages[currentPageIndex] : null;
+  if (!page) return;
+
+  if (page.dot_to_dot) {
+    page.dot_to_dot.faint_guide = isChecked;
+  }
+  loadPageIntoCanvas(currentPageIndex);
+  markProjectDirty();
+}
+
+async function resampleCurrentDotToDot() {
+  const page = currentProject.pages ? currentProject.pages[currentPageIndex] : null;
+  if (!page) return;
+
+  const countInput = document.getElementById("prop-dot-count");
+  const count = countInput ? parseInt(countInput.value) : 35;
+  const guideBox = document.getElementById("prop-dot-faint-guide");
+  const isGuide = guideBox ? guideBox.checked : true;
+
+  const pData = page.dot_to_dot;
+  const refImg = page.elements?.find(e => (e.type === "ref_image" || e.type === "main_image") && e.image_src)?.image_src || pData?.image_src;
+
+  showToast("🪄 Re-sampling Dot-to-Dot points...", "info");
+
+  try {
+    const payload = refImg 
+      ? { image_data: refImg, dot_count: count, faint_guide: isGuide }
+      : { preset_name: pData?.preset || "star", dot_count: count, faint_guide: isGuide };
+
+    const resp = await fetch("/api/generators/dot_to_dot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (data.puzzle) {
+      page.dot_to_dot = data.puzzle;
+      if (refImg) page.dot_to_dot.image_src = refImg;
+      loadPageIntoCanvas(currentPageIndex);
+      markProjectDirty();
+      showToast(`✨ Re-sampled to ${data.puzzle.dot_count} dots!`, "success");
+    }
+  } catch (err) {
+    showToast("Re-sample error: " + err.message, "danger");
+  }
 }
 
 // ==========================================
@@ -3860,6 +4106,38 @@ async function addNewPage() {
     } catch (e) {
       console.error(e);
     }
+  } else if (bType === "dot_to_dot") {
+    recordHistoryState("Add Dot-to-Dot Page");
+    showToast("⚡ Generating new Dot-to-Dot page...", "info");
+
+    try {
+      const presets = ["star", "butterfly", "rocket", "dinosaur", "heart", "cat", "airplane", "fish"];
+      const presetKey = presets[(newPageNum - 1) % presets.length];
+      const resp = await fetch("/api/generators/dot_to_dot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preset_name: presetKey, dot_count: 35 })
+      });
+      const data = await resp.json();
+      const pz = data.puzzle || {};
+      const pTitle = pz.title || presetKey.toUpperCase();
+
+      currentProject.pages.push({
+        page_number: newPageNum,
+        page_type: "content",
+        title: pTitle,
+        layout: "dot_to_dot",
+        dot_to_dot: pz,
+        elements: [
+          { id: `elem_ref_${newPageNum}`, type: "ref_image", x: 35, y: 25, w: 160, h: 150, text: pTitle, image_src: null },
+          { id: `elem_title_${newPageNum}`, type: "title", x: 215, y: 55, w: 260, h: 80, text: pTitle.toUpperCase(), font_size: 34, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+          { id: `elem_dot_${newPageNum}`, type: "dot_to_dot", x: 35, y: 190, w: 440, h: 440, text: pTitle },
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    } catch (e) {
+      console.error(e);
+    }
   } else {
     // Coloring Book
     recordHistoryState("Add Drawing Page");
@@ -4117,6 +4395,9 @@ function renderTimeline() {
     } else if (page.word_search || page.layout === "word_search" || bType === "word_search") {
       pageLabel = `Word Search ${idx + 1}`;
       previewContent = `<span style="font-size:16px;">🔤</span>`;
+    } else if (page.dot_to_dot || page.layout === "dot_to_dot" || bType === "dot_to_dot") {
+      pageLabel = `Dot-to-Dot ${idx + 1}`;
+      previewContent = `<span style="font-size:16px;">🔢</span>`;
     } else {
       pageLabel = `Drawing ${idx + 1}`;
       const mainEl = page.elements ? page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src) : null;

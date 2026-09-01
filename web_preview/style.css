@@ -2817,6 +2817,63 @@ kbd {
 }
 
 /* =====================================================
+   DOT-TO-DOT (CONNECT THE DOTS) PUZZLE CANVAS STYLING
+===================================================== */
+.elem-dot-to-dot-box {
+  border: 1.5px dashed rgba(99, 102, 241, 0.4);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible !important;
+  transition: all 0.2s ease;
+}
+
+.elem-dot-to-dot-box:hover {
+  border-color: #6366f1;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.12);
+}
+
+.dot-to-dot-canvas-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: visible;
+}
+
+.dot-to-dot-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.canvas-dot-point {
+  transition: r 0.15s ease, fill 0.15s ease;
+}
+
+.canvas-dot-point:hover {
+  r: 5px;
+  fill: #6366f1;
+  cursor: pointer;
+}
+
+.canvas-dot-num {
+  font-family: 'Fredoka', 'Plus Jakarta Sans', sans-serif;
+  user-select: none;
+  pointer-events: none;
+}
+
+.dot-start-marker {
+  animation: startPulse 2s infinite alternate ease-in-out;
+}
+
+@keyframes startPulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+
+/* =====================================================
    FULLSCREEN BLOCKING IMAGE OPTIMIZATION MODAL & RADIAL BAR
 ===================================================== */
 .blocking-processing-overlay {

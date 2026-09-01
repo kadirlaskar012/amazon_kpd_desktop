@@ -25,6 +25,7 @@ from app.generators.sudoku_generator import SudokuGenerator
 from app.generators.tic_tac_toe_generator import TicTacToeGenerator
 from app.generators.maze_generator import MazeGenerator
 from app.generators.word_search_generator import WordSearchGenerator
+from app.generators.dot_to_dot_generator import DotToDotGenerator
 
 # Ensure UTF-8 output encoding for Windows consoles
 if hasattr(sys.stdout, "reconfigure"):
@@ -449,6 +450,43 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"status": "success", "word_search": ws}).encode("utf-8"))
+                return
+
+        elif req_path == "/api/generators/dot_to_dot":
+            image_data = req_data.get("image_data")
+            preset_name = req_data.get("preset_name", "star")
+            dot_count = int(req_data.get("dot_count", 35))
+            faint_guide = bool(req_data.get("faint_guide", True))
+            canvas_w = int(req_data.get("canvas_w", 420))
+            canvas_h = int(req_data.get("canvas_h", 460))
+
+            try:
+                if image_data:
+                    res = DotToDotGenerator.from_image(
+                        image_input=image_data,
+                        dot_count=dot_count,
+                        canvas_w=canvas_w,
+                        canvas_h=canvas_h,
+                        faint_guide=faint_guide
+                    )
+                else:
+                    res = DotToDotGenerator.generate_preset(
+                        preset_name=preset_name,
+                        dot_count=dot_count,
+                        canvas_w=canvas_w,
+                        canvas_h=canvas_h
+                    )
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "puzzle": res}).encode("utf-8"))
+                return
+            except Exception as err:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(err)}).encode("utf-8"))
                 return
 
         self.send_response(404)

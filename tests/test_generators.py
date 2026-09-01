@@ -11,6 +11,10 @@ from app.generators.sudoku_generator import SudokuGenerator
 from app.generators.tic_tac_toe_generator import TicTacToeGenerator
 from app.generators.maze_generator import MazeGenerator
 from app.generators.word_search_generator import WordSearchGenerator
+from app.generators.dot_to_dot_generator import DotToDotGenerator
+from PIL import Image, ImageDraw
+import io
+import base64
 
 
 def test_sudoku_generation_and_uniqueness():
@@ -58,3 +62,33 @@ def test_word_search_generator():
     assert len(ws["words"]) == 5
     for placed in ws["placed_details"]:
         assert placed["word"] in words
+
+
+def test_dot_to_dot_generator_presets():
+    for preset_name in ["star", "butterfly", "heart", "rocket", "dinosaur", "cat", "airplane", "fish"]:
+        res = DotToDotGenerator.generate_preset(preset_name=preset_name, dot_count=30)
+        assert res["type"] == "dot_to_dot"
+        assert len(res["dots"]) == 30
+        assert res["dots"][0]["num"] == 1
+        assert res["dots"][0]["is_start"] is True
+        assert res["dots"][-1]["num"] == 30
+
+
+def test_dot_to_dot_generator_from_image():
+    # Create a synthetic test image with a black circle on white background
+    img = Image.new("RGB", (300, 300), "white")
+    draw = ImageDraw.Draw(img)
+    draw.ellipse((50, 50, 250, 250), outline="black", width=6)
+    
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    data_url = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    res = DotToDotGenerator.from_image(image_input=data_url, dot_count=24)
+    assert res["type"] == "dot_to_dot"
+    assert res["dot_count"] == 24
+    assert len(res["dots"]) == 24
+    assert res["dots"][0]["num"] == 1
+    assert "x" in res["dots"][0] and "y" in res["dots"][0]
+    assert "label_x" in res["dots"][0] and "label_y" in res["dots"][0]
+
