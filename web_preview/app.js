@@ -2306,6 +2306,69 @@ function loadPageIntoCanvas(index) {
     layer.appendChild(elDiv);
   });
 
+  // If page has Sudoku Puzzles attached, render vector Sudoku interactive board
+  if (page.puzzles && page.puzzles.length > 0) {
+    const p = page.puzzles[0];
+    const grid = p.puzzle_grid || [];
+    
+    const wrapper = document.createElement("div");
+    wrapper.className = "canvas-sudoku-wrapper";
+
+    const diffDiv = document.createElement("div");
+    diffDiv.style.cssText = "font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;";
+    diffDiv.innerText = `Difficulty: ${p.difficulty || 'Medium'} • ${p.clues_count || 32} Clues`;
+    wrapper.appendChild(diffDiv);
+
+    const board = document.createElement("div");
+    board.className = "canvas-sudoku-board";
+
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const cell = document.createElement("div");
+        cell.className = "canvas-sudoku-cell";
+        const val = (grid[r] && grid[r][c]) ? grid[r][c] : 0;
+        cell.innerText = val !== 0 ? val : "";
+        if (val !== 0) {
+          cell.style.color = "#0f172a";
+        }
+        board.appendChild(cell);
+      }
+    }
+    wrapper.appendChild(board);
+    layer.appendChild(wrapper);
+  }
+
+  // If page has Tic-Tac-Toe games attached, render 4 vector game cards
+  if (page.games && page.games.length > 0) {
+    const container = document.createElement("div");
+    container.className = "canvas-ttt-container";
+
+    page.games.slice(0, 4).forEach((g, idx) => {
+      const card = document.createElement("div");
+      card.className = "canvas-ttt-card";
+      card.innerHTML = `
+        <div class="card-head">
+          <span>${g.title || `Game #${idx+1}`}</span>
+          <span style="font-size: 9px; color: #94a3b8;">3x3 Grid</span>
+        </div>
+        <div class="card-players">
+          <div>${g.player_x_label || 'Player X: ______________'}</div>
+          <div>${g.player_o_label || 'Player O: ______________'}</div>
+        </div>
+        <div class="card-grid">
+          <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+          <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+          <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+        </div>
+        <div class="card-winner">
+          ${g.winner_label || 'Winner: [ X ]  [ O ]  [ Tie ]'}
+        </div>
+      `;
+      container.appendChild(card);
+    });
+    layer.appendChild(container);
+  }
+
   const pageReadout = document.getElementById("page-num-readout");
   if (pageReadout) {
     const pageTypeTag = page.page_type === "front_matter_disclaimer" 
@@ -2709,42 +2772,113 @@ function deleteActiveElement() {
   }
 }
 
-// Page Actions - Adds 1 Drawing Page to the active canvas workspace
-function addNewPage() {
+// Page Actions - Adds 1 Page dynamically based on Book Type (Sudoku, Tic-Tac-Toe, or Coloring)
+async function addNewPage() {
   if (currentProject.is_locked) {
     showToast("🔒 Project is locked!", "warning");
     return;
   }
 
-  recordHistoryState("Add Drawing Page");
-
+  const bType = currentProject.book_type || "coloring_book";
   const newPageNum = currentProject.pages.length + 1;
 
-  const projFont = currentProject.settings?.default_font_family || "Fredoka";
-  const projOutline = currentProject.settings?.default_font_mode !== "solid";
-  const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
-  const projColor = currentProject.settings?.default_text_color || (projOutline ? "#ffffff" : "#111827");
+  if (bType === "sudoku") {
+    recordHistoryState("Add Sudoku Page");
+    showToast("⚡ Generating new 9x9 Sudoku puzzle...", "info");
 
-  // Add Drawing Page
-  currentProject.pages.push({
-    page_number: newPageNum,
-    page_type: "content",
-    title: `Drawing ${newPageNum}`,
-    layout: "kdp_top_ref",
-    elements: [
-      { id: `elem_ref_${newPageNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${newPageNum}`, image_src: null },
-      { id: `elem_title_${newPageNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${newPageNum}`, font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
-      { id: `elem_main_${newPageNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${newPageNum}`, image_src: null },
-      { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
-    ]
-  });
+    try {
+      const resp = await fetch("/api/generators/sudoku", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: 1, difficulty: "medium" })
+      });
+      const data = await resp.json();
+      const p = (data.puzzles && data.puzzles[0]) ? data.puzzles[0] : null;
+      const pIdStr = p ? p.id.replace("sudoku_", "#") : `#${newPageNum.toString().padStart(4, '0')}`;
+      const pTitle = `Sudoku ${pIdStr}`;
+
+      currentProject.pages.push({
+        page_number: newPageNum,
+        page_type: "content",
+        title: pTitle,
+        layout: "sudoku",
+        puzzles: [p],
+        elements: [
+          { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  } else if (bType === "tic_tac_toe") {
+    recordHistoryState("Add Tic-Tac-Toe Page");
+    showToast("⚡ Generating 4 Tic-Tac-Toe game grids...", "info");
+
+    try {
+      const totalSoFar = currentProject.pages.length * 4;
+      const resp = await fetch("/api/generators/tic_tac_toe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ total_games: 4, games_per_page: 4, grid_size: 3 })
+      });
+      const data = await resp.json();
+      const pData = (data.pages && data.pages[0]) ? data.pages[0] : null;
+      const games = pData ? pData.games : [];
+      
+      // Update numbering
+      games.forEach((g, idx) => {
+        const gn = totalSoFar + idx + 1;
+        g.game_number = gn;
+        g.title = `Game #${gn.toString().padStart(3, '0')}`;
+      });
+
+      const firstG = games[0].game_number;
+      const lastG = games[games.length - 1].game_number;
+      const pTitle = `Games #${firstG} - #${lastG}`;
+
+      currentProject.pages.push({
+        page_number: newPageNum,
+        page_type: "content",
+        title: pTitle,
+        layout: "tic_tac_toe",
+        games: games,
+        elements: [
+          { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: "TIC-TAC-TOE", font_size: 26, color: "#0f172a", is_outline: false },
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  } else {
+    // Coloring Book
+    recordHistoryState("Add Drawing Page");
+    const projFont = currentProject.settings?.default_font_family || "Fredoka";
+    const projOutline = currentProject.settings?.default_font_mode !== "solid";
+    const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
+    const projColor = currentProject.settings?.default_text_color || (projOutline ? "#ffffff" : "#111827");
+
+    currentProject.pages.push({
+      page_number: newPageNum,
+      page_type: "content",
+      title: `Drawing ${newPageNum}`,
+      layout: "kdp_top_ref",
+      elements: [
+        { id: `elem_ref_${newPageNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${newPageNum}`, image_src: null },
+        { id: `elem_title_${newPageNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${newPageNum}`, font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
+        { id: `elem_main_${newPageNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${newPageNum}`, image_src: null },
+        { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+      ]
+    });
+  }
 
   renumberPages();
   renderTimeline();
   selectPage(currentProject.pages.length - 1);
   syncActiveProjectUI();
   markProjectDirty();
-  showToast(`➕ Added Drawing Canvas (Page ${newPageNum})!`, "success");
+  showToast(`➕ Added Page ${newPageNum} to book!`, "success");
 }
 
 function duplicateCurrentPage() {
@@ -2774,7 +2908,7 @@ function deleteCurrentPage() {
   }
 
   if (currentProject.pages.length <= 1) {
-    showToast("A book must contain at least one drawing canvas.", "info");
+    showToast("A book must contain at least one content page.", "info");
     return;
   }
 
@@ -2796,26 +2930,38 @@ function deleteCurrentPage() {
   showToast(`🗑 Deleted Page ${deletedNum} & Auto-Renumbered Remaining Pages!`, "info");
 }
 
-// Timeline Ribbon - Displays clean working drawing canvases
+// Timeline Ribbon - Displays clean working canvases (Sudoku, Tic-Tac-Toe, or Drawing)
 function renderTimeline() {
   const strip = document.getElementById("thumbnails-strip");
   if (!strip) return;
   strip.innerHTML = "";
+
+  const bType = currentProject.book_type || "coloring_book";
 
   currentProject.pages.forEach((page, idx) => {
     const card = document.createElement("div");
     card.className = `thumb-card ${idx === currentPageIndex ? 'active' : ''}`;
     card.onclick = () => selectPage(idx);
 
-    const mainEl = page.elements ? page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src) : null;
-    const previewContent = mainEl 
-      ? `<img src="${mainEl.image_src}">` 
-      : `<span style="font-size:16px;">🎨</span>`;
+    let pageLabel = `Page ${idx + 1}`;
+    let previewContent = "";
+
+    if (page.puzzles || page.layout === "sudoku" || bType === "sudoku") {
+      pageLabel = `Sudoku ${idx + 1}`;
+      previewContent = `<span style="font-size:16px;">🔢</span>`;
+    } else if (page.games || page.layout === "tic_tac_toe" || bType === "tic_tac_toe") {
+      pageLabel = `Game Page ${idx + 1}`;
+      previewContent = `<span style="font-size:16px;">⭕</span>`;
+    } else {
+      pageLabel = `Drawing ${idx + 1}`;
+      const mainEl = page.elements ? page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src) : null;
+      previewContent = mainEl ? `<img src="${mainEl.image_src}">` : `<span style="font-size:16px;">🎨</span>`;
+    }
 
     card.innerHTML = `
-      <div class="thumb-page-num">Drawing ${idx + 1}</div>
+      <div class="thumb-page-num">${pageLabel}</div>
       <div class="thumb-preview-box">${previewContent}</div>
-      <div class="thumb-title">${page.title || 'Drawing ' + (idx + 1)}</div>
+      <div class="thumb-title">${page.title || pageLabel}</div>
     `;
     strip.appendChild(card);
   });
