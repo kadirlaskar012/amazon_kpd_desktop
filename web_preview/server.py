@@ -19,6 +19,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.storage.project_storage import ProjectStorage
 from app.core.pdf_exporter import KDPPdfExporter
+from app.core.cover_exporter import KDPCoverExporter
 
 # Ensure UTF-8 output encoding for Windows consoles
 if hasattr(sys.stdout, "reconfigure"):
@@ -200,6 +201,36 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
 
             try:
                 KDPPdfExporter.generate_pdf(req_data, out_pdf, single_sided=single_sided, blank_page_note=blank_page_note)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                resp = {
+                    "status": "success",
+                    "pdf_path": str(out_pdf),
+                    "filename": out_pdf.name,
+                    "download_url": f"/api/exports/{urllib.parse.quote(out_pdf.name)}?path={urllib.parse.quote(str(out_pdf))}"
+                }
+                self.wfile.write(json.dumps(resp).encode("utf-8"))
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                return
+
+        elif req_path == "/api/projects/export_cover_pdf":
+            # Generate 300 DPI Amazon KDP Full Wrap Cover PDF
+            project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "My_Project")).resolve()
+            exports_dir = project_dir / "exports"
+            exports_dir.mkdir(parents=True, exist_ok=True)
+
+            proj_name = req_data.get("name", "KDP_Book").replace(" ", "_")
+            out_pdf = exports_dir / f"{proj_name}_KDP_Cover_Full_Wrap.pdf"
+            cover_config = req_data.get("cover_config", {})
+
+            try:
+                KDPCoverExporter.generate_cover_pdf(req_data, out_pdf, cover_config=cover_config)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()

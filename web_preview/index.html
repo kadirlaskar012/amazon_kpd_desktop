@@ -63,6 +63,7 @@
 
         <button class="btn btn-outline btn-sm" onclick="openShortcutsModal()" title="Keyboard Shortcuts Reference">⌨️ Keys</button>
         <button class="btn btn-primary btn-sm" id="btn-save-project" onclick="saveProject(true)">💾 Save (Ctrl+S)</button>
+        <button class="btn btn-warning btn-sm" id="btn-cover-gen" onclick="openCoverModal()" title="Generate Amazon KDP Full Wrap Cover PDF">🎨 Cover PDF</button>
         <button class="btn btn-success btn-sm" id="btn-export-pdf" onclick="exportProjectPdf()" title="Generate & Download 300 DPI Amazon KDP PDF">📄 Export PDF</button>
       </div>
     </header>
@@ -315,7 +316,36 @@
                   </div>
                 </div>
 
-                <!-- Layout 3: Blank Back Page -->
+                <!-- Layout 3: This Book Belongs To -->
+                <div class="layout-card" data-layout="belongs_to" onclick="applyPageLayout('belongs_to')">
+                  <div class="layout-mini-preview" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff; border: 1px solid #cbd5e1; gap: 4px; padding: 4px;">
+                    <div style="font-size: 7px; font-weight: 800; color: #1e293b;">THIS BOOK BELONGS TO</div>
+                    <div style="width: 80%; height: 1px; background: #94a3b8; margin: 2px 0;"></div>
+                    <div style="font-size: 6px; color: #64748b;">[ Name Line ]</div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">"Belongs To" Page</div>
+                    <div class="layout-sub">Classic KDP ownership page</div>
+                  </div>
+                </div>
+
+                <!-- Layout 4: Color Test Palette -->
+                <div class="layout-card" data-layout="color_test" onclick="applyPageLayout('color_test')">
+                  <div class="layout-mini-preview" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; padding: 4px; background: #fff; border: 1px solid #cbd5e1;">
+                    <div style="border: 1px dashed #94a3b8; border-radius: 2px; height: 16px;"></div>
+                    <div style="border: 1px dashed #94a3b8; border-radius: 2px; height: 16px;"></div>
+                    <div style="border: 1px dashed #94a3b8; border-radius: 2px; height: 16px;"></div>
+                    <div style="border: 1px dashed #94a3b8; border-radius: 2px; height: 16px;"></div>
+                    <div style="border: 1px dashed #94a3b8; border-radius: 2px; height: 16px;"></div>
+                    <div style="border: 1px dashed #94a3b8; border-radius: 2px; height: 16px;"></div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">Color Test Palette</div>
+                    <div class="layout-sub">Swatch boxes for markers</div>
+                  </div>
+                </div>
+
+                <!-- Layout 5: Blank Back Page -->
                 <div class="layout-card" data-layout="blank_page" onclick="applyPageLayout('blank_page')">
                   <div class="layout-mini-preview" style="display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 1px dashed #cbd5e1;">
                     <div style="font-size: 8px; color: #94a3b8; text-align: center;">⚪ Blank Back (Bleed-Proof)</div>
@@ -544,50 +574,27 @@
         </div>
       </section>
 
-      <!-- TAB 4: QUALITY CHECK -->
+      <!-- TAB 4: QUALITY CHECK (DYNAMIC KDP PREFLIGHT ENGINE) -->
       <section class="tab-panel" id="panel-preflight">
         <div class="preflight-container">
-          <div class="section-title-bar">
-            <h2>KDP Preflight Quality Verification</h2>
-            <p>Automated diagnostic engine checking dimensions, bleed margins, DPI resolution, and text safety.</p>
+          <div class="section-title-bar" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h2>🛡️ Amazon KDP Preflight Quality Verification</h2>
+              <p>Automated diagnostic engine verifying Amazon KDP print rules, 24-page minimums, bleed margins, and spine math.</p>
+            </div>
+            <div id="preflight-overall-badge" class="badge" style="font-size: 13px; padding: 6px 14px; font-weight: 800; background: rgba(34, 197, 94, 0.2); color: var(--secondary);">
+              ✓ KDP COMPLIANT
+            </div>
           </div>
 
-          <div class="check-results-list">
-            <div class="check-item pass">
-              <div class="check-icon">✓</div>
-              <div class="check-info">
-                <h4>Trim Dimensions Match Specification</h4>
-                <p>Page size is set to 8.50 x 11.00 inches (612.0 x 792.0 pt) with uniform sizing.</p>
-              </div>
-              <span class="check-badge pass">PASS</span>
-            </div>
+          <div class="check-results-list" id="preflight-results-list">
+            <!-- Rendered dynamically by updatePreflightDashboard() -->
+          </div>
 
-            <div class="check-item pass">
-              <div class="check-icon">✓</div>
-              <div class="check-info">
-                <h4>Full Bleed Envelope Valid</h4>
-                <p>Outer bleed boundary is set to +0.125 in (9.0 pt) satisfying Amazon KDP color/interior guidelines.</p>
-              </div>
-              <span class="check-badge pass">PASS</span>
-            </div>
-
-            <div class="check-item pass">
-              <div class="check-info">✓</div>
-              <div class="check-info">
-                <h4>Inside Binding Gutter Compliant</h4>
-                <p>Inside gutter margin is set to 0.500 in, exceeding the minimum 0.375 in requirement for books under 150 pages.</p>
-              </div>
-              <span class="check-badge pass">PASS</span>
-            </div>
-
-            <div class="check-item warning">
-              <div class="check-icon">⚠</div>
-              <div class="check-info">
-                <h4>Page Count Advisory</h4>
-                <p>Current project has active pages. Amazon KDP paperback books require a minimum of 24 pages for spine binding.</p>
-              </div>
-              <span class="check-badge warning">ADVISORY</span>
-            </div>
+          <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+            <button class="btn btn-outline" onclick="autoFillTo24Pages()">➕ Auto-Fill to 24 Pages (KDP Minimum)</button>
+            <button class="btn btn-warning" onclick="openCoverModal()">🎨 Create Cover PDF</button>
+            <button class="btn btn-success" onclick="exportProjectPdf()">📄 Export Interior PDF</button>
           </div>
         </div>
       </section>
@@ -894,6 +901,134 @@
             </button>
             <button class="btn btn-success" onclick="executePdfExport(false)">
               ⬇️ Download PDF File
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 6: AMAZON KDP FULL WRAP COVER GENERATOR MODAL -->
+    <div class="modal-overlay" id="cover-generator-modal">
+      <div class="modal-box" style="max-width: 820px;">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span style="font-size: 20px;">🎨</span>
+            <span>Amazon KDP 300 DPI Full Wrap Cover Generator</span>
+          </div>
+          <button class="modal-close" onclick="closeModal('cover-generator-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+            Generates the official single-file Paperback Cover PDF (Back Cover + Spine + Front Cover + 0.125 in Bleed) calculated for Amazon KDP printing.
+          </p>
+
+          <!-- Cover Specifications Grid -->
+          <div class="export-specs-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+            <div class="spec-card">
+              <span class="spec-icon">📏</span>
+              <div>
+                <div class="spec-lbl">Calculated Spine</div>
+                <div class="spec-val" id="cov-spec-spine" style="color: var(--secondary);">0.113 in (8.1 pt)</div>
+              </div>
+            </div>
+            <div class="spec-card">
+              <span class="spec-icon">📐</span>
+              <div>
+                <div class="spec-lbl">Total Cover Width</div>
+                <div class="spec-val" id="cov-spec-width">17.51 in</div>
+              </div>
+            </div>
+            <div class="spec-card">
+              <span class="spec-icon">📜</span>
+              <div>
+                <div class="spec-lbl">Total Cover Height</div>
+                <div class="spec-val" id="cov-spec-height">11.25 in</div>
+              </div>
+            </div>
+            <div class="spec-card">
+              <span class="spec-icon">🎯</span>
+              <div>
+                <div class="spec-lbl">Resolution</div>
+                <div class="spec-val">300 DPI Print</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Visual Cover Spread Preview -->
+          <div class="cover-visual-preview-box" id="cover-visual-preview" style="background: #1e1b4b; border-radius: 8px; padding: 12px; display: flex; gap: 4px; border: 2px solid #3b82f6; min-height: 180px; position: relative; color: #fff; margin-bottom: 16px;">
+            <!-- Back Cover Preview -->
+            <div style="flex: 1; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="font-size: 11px; font-weight: 800; color: #fbbf24;" id="cov-prev-back-title">WHY YOUR CHILD WILL LOVE THIS BOOK</div>
+                <div style="font-size: 8px; color: #cbd5e1; margin-top: 4px; line-height: 1.3;">• 50+ Cute Coloring Pages<br>• Bleed-Safe Blank Backs<br>• Large 8.5x11 in Format</div>
+              </div>
+              <div style="align-self: flex-end; background: #fff; color: #94a3b8; font-size: 7px; padding: 2px 6px; border-radius: 2px;">Barcode Zone</div>
+            </div>
+
+            <!-- Spine Preview -->
+            <div style="width: 22px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 7px; font-weight: 800; color: #fff; letter-spacing: 1px;" id="cov-prev-spine">
+              SPINE
+            </div>
+
+            <!-- Front Cover Preview -->
+            <div style="flex: 1; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center;">
+              <div>
+                <div style="font-size: 13px; font-weight: 900; color: #fbbf24; font-family: 'Fredoka', sans-serif;" id="cov-prev-front-title">MY JUNGLE COLORING BOOK</div>
+                <div style="font-size: 8px; color: #fff; margin-top: 2px;" id="cov-prev-front-sub">50+ Fun & Easy Coloring Pages</div>
+              </div>
+              <div style="width: 70px; height: 70px; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px;" id="cov-prev-front-art">
+                🎨
+              </div>
+              <div style="font-size: 8px; color: #e2e8f0;" id="cov-prev-front-author">By Creative Kids Studio</div>
+            </div>
+          </div>
+
+          <!-- Cover Settings Form -->
+          <div class="form-row-dual">
+            <div>
+              <label>Front Cover Title</label>
+              <input type="text" id="cov-input-title" class="form-control" value="MY JUNGLE COLORING BOOK" oninput="updateCoverVisualPreview()">
+            </div>
+            <div>
+              <label>Subtitle / Hook</label>
+              <input type="text" id="cov-input-subtitle" class="form-control" value="50+ Fun & Easy Coloring Pages For Kids" oninput="updateCoverVisualPreview()">
+            </div>
+          </div>
+
+          <div class="form-row-dual">
+            <div>
+              <label>Author / Brand Name</label>
+              <input type="text" id="cov-input-author" class="form-control" value="Creative Kids Studio" oninput="updateCoverVisualPreview()">
+            </div>
+            <div>
+              <label>Paper Type (For Exact Spine Math)</label>
+              <select id="cov-input-paper" class="form-control" onchange="updateCoverVisualPreview()">
+                <option value="white">White Paper (0.002252 in/page - Standard)</option>
+                <option value="cream">Cream Paper (0.002500 in/page)</option>
+                <option value="premium_color">Premium Color Paper (0.002347 in/page)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-dual">
+            <div>
+              <label>Cover Theme Color</label>
+              <input type="color" id="cov-input-color" class="form-control" value="#1e1b4b" style="height: 38px;" oninput="updateCoverVisualPreview()">
+            </div>
+            <div>
+              <label>Back Cover Blurb Heading</label>
+              <input type="text" id="cov-input-back-heading" class="form-control" value="WHY YOUR CHILD WILL LOVE THIS BOOK" oninput="updateCoverVisualPreview()">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: space-between;">
+          <button class="btn btn-outline" onclick="closeModal('cover-generator-modal')">Cancel</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary" onclick="executeCoverPdfExport(true)">
+              🚀 Generate & Open Cover PDF
+            </button>
+            <button class="btn btn-success" onclick="executeCoverPdfExport(false)">
+              ⬇️ Download Cover PDF
             </button>
           </div>
         </div>

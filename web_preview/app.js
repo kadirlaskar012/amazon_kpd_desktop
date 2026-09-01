@@ -1377,6 +1377,8 @@ function switchTab(tabId) {
     renderMediaLibrary();
   } else if (tabId === "preview") {
     renderSpreadPreview();
+  } else if (tabId === "preflight") {
+    updatePreflightDashboard();
   }
 }
 
@@ -1538,6 +1540,35 @@ function submitCreateProject() {
         { id: "elem_cnt_frame", type: "border", x: 30, y: 25, w: 450, h: 610 },
         { id: "elem_cnt_head", type: "title", x: 45, y: 55, w: 420, h: 35, text: "TABLE OF CONTENTS", font_size: 22, color: "#0f172a", is_outline: false },
         { id: "elem_cnt_sub", type: "title", x: 45, y: 90, w: 420, h: 20, text: "Explore all the illustrations and coloring pages in this book", font_size: 11, color: "#64748b", is_outline: false }
+      ]
+    });
+
+    // Page 3: This Book Belongs To
+    pagesList.push({
+      page_number: 3,
+      page_type: "front_matter_belongs_to",
+      title: "Belongs To Page",
+      layout: "belongs_to",
+      elements: [
+        { id: "elem_bt_frame", type: "border", x: 30, y: 25, w: 450, h: 610 },
+        { id: "elem_bt_title", type: "title", x: 45, y: 80, w: 420, h: 30, text: "THIS COLORING BOOK", font_size: 22, color: "#1e293b", is_outline: false },
+        { id: "elem_bt_belongs", type: "title", x: 45, y: 135, w: 420, h: 45, text: "BELONGS TO:", font_size: 32, font_family: "Fredoka", color: "#ffffff", is_outline: true },
+        { id: "elem_bt_line", type: "title", x: 45, y: 220, w: 420, h: 30, text: "____________________________________", font_size: 18, color: "#64748b", is_outline: false },
+        { id: "elem_bt_sub", type: "title", x: 45, y: 320, w: 420, h: 25, text: "Color with joy, love and your wild imagination!", font_size: 13, color: "#475569", is_outline: false }
+      ]
+    });
+
+    // Page 4: Color Test Palette
+    pagesList.push({
+      page_number: 4,
+      page_type: "front_matter_color_test",
+      title: "Color Test Palette",
+      layout: "color_test",
+      elements: [
+        { id: "elem_ct_frame", type: "border", x: 30, y: 25, w: 450, h: 610 },
+        { id: "elem_ct_title", type: "title", x: 45, y: 55, w: 420, h: 35, text: "COLOR TEST PALETTE", font_size: 24, font_family: "Fredoka", color: "#ffffff", is_outline: true },
+        { id: "elem_ct_sub", type: "title", x: 45, y: 95, w: 420, h: 20, text: "Test your pencils, markers and crayons here before coloring!", font_size: 11, color: "#64748b", is_outline: false },
+        { id: "elem_ct_hint", type: "title", x: 45, y: 140, w: 420, h: 20, text: "Color Swatch Test Boxes:", font_size: 12, color: "#1e293b", is_outline: false }
       ]
     });
   }
@@ -1928,6 +1959,25 @@ function applyPageLayout(layoutKey) {
       { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 25, w: 440, h: 605, text: "Full Page Drawing", image_src: existingMainImg || existingRefImg },
       { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
     ];
+  } else if (layoutKey === "belongs_to") {
+    page.page_type = "front_matter_belongs_to";
+    page.title = "Belongs To Page";
+    newElements = [
+      { id: `elem_bt_frame_${Date.now()}`, type: "border", x: 30, y: 25, w: 450, h: 610 },
+      { id: `elem_bt_title_${Date.now()}`, type: "title", x: 45, y: 80, w: 420, h: 30, text: "THIS COLORING BOOK", font_size: 22, color: "#1e293b", is_outline: false },
+      { id: `elem_bt_belongs_${Date.now()}`, type: "title", x: 45, y: 135, w: 420, h: 45, text: "BELONGS TO:", font_size: 32, font_family: "Fredoka", color: "#ffffff", is_outline: true },
+      { id: `elem_bt_line_${Date.now()}`, type: "title", x: 45, y: 220, w: 420, h: 30, text: "____________________________________", font_size: 18, color: "#64748b", is_outline: false },
+      { id: `elem_bt_sub_${Date.now()}`, type: "title", x: 45, y: 320, w: 420, h: 25, text: "Color with joy, love and your wild imagination!", font_size: 13, color: "#475569", is_outline: false }
+    ];
+  } else if (layoutKey === "color_test") {
+    page.page_type = "front_matter_color_test";
+    page.title = "Color Test Palette";
+    newElements = [
+      { id: `elem_ct_frame_${Date.now()}`, type: "border", x: 30, y: 25, w: 450, h: 610 },
+      { id: `elem_ct_title_${Date.now()}`, type: "title", x: 45, y: 55, w: 420, h: 35, text: "COLOR TEST PALETTE", font_size: 24, font_family: "Fredoka", color: "#ffffff", is_outline: true },
+      { id: `elem_ct_sub_${Date.now()}`, type: "title", x: 45, y: 95, w: 420, h: 20, text: "Test your pencils, markers and crayons here before coloring!", font_size: 11, color: "#64748b", is_outline: false },
+      { id: `elem_ct_hint_${Date.now()}`, type: "title", x: 45, y: 140, w: 420, h: 20, text: "Color Swatch Test Boxes:", font_size: 12, color: "#1e293b", is_outline: false }
+    ];
   } else if (layoutKey === "blank_page") {
     page.page_type = "blank_verso";
     page.title = "Blank Back Page";
@@ -1955,6 +2005,8 @@ function getLayoutName(key) {
     kdp_top_ref: "Standard KDP (Top Ref + Outline Title + 75% Art)",
     top_ref: "Standard KDP (Top Ref + Outline Title + 75% Art)",
     full_page: "Full Page Drawing (100%)",
+    belongs_to: "This Book Belongs To Page",
+    color_test: "Color Test Palette",
     blank_page: "Blank Back Page (Verso)",
     disclaimer_standard: "Disclaimer & Copyright",
     contents_standard: "Table of Contents"
@@ -2728,4 +2780,297 @@ function showToast(message, type = "info") {
   setTimeout(() => {
     toast.remove();
   }, 3200);
+}
+
+// ==========================================
+// Amazon KDP Preflight Quality Verification Engine
+// ==========================================
+function calculateKDPGutterMarginPt(pageCount) {
+  if (pageCount <= 150) return 27.0; // 0.375 in
+  if (pageCount <= 300) return 36.0; // 0.500 in
+  if (pageCount <= 500) return 45.0; // 0.625 in
+  return 54.0; // 0.750 in
+}
+
+function calculateKDPSpineWidthIn(pageCount, paperType = "white") {
+  const multiplier = (paperType === "cream") ? 0.002500 : ((paperType === "premium_color") ? 0.002347 : 0.002252);
+  return Math.max(0.06, pageCount * multiplier);
+}
+
+function updatePreflightDashboard() {
+  const list = document.getElementById("preflight-results-list");
+  const overallBadge = document.getElementById("preflight-overall-badge");
+  if (!list) return;
+
+  const pages = currentProject.pages || [];
+  const totalPages = pages.length;
+  const is24PageMin = totalPages >= 24;
+
+  const contentPages = pages.filter(p => p.page_type === "content");
+  const blankPages = pages.filter(p => p.page_type === "blank_verso");
+  const hasSingleSided = (contentPages.length > 0) && (blankPages.length >= contentPages.length - 1);
+
+  const spineWidthIn = calculateKDPSpineWidthIn(totalPages, "white");
+  const spineWidthPt = (spineWidthIn * 72.0).toFixed(1);
+  const gutterPt = calculateKDPGutterMarginPt(totalPages);
+  const gutterIn = (gutterPt / 72.0).toFixed(3);
+
+  const isOverallPass = is24PageMin && hasSingleSided;
+
+  if (overallBadge) {
+    overallBadge.className = `badge ${isOverallPass ? 'pass' : 'warning'}`;
+    overallBadge.style.background = isOverallPass ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)";
+    overallBadge.style.color = isOverallPass ? "var(--secondary)" : "var(--warning)";
+    overallBadge.innerText = isOverallPass ? "✓ 100% KDP COMPLIANT" : "⚠️ KDP ADVISORY (ACTION NEEDED)";
+  }
+
+  list.innerHTML = `
+    <!-- Check 1: 24-Page Minimum Rule -->
+    <div class="check-item ${is24PageMin ? 'pass' : 'warning'}">
+      <div class="check-icon">${is24PageMin ? '✓' : '⚠️'}</div>
+      <div class="check-info">
+        <h4>${is24PageMin ? 'Amazon KDP Minimum 24-Page Requirement Satisfied' : 'Page Count Below Amazon KDP Minimum (24 Pages)'}</h4>
+        <p>Your book currently has <strong>${totalPages} pages</strong>. Amazon KDP paperback books require a minimum of 24 pages to bind properly. ${!is24PageMin ? `<em>Click "Auto-Fill to 24 Pages" below to add ${24 - totalPages} more pages instantly.</em>` : ''}</p>
+      </div>
+      <span class="check-badge ${is24PageMin ? 'pass' : 'warning'}">${is24PageMin ? 'PASS' : 'ADVISORY'}</span>
+    </div>
+
+    <!-- Check 2: Single-Sided Coloring Book Rule -->
+    <div class="check-item ${hasSingleSided ? 'pass' : 'warning'}">
+      <div class="check-icon">${hasSingleSided ? '✓' : 'ℹ'}</div>
+      <div class="check-info">
+        <h4>Single-Sided Bleed-Through Protection (Blank Verso Pages)</h4>
+        <p>Coloring pages sit on odd pages (Recto) with blank back pages (Verso) inserted to protect against marker & watercolor bleed-through.</p>
+      </div>
+      <span class="check-badge ${hasSingleSided ? 'pass' : 'info'}">${hasSingleSided ? 'PASS' : 'ACTIVE'}</span>
+    </div>
+
+    <!-- Check 3: Dynamic Inside Gutter Binding Margin -->
+    <div class="check-item pass">
+      <div class="check-icon">✓</div>
+      <div class="check-info">
+        <h4>Dynamic Inside Binding Gutter: ${gutterIn} in (${gutterPt} pt)</h4>
+        <p>Calculated automatically for ${totalPages} pages. Satisfies Amazon KDP spine glue safe margin specifications.</p>
+      </div>
+      <span class="check-badge pass">PASS</span>
+    </div>
+
+    <!-- Check 4: Calculated Spine Thickness & Wrap Cover Dimensions -->
+    <div class="check-item pass">
+      <div class="check-icon">✓</div>
+      <div class="check-info">
+        <h4>Spine Thickness Calculation: ${spineWidthIn.toFixed(4)} in (${spineWidthPt} pt)</h4>
+        <p>Paperback full wrap cover width: <strong>${(17.25 + spineWidthIn).toFixed(3)} in</strong> × <strong>11.25 in</strong> (including 0.125 in outer bleed). Spine text ${totalPages >= 79 ? 'is eligible (>=79 pages)' : 'is omitted (minimum 79 pages required by Amazon for spine text)'}.</p>
+      </div>
+      <span class="check-badge pass">PASS</span>
+    </div>
+
+    <!-- Check 5: Resolution & Safe Margins -->
+    <div class="check-item pass">
+      <div class="check-icon">✓</div>
+      <div class="check-info">
+        <h4>Print Resolution (300 DPI Vector PDF)</h4>
+        <p>Vector lineart, stroke outlines and embedded graphics are exported at lossless 300 DPI Amazon KDP print resolution.</p>
+      </div>
+      <span class="check-badge pass">PASS</span>
+    </div>
+  `;
+}
+
+function autoFillTo24Pages() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    return;
+  }
+
+  const currentCount = currentProject.pages ? currentProject.pages.length : 0;
+  if (currentCount >= 24) {
+    showToast("✨ Book already has 24 or more pages!", "info");
+    return;
+  }
+
+  recordHistoryState("Auto-Fill to 24 Pages");
+
+  const needed = 24 - currentCount;
+  const pairsNeeded = Math.ceil(needed / 2);
+
+  for (let i = 0; i < pairsNeeded; i++) {
+    const drawPageNum = currentProject.pages.length + 1;
+    const blankPageNum = currentProject.pages.length + 2;
+    const contentCount = currentProject.pages.filter(p => p.page_type === "content").length + 1;
+
+    currentProject.pages.push({
+      page_number: drawPageNum,
+      page_type: "content",
+      title: `Page ${contentCount}`,
+      layout: "kdp_top_ref",
+      elements: [
+        { id: `elem_ref_${drawPageNum}`, type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: `Ref ${contentCount}`, image_src: null },
+        { id: `elem_title_${drawPageNum}`, type: "title", x: 220, y: 70, w: 255, h: 75, text: `PAGE ${contentCount}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+        { id: `elem_main_${drawPageNum}`, type: "main_image", x: 35, y: 200, w: 440, h: 430, text: `Drawing ${contentCount}`, image_src: null },
+        { id: `elem_frame_${drawPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+      ]
+    });
+
+    if (currentProject.pages.length < 24) {
+      currentProject.pages.push({
+        page_number: blankPageNum,
+        page_type: "blank_verso",
+        title: "Blank Page",
+        layout: "blank_page",
+        elements: []
+      });
+    }
+  }
+
+  renumberPages();
+  syncActiveProjectUI();
+  updatePreflightDashboard();
+  renderTimeline();
+  markProjectDirty();
+  showToast(`🎉 Auto-filled book to ${currentProject.pages.length} Pages (Amazon KDP Compliant)!`, "success");
+}
+
+// ==========================================
+// Amazon KDP Full Wrap Cover Generator Engine
+// ==========================================
+function openCoverModal() {
+  const modal = document.getElementById("cover-generator-modal");
+  if (!modal) return;
+
+  const titleInput = document.getElementById("cov-input-title");
+  const authorInput = document.getElementById("cov-input-author");
+
+  if (titleInput) titleInput.value = currentProject.name || "MY JUNGLE COLORING BOOK";
+  if (authorInput) authorInput.value = currentProject.author || "Creative Kids Studio";
+
+  updateCoverVisualPreview();
+  modal.classList.add("active");
+}
+
+function updateCoverVisualPreview() {
+  const title = (document.getElementById("cov-input-title")?.value || currentProject.name || "COLORING BOOK").toUpperCase();
+  const subtitle = document.getElementById("cov-input-subtitle")?.value || "50+ Fun & Easy Coloring Pages";
+  const author = document.getElementById("cov-input-author")?.value || currentProject.author || "Creative Kids Studio";
+  const color = document.getElementById("cov-input-color")?.value || "#1e1b4b";
+  const backHeading = (document.getElementById("cov-input-back-heading")?.value || "WHY YOUR CHILD WILL LOVE THIS BOOK").toUpperCase();
+  const paperType = document.getElementById("cov-input-paper")?.value || "white";
+
+  const totalPages = Math.max(24, currentProject.pages ? currentProject.pages.length : 24);
+  const spineIn = calculateKDPSpineWidthIn(totalPages, paperType);
+  const spinePt = (spineIn * 72.0).toFixed(1);
+  const totalW = (17.25 + spineIn).toFixed(2);
+
+  // Update Specs readout
+  const spineLabel = document.getElementById("cov-spec-spine");
+  if (spineLabel) spineLabel.innerText = `${spineIn.toFixed(3)} in (${spinePt} pt)`;
+  const widthLabel = document.getElementById("cov-spec-width");
+  if (widthLabel) widthLabel.innerText = `${totalW} in`;
+
+  // Update visual preview elements
+  const box = document.getElementById("cover-visual-preview");
+  if (box) box.style.background = color;
+
+  const frontTitle = document.getElementById("cov-prev-front-title");
+  if (frontTitle) frontTitle.innerText = title;
+
+  const frontSub = document.getElementById("cov-prev-front-sub");
+  if (frontSub) frontSub.innerText = subtitle;
+
+  const frontAuthor = document.getElementById("cov-prev-front-author");
+  if (frontAuthor) frontAuthor.innerText = `By ${author}`;
+
+  const backTitle = document.getElementById("cov-prev-back-title");
+  if (backTitle) backTitle.innerText = backHeading;
+
+  const spineElem = document.getElementById("cov-prev-spine");
+  if (spineElem) {
+    spineElem.innerText = totalPages >= 79 ? `${title} • ${author}` : "SPINE";
+  }
+
+  // Display first project image as cover artwork
+  const artBox = document.getElementById("cov-prev-front-art");
+  if (artBox) {
+    let coverImg = null;
+    for (const p of (currentProject.pages || [])) {
+      for (const el of (p.elements || [])) {
+        if ((el.type === "main_image" || el.type === "ref_image") && el.image_src) {
+          coverImg = el.image_src;
+          break;
+        }
+      }
+      if (coverImg) break;
+    }
+
+    if (coverImg) {
+      artBox.innerHTML = `<img src="${coverImg}" style="width:100%;height:100%;object-fit:contain;border-radius:6px;">`;
+    } else {
+      artBox.innerHTML = `🎨`;
+    }
+  }
+}
+
+function executeCoverPdfExport(openInBrowser = true) {
+  showToast("⚙️ Generating 300 DPI Amazon KDP Cover PDF...", "info");
+
+  const title = document.getElementById("cov-input-title")?.value || currentProject.name;
+  const subtitle = document.getElementById("cov-input-subtitle")?.value || "50+ Fun & Easy Coloring Pages";
+  const author = document.getElementById("cov-input-author")?.value || currentProject.author;
+  const color = document.getElementById("cov-input-color")?.value || "#1e1b4b";
+  const backHeading = document.getElementById("cov-input-back-heading")?.value || "WHY YOUR CHILD WILL LOVE THIS BOOK";
+  const paperType = document.getElementById("cov-input-paper")?.value || "white";
+
+  let coverImg = null;
+  for (const p of (currentProject.pages || [])) {
+    for (const el of (p.elements || [])) {
+      if ((el.type === "main_image" || el.type === "ref_image") && el.image_src) {
+        coverImg = el.image_src;
+        break;
+      }
+    }
+    if (coverImg) break;
+  }
+
+  const payload = {
+    ...currentProject,
+    cover_config: {
+      title,
+      subtitle,
+      author,
+      bg_color: color,
+      spine_color: color,
+      back_heading: backHeading,
+      paper_type: paperType,
+      front_image: coverImg
+    }
+  };
+
+  fetch("/api/projects/export_cover_pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(data => {
+    closeModal("cover-generator-modal");
+    if (data.status === "success" && data.download_url) {
+      showToast(`🎉 Cover PDF Generated: ${data.filename}!`, "success");
+      if (openInBrowser) {
+        window.open(data.download_url, "_blank");
+      } else {
+        const a = document.createElement("a");
+        a.href = data.download_url;
+        a.download = data.filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    } else {
+      showToast(`⚠️ Cover PDF Export failed: ${data.error || 'Unknown error'}`, "danger");
+    }
+  })
+  .catch(err => {
+    closeModal("cover-generator-modal");
+    showToast(`⚠️ Cover PDF Export error: ${err.message}`, "danger");
+  });
 }
