@@ -817,28 +817,36 @@ function renderSpreadPreview() {
   if (!container) return;
 
   const contentPages = (currentProject.pages || []).filter(p => p.page_type !== "blank_verso" && !p.page_type?.startsWith("front_matter_"));
+  const bType = currentProject.book_type || "coloring_book";
+  const isColoring = (bType === "coloring_book");
 
   // Build compiled full KDP book pages for realistic spread inspection
-  let compiledSpreadPages = [
+  let compiledSpreadPages = isColoring ? [
     { page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", page_number: 1, is_front_matter: true },
     { page_type: "front_matter_contents", title: "Table of Contents", page_number: 2, is_front_matter: true },
     { page_type: "front_matter_belongs_to", title: "This Book Belongs To", page_number: 3, is_front_matter: true },
     { page_type: "front_matter_color_test", title: "Color Test Palette", page_number: 4, is_front_matter: true }
+  ] : [
+    { page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", page_number: 1, is_front_matter: true }
   ];
 
+  const startContentNum = compiledSpreadPages.length + 1;
+
   contentPages.forEach((p, idx) => {
-    const drawPageNum = 5 + (idx * 2);
+    const drawPageNum = isColoring ? (startContentNum + (idx * 2)) : (startContentNum + idx);
     compiledSpreadPages.push({
       ...p,
       page_number: drawPageNum,
       doc_page_number: drawPageNum
     });
-    compiledSpreadPages.push({
-      page_type: "blank_verso",
-      title: "Blank Back Page",
-      page_number: drawPageNum + 1,
-      doc_page_number: drawPageNum + 1
-    });
+    if (isColoring) {
+      compiledSpreadPages.push({
+        page_type: "blank_verso",
+        title: "Blank Back Page",
+        page_number: drawPageNum + 1,
+        doc_page_number: drawPageNum + 1
+      });
+    }
   });
 
   const totalPages = compiledSpreadPages.length;
@@ -1841,7 +1849,7 @@ async function submitCreateProject() {
 
 function finishProjectSetup(proj) {
   currentProject = proj;
-  currentPageIndex = 2; // Jump straight to first drawing page
+  currentPageIndex = 0; // Always start directly on Page 1
   activeElementId = null;
   undoStack = [];
   redoStack = [];
@@ -1853,9 +1861,10 @@ function finishProjectSetup(proj) {
   closeModal("new-project-modal");
   syncActiveProjectUI();
   fetchRecentProjects();
+  loadPageIntoCanvas(0);
   switchTab("canvas");
 
-  showToast(`✨ Created Project with Single-Sided KDP Layout & Front Matter!`, "success");
+  showToast(`✨ Created Project "${currentProject.name}"!`, "success");
 }
 
 function openProjectByPath(path) {
@@ -1873,7 +1882,7 @@ function openProjectByPath(path) {
           currentProject.is_locked = Boolean(found.is_locked);
         }
       }
-      currentPageIndex = Math.min(2, (currentProject.pages ? currentProject.pages.length - 1 : 0));
+      currentPageIndex = 0; // Always start directly on Page 1
       activeElementId = null;
       undoStack = [];
       redoStack = [];
@@ -1884,7 +1893,7 @@ function openProjectByPath(path) {
 
       closeModal("open-folder-modal");
       syncActiveProjectUI();
-      loadPageIntoCanvas(currentPageIndex);
+      loadPageIntoCanvas(0);
       switchTab("canvas");
       showToast(`📂 Opened Project "${currentProject.name}"!`, "info");
     })

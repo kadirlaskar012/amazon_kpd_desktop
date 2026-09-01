@@ -82,10 +82,10 @@ class KDPPdfExporter:
             c.showPage()
 
         # =========================================================================
-        # 1. FRONT MATTER PAGES (Pages 1 - 4)
+        # 1. FRONT MATTER PAGES
         # =========================================================================
         if include_front_matter:
-            # --- PAGE 1: DISCLAIMER & COPYRIGHT ---
+            # --- PAGE 1: DISCLAIMER & COPYRIGHT (Included for all book types) ---
             c.setFillColor(colors.white)
             c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
 
@@ -147,168 +147,170 @@ class KDPPdfExporter:
             c.drawCentredString(page_w / 2.0, page_h - 540 - bleed_pt, "Printed in the United States of America  •  Amazon KDP Distribution")
             c.showPage()
 
-            # --- PAGE 2: TABLE OF CONTENTS (AUTO ITEM LIST) ---
-            c.setFillColor(colors.white)
-            c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+            # For Coloring Books only: Add Table of Contents, Belongs To, and Color Test Palette
+            if b_type == "coloring_book":
+                # --- PAGE 2: TABLE OF CONTENTS (AUTO ITEM LIST) ---
+                c.setFillColor(colors.white)
+                c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
 
-            # Outer border
-            c.setStrokeColor(colors.HexColor("#0f172a"))
-            c.setLineWidth(1.5)
-            c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
-            c.setStrokeColor(colors.HexColor("#cbd5e1"))
-            c.setLineWidth(0.75)
-            c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
+                # Outer border
+                c.setStrokeColor(colors.HexColor("#0f172a"))
+                c.setLineWidth(1.5)
+                c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
+                c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                c.setLineWidth(0.75)
+                c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
 
-            # Header
-            c.setFont("Helvetica-Bold", 18)
-            c.setFillColor(colors.HexColor("#0f172a"))
-            c.drawCentredString(page_w / 2.0, page_h - 90 - bleed_pt, "TABLE OF CONTENTS")
+                # Header
+                c.setFont("Helvetica-Bold", 18)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 90 - bleed_pt, "TABLE OF CONTENTS")
 
-            c.setFont("Helvetica", 10)
-            c.setFillColor(colors.HexColor("#64748b"))
-            c.drawCentredString(page_w / 2.0, page_h - 115 - bleed_pt, "Complete list of coloring illustrations in this book")
+                c.setFont("Helvetica", 10)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, page_h - 115 - bleed_pt, "Complete list of coloring illustrations in this book")
 
-            c.setStrokeColor(colors.HexColor("#e2e8f0"))
-            c.setLineWidth(1.0)
-            c.line(page_w / 2.0 - 60, page_h - 135 - bleed_pt, page_w / 2.0 + 60, page_h - 135 - bleed_pt)
+                c.setStrokeColor(colors.HexColor("#e2e8f0"))
+                c.setLineWidth(1.0)
+                c.line(page_w / 2.0 - 60, page_h - 135 - bleed_pt, page_w / 2.0 + 60, page_h - 135 - bleed_pt)
 
-            # Item List
-            start_y = page_h - 170 - bleed_pt
-            max_items_to_print = min(22, len(content_pages))
-            
-            left_margin = 65 + bleed_pt
-            right_margin = page_w - 65 - bleed_pt
-
-            for idx in range(max_items_to_print):
-                cp = content_pages[idx]
-                item_title = cp.get("title") or f"Illustration {idx + 1}"
+                # Item List
+                start_y = page_h - 170 - bleed_pt
+                max_items_to_print = min(22, len(content_pages))
                 
-                # Check for explicit title element
-                for el in cp.get("elements", []):
-                    if el.get("type") == "title" and el.get("text"):
-                        item_title = el.get("text").title()
-                        break
+                left_margin = 65 + bleed_pt
+                right_margin = page_w - 65 - bleed_pt
 
-                calc_page_num = 5 + (idx * 2) if single_sided else 5 + idx
-                item_y = start_y - (idx * 22)
+                for idx in range(max_items_to_print):
+                    cp = content_pages[idx]
+                    item_title = cp.get("title") or f"Illustration {idx + 1}"
+                    
+                    # Check for explicit title element
+                    for el in cp.get("elements", []):
+                        if el.get("type") == "title" and el.get("text"):
+                            item_title = el.get("text").title()
+                            break
 
-                # Draw Left Text
-                c.setFont("Helvetica-Bold", 9.5)
-                c.setFillColor(colors.HexColor("#1e293b"))
-                left_str = f"{idx + 1}.  {item_title}"
-                c.drawString(left_margin, item_y, left_str)
+                    calc_page_num = 5 + (idx * 2) if single_sided else 5 + idx
+                    item_y = start_y - (idx * 22)
 
-                # Draw Right Text
-                c.setFont("Helvetica-Bold", 9.5)
-                c.setFillColor(colors.HexColor("#475569"))
-                right_str = f"Page {calc_page_num}"
-                c.drawRightString(right_margin, item_y, right_str)
+                    # Draw Left Text
+                    c.setFont("Helvetica-Bold", 9.5)
+                    c.setFillColor(colors.HexColor("#1e293b"))
+                    left_str = f"{idx + 1}.  {item_title}"
+                    c.drawString(left_margin, item_y, left_str)
 
-                # Crisp Dot Leader between left and right
-                c.setFont("Helvetica", 8)
-                c.setFillColor(colors.HexColor("#94a3b8"))
-                
-                name_w = c.stringWidth(left_str, "Helvetica-Bold", 9.5)
-                page_w_num = c.stringWidth(right_str, "Helvetica-Bold", 9.5)
-                
-                dot_start = left_margin + name_w + 12
-                dot_end = right_margin - page_w_num - 12
-                
-                if dot_end > dot_start:
-                    dot_unit_w = c.stringWidth(" . ", "Helvetica", 8)
-                    num_dots = int((dot_end - dot_start) / dot_unit_w)
-                    if num_dots > 0:
-                        c.drawString(dot_start, item_y, " . " * num_dots)
+                    # Draw Right Text
+                    c.setFont("Helvetica-Bold", 9.5)
+                    c.setFillColor(colors.HexColor("#475569"))
+                    right_str = f"Page {calc_page_num}"
+                    c.drawRightString(right_margin, item_y, right_str)
 
-            c.showPage()
-
-            # --- PAGE 3: THIS BOOK BELONGS TO ---
-            c.setFillColor(colors.white)
-            c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
-
-            c.setStrokeColor(colors.HexColor("#0f172a"))
-            c.setLineWidth(1.5)
-            c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
-            c.setStrokeColor(colors.HexColor("#cbd5e1"))
-            c.setLineWidth(0.75)
-            c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
-
-            c.setFont("Helvetica-Bold", 16)
-            c.setFillColor(colors.HexColor("#334155"))
-            c.drawCentredString(page_w / 2.0, page_h - 130 - bleed_pt, "THIS COLORING BOOK")
-
-            # Outlined BELONGS TO
-            c.setFont("Helvetica-Bold", 32)
-            c.setStrokeColor(colors.HexColor("#0f172a"))
-            c.setFillColor(colors.white)
-            c.setLineWidth(1.6)
-            c._code.append("2 Tr\n")
-            c.drawCentredString(page_w / 2.0, page_h - 190 - bleed_pt, "BELONGS TO:")
-            c._code.append("0 Tr\n")
-
-            # Clean writing line
-            c.setStrokeColor(colors.HexColor("#94a3b8"))
-            c.setLineWidth(1.2)
-            line_y = page_h - 300 - bleed_pt
-            c.line(80 + bleed_pt, line_y, page_w - 80 - bleed_pt, line_y)
-
-            c.setFont("Helvetica-Oblique", 11)
-            c.setFillColor(colors.HexColor("#64748b"))
-            c.drawCentredString(page_w / 2.0, page_h - 420 - bleed_pt, "Color with joy, love and your wild imagination!")
-            c.showPage()
-
-            # --- PAGE 4: COLOR TEST PALETTE ---
-            c.setFillColor(colors.white)
-            c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
-
-            c.setStrokeColor(colors.HexColor("#0f172a"))
-            c.setLineWidth(1.5)
-            c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
-            c.setStrokeColor(colors.HexColor("#cbd5e1"))
-            c.setLineWidth(0.75)
-            c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
-
-            c.setFont("Helvetica-Bold", 22)
-            c.setFillColor(colors.HexColor("#0f172a"))
-            c.drawCentredString(page_w / 2.0, page_h - 85 - bleed_pt, "COLOR TEST PALETTE")
-
-            c.setFont("Helvetica", 10)
-            c.setFillColor(colors.HexColor("#64748b"))
-            c.drawCentredString(page_w / 2.0, page_h - 110 - bleed_pt, "Test your pencils, markers, and crayons here before coloring!")
-
-            c.setStrokeColor(colors.HexColor("#e2e8f0"))
-            c.setLineWidth(1.0)
-            c.line(page_w / 2.0 - 60, page_h - 125 - bleed_pt, page_w / 2.0 + 60, page_h - 125 - bleed_pt)
-
-            # 12 Swatch Boxes Grid (4 rows x 3 cols)
-            grid_cols = 3
-            grid_rows = 4
-            swatch_w = 120
-            swatch_h = 85
-            spacing_x = 24
-            spacing_y = 24
-            grid_total_w = (grid_cols * swatch_w) + ((grid_cols - 1) * spacing_x)
-            grid_start_x = (page_w - grid_total_w) / 2.0
-            grid_start_y = page_h - 160 - bleed_pt - swatch_h
-
-            box_idx = 1
-            for r in range(grid_rows):
-                for col in range(grid_cols):
-                    bx = grid_start_x + (col * (swatch_w + spacing_x))
-                    by = grid_start_y - (r * (swatch_h + spacing_y))
-
-                    c.setStrokeColor(colors.HexColor("#94a3b8"))
-                    c.setLineWidth(1.0)
-                    c.setDash(4, 3)
-                    c.roundRect(bx, by, swatch_w, swatch_h, radius=6, fill=0, stroke=1)
-                    c.setDash()
-
+                    # Crisp Dot Leader between left and right
                     c.setFont("Helvetica", 8)
                     c.setFillColor(colors.HexColor("#94a3b8"))
-                    c.drawString(bx + 8, by + swatch_h - 12, f"Color {box_idx}")
-                    box_idx += 1
+                    
+                    name_w = c.stringWidth(left_str, "Helvetica-Bold", 9.5)
+                    page_w_num = c.stringWidth(right_str, "Helvetica-Bold", 9.5)
+                    
+                    dot_start = left_margin + name_w + 12
+                    dot_end = right_margin - page_w_num - 12
+                    
+                    if dot_end > dot_start:
+                        dot_unit_w = c.stringWidth(" . ", "Helvetica", 8)
+                        num_dots = int((dot_end - dot_start) / dot_unit_w)
+                        if num_dots > 0:
+                            c.drawString(dot_start, item_y, " . " * num_dots)
 
-            c.showPage()
+                c.showPage()
+
+                # --- PAGE 3: THIS BOOK BELONGS TO ---
+                c.setFillColor(colors.white)
+                c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+
+                c.setStrokeColor(colors.HexColor("#0f172a"))
+                c.setLineWidth(1.5)
+                c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
+                c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                c.setLineWidth(0.75)
+                c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
+
+                c.setFont("Helvetica-Bold", 16)
+                c.setFillColor(colors.HexColor("#334155"))
+                c.drawCentredString(page_w / 2.0, page_h - 130 - bleed_pt, "THIS COLORING BOOK")
+
+                # Outlined BELONGS TO
+                c.setFont("Helvetica-Bold", 32)
+                c.setStrokeColor(colors.HexColor("#0f172a"))
+                c.setFillColor(colors.white)
+                c.setLineWidth(1.6)
+                c._code.append("2 Tr\n")
+                c.drawCentredString(page_w / 2.0, page_h - 190 - bleed_pt, "BELONGS TO:")
+                c._code.append("0 Tr\n")
+
+                # Clean writing line
+                c.setStrokeColor(colors.HexColor("#94a3b8"))
+                c.setLineWidth(1.2)
+                line_y = page_h - 300 - bleed_pt
+                c.line(80 + bleed_pt, line_y, page_w - 80 - bleed_pt, line_y)
+
+                c.setFont("Helvetica-Oblique", 11)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, page_h - 420 - bleed_pt, "Color with joy, love and your wild imagination!")
+                c.showPage()
+
+                # --- PAGE 4: COLOR TEST PALETTE ---
+                c.setFillColor(colors.white)
+                c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+
+                c.setStrokeColor(colors.HexColor("#0f172a"))
+                c.setLineWidth(1.5)
+                c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
+                c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                c.setLineWidth(0.75)
+                c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
+
+                c.setFont("Helvetica-Bold", 22)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 85 - bleed_pt, "COLOR TEST PALETTE")
+
+                c.setFont("Helvetica", 10)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, page_h - 110 - bleed_pt, "Test your pencils, markers, and crayons here before coloring!")
+
+                c.setStrokeColor(colors.HexColor("#e2e8f0"))
+                c.setLineWidth(1.0)
+                c.line(page_w / 2.0 - 60, page_h - 125 - bleed_pt, page_w / 2.0 + 60, page_h - 125 - bleed_pt)
+
+                # 12 Swatch Boxes Grid (4 rows x 3 cols)
+                grid_cols = 3
+                grid_rows = 4
+                swatch_w = 120
+                swatch_h = 85
+                spacing_x = 24
+                spacing_y = 24
+                grid_total_w = (grid_cols * swatch_w) + ((grid_cols - 1) * spacing_x)
+                grid_start_x = (page_w - grid_total_w) / 2.0
+                grid_start_y = page_h - 160 - bleed_pt - swatch_h
+
+                box_idx = 1
+                for r in range(grid_rows):
+                    for col in range(grid_cols):
+                        bx = grid_start_x + (col * (swatch_w + spacing_x))
+                        by = grid_start_y - (r * (swatch_h + spacing_y))
+
+                        c.setStrokeColor(colors.HexColor("#94a3b8"))
+                        c.setLineWidth(1.0)
+                        c.setDash(4, 3)
+                        c.roundRect(bx, by, swatch_w, swatch_h, radius=6, fill=0, stroke=1)
+                        c.setDash()
+
+                        c.setFont("Helvetica", 8)
+                        c.setFillColor(colors.HexColor("#94a3b8"))
+                        c.drawString(bx + 8, by + swatch_h - 12, f"Color {box_idx}")
+                        box_idx += 1
+
+                c.showPage()
 
         # =========================================================================
         # 2. CONTENT DRAWING PAGES (Pages 5+) + BLANK VERSO PAGES
