@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KDP Book Production Studio - Live Web Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Hidden File Inputs for Direct Desktop Image Uploads -->
+    <input type="file" id="media-library-upload-input" accept="image/*" multiple onchange="handleMediaLibraryUpload(event)" style="display: none;">
+    <input type="file" id="batch-images-input" accept="image/*" multiple onchange="handleBatchImagesUpload(event)" style="display: none;">
+
+    <!-- Top Navigation Workflow Ribbon -->
+    <header class="top-nav">
+      <div class="brand">
+        <div class="logo-icon">📖</div>
+        <div class="brand-text">
+          <span class="brand-name">KDP Studio</span>
+          <span class="badge-tag">Offline Desktop</span>
+        </div>
+      </div>
+
+      <nav class="workflow-ribbon">
+        <button class="nav-btn" data-tab="dashboard">
+          <span class="step-num">1</span> Dashboard
+        </button>
+        <button class="nav-btn" data-tab="settings">
+          <span class="step-num">2</span> Book Settings
+        </button>
+        <button class="nav-btn active" data-tab="canvas">
+          <span class="step-num">3</span> Canvas Editor
+        </button>
+        <button class="nav-btn" data-tab="preflight">
+          <span class="step-num">4</span> Quality Check
+        </button>
+        <button class="nav-btn" data-tab="preview">
+          <span class="step-num">5</span> Spread Preview
+        </button>
+      </nav>
+
+      <div class="top-actions">
+        <div class="project-pill" id="current-project-pill">
+          <span class="status-dot"></span>
+          <span id="nav-project-name">Animal Kingdom Coloring Book</span>
+        </div>
+        <button class="btn btn-primary" id="btn-save-project" onclick="saveProject()">💾 Save Project</button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="main-content">
+      
+      <!-- TAB 1: DASHBOARD -->
+      <section class="tab-panel" id="panel-dashboard">
+        <div class="dashboard-hero">
+          <div class="hero-left">
+            <div class="hero-tag">⚡ Automated Children's Book Creator</div>
+            <h1>KDP Book Production Studio</h1>
+            <p>Rapidly generate, design, preflight, and export print-compliant Amazon KDP children's books and coloring workbooks with physical point accuracy.</p>
+            <div class="hero-buttons">
+              <button class="btn btn-lg btn-primary" id="dash-new-btn" onclick="openNewProjectModal()">✨ Create New Book</button>
+              <button class="btn btn-lg btn-secondary" onclick="triggerBatchUpload()">⚡ Batch Import Images</button>
+              <button class="btn btn-lg btn-outline" id="dash-open-btn" onclick="openExistingFolderModal()">📂 Open Existing Folder</button>
+            </div>
+          </div>
+          <div class="hero-stats">
+            <div class="stat-card">
+              <div class="stat-num" id="stat-page-count">4</div>
+              <div class="stat-lbl">Active Pages</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-num">300 DPI</div>
+              <div class="stat-lbl">Target Resolution</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-num" id="stat-trim-lbl">8.5 × 11 in</div>
+              <div class="stat-lbl">Trim Size</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <!-- Book Types -->
+          <div class="dash-card">
+            <div class="card-header">
+              <h3>Book Production Modules</h3>
+              <span class="sub-lbl">Modular Pluggable Subsystem</span>
+            </div>
+            <div class="modules-grid">
+              <div class="module-item active">
+                <div class="mod-top">
+                  <span class="mod-icon">🎨</span>
+                  <span class="status-badge active">Active V1</span>
+                </div>
+                <h4>Coloring Book</h4>
+                <p>Reference preview thumbnails, black & white line art, bold titles & frame borders.</p>
+                <div class="btn-group-dual">
+                  <button class="btn btn-sm btn-primary" onclick="openNewProjectModal('coloring_book')">✨ New Coloring Book</button>
+                  <button class="btn btn-sm btn-outline" onclick="switchTab('canvas')">Open Canvas</button>
+                </div>
+              </div>
+              <div class="module-item disabled">
+                <div class="mod-top">
+                  <span class="mod-icon">✍️</span>
+                  <span class="status-badge">Coming Soon</span>
+                </div>
+                <h4>Tracing Book</h4>
+                <p>Alphabet, number, and word line-tracing worksheets for kids.</p>
+                <button class="btn btn-sm btn-disabled" onclick="alert('Tracing Book module is scheduled for future expansion!')">Preview Module</button>
+              </div>
+              <div class="module-item disabled">
+                <div class="mod-top">
+                  <span class="mod-icon">🧩</span>
+                  <span class="status-badge">Coming Soon</span>
+                </div>
+                <h4>Activity Book</h4>
+                <p>Mazes, spot-the-difference, counting, and matching sheets.</p>
+                <button class="btn btn-sm btn-disabled" onclick="alert('Activity Book module is scheduled for future expansion!')">Preview Module</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Projects -->
+          <div class="dash-card">
+            <div class="card-header">
+              <h3>Recent Projects</h3>
+              <button class="btn-text" onclick="renderRecentProjects()">Refresh</button>
+            </div>
+            <div class="recent-list" id="recent-projects-list">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: BOOK SETTINGS -->
+      <section class="tab-panel" id="panel-settings">
+        <div class="settings-container">
+          <div class="section-title-bar">
+            <h2>KDP Book & Print Dimensions</h2>
+            <p>Configure physical cut size, bleed allowance, safe margins, and binding gutter calculations.</p>
+          </div>
+
+          <div class="settings-grid">
+            <div class="settings-box">
+              <h3>Trim Size & Orientation</h3>
+              <div class="form-row">
+                <label>Trim Preset</label>
+                <select id="setting-trim-preset" class="form-control" onchange="onTrimPresetChange()">
+                  <option value="8.5x11">8.5 x 11 in (Standard Children's Book)</option>
+                  <option value="8x10">8 x 10 in (Activity Book)</option>
+                  <option value="8.5x8.5">8.5 x 8.5 in (Square Picture Book)</option>
+                  <option value="7x10">7 x 10 in (Medium Format)</option>
+                  <option value="6x9">6 x 9 in (Standard Trade)</option>
+                  <option value="custom">Custom Size</option>
+                </select>
+              </div>
+              <div class="form-row-dual">
+                <div>
+                  <label>Width (in)</label>
+                  <input type="number" id="setting-width" class="form-control" value="8.5" step="0.125">
+                </div>
+                <div>
+                  <label>Height (in)</label>
+                  <input type="number" id="setting-height" class="form-control" value="11.0" step="0.125">
+                </div>
+              </div>
+              <div class="form-row">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="setting-bleed" checked>
+                  <span><strong>Enable Full Page Bleed (+0.125 in outer trim)</strong></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="settings-box">
+              <h3>Margins & Gutter</h3>
+              <div class="form-row-dual">
+                <div>
+                  <label>Top Margin (in)</label>
+                  <input type="number" id="setting-top-m" class="form-control" value="0.375" step="0.05">
+                </div>
+                <div>
+                  <label>Bottom Margin (in)</label>
+                  <input type="number" id="setting-bot-m" class="form-control" value="0.375" step="0.05">
+                </div>
+              </div>
+              <div class="form-row-dual">
+                <div>
+                  <label>Inside Gutter (Binding)</label>
+                  <input type="number" id="setting-inside-m" class="form-control" value="0.500" step="0.05">
+                </div>
+                <div>
+                  <label>Outside Margin (in)</label>
+                  <input type="number" id="setting-outside-m" class="form-control" value="0.375" step="0.05">
+                </div>
+              </div>
+              <div class="info-banner">
+                ℹ KDP Spec: 0.375 in (24-150 pages), 0.500 in (151-300 pages). Bleed adds 0.125 in to outside edges.
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-footer">
+            <button class="btn btn-primary" onclick="saveSettings()">Save & Apply Settings</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: CANVAS EDITOR WITH INTEGRATED MEDIA LIBRARY & LAYOUT SELECTOR -->
+      <section class="tab-panel active" id="panel-canvas">
+        <div class="canvas-workspace">
+          
+          <!-- Left Expandable Sidebar (Layouts & Media Library) -->
+          <aside class="left-studio-drawer">
+            <!-- Drawer Tabs Header -->
+            <div class="drawer-tabs-header">
+              <button class="drawer-tab-btn active" id="dtab-layouts" onclick="switchDrawerTab('layouts')">
+                📐 Layouts
+              </button>
+              <button class="drawer-tab-btn" id="dtab-media" onclick="switchDrawerTab('media')">
+                📁 Media Library <span class="badge" id="media-count-badge">8</span>
+              </button>
+            </div>
+
+            <!-- DRAWER CONTENT 1: LAYOUT TEMPLATES -->
+            <div class="drawer-content active" id="dcontent-layouts">
+              <div class="drawer-section-title">Page Layout Templates</div>
+              <p class="drawer-section-desc">Click any layout to apply to the current active page:</p>
+
+              <div class="layouts-grid" id="layouts-template-list">
+                <!-- Layout 1: Top Reference + Bottom Large Drawing -->
+                <div class="layout-card active" data-layout="top_ref" onclick="applyPageLayout('top_ref')">
+                  <div class="layout-mini-preview preview-top-ref">
+                    <div class="mini-box mini-ref">Ref</div>
+                    <div class="mini-box mini-main">Drawing Box</div>
+                    <div class="mini-box mini-txt">Title</div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">Top Ref + Big Drawing</div>
+                    <div class="layout-sub">Classic coloring workbook</div>
+                  </div>
+                </div>
+
+                <!-- Layout 2: Full Page Drawing (No Reference) -->
+                <div class="layout-card" data-layout="full_page" onclick="applyPageLayout('full_page')">
+                  <div class="layout-mini-preview preview-full-page">
+                    <div class="mini-box mini-main full">Full Drawing Area</div>
+                    <div class="mini-box mini-txt">Bottom Title</div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">Full Page Drawing</div>
+                    <div class="layout-sub">Maximum coloring space</div>
+                  </div>
+                </div>
+
+                <!-- Layout 3: Side-by-Side (Left Ref + Right Drawing) -->
+                <div class="layout-card" data-layout="side_by_side" onclick="applyPageLayout('side_by_side')">
+                  <div class="layout-mini-preview preview-side-by-side">
+                    <div class="mini-box mini-ref left">Ref</div>
+                    <div class="mini-box mini-main right">Drawing</div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">Side-by-Side Split</div>
+                    <div class="layout-sub">Left color / Right outline</div>
+                  </div>
+                </div>
+
+                <!-- Layout 4: Top Title + Center Art -->
+                <div class="layout-card" data-layout="top_title" onclick="applyPageLayout('top_title')">
+                  <div class="layout-mini-preview preview-top-title">
+                    <div class="mini-box mini-txt top">HEADING TITLE</div>
+                    <div class="mini-box mini-main center">Center Drawing</div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">Top Title + Center Art</div>
+                    <div class="layout-sub">Standard KDP storybook</div>
+                  </div>
+                </div>
+
+                <!-- Layout 5: Color & Write / Trace Lines -->
+                <div class="layout-card" data-layout="color_and_trace" onclick="applyPageLayout('color_and_trace')">
+                  <div class="layout-mini-preview preview-trace">
+                    <div class="mini-box mini-ref small-top">Ref</div>
+                    <div class="mini-box mini-main mid">Coloring</div>
+                    <div class="mini-lines">───── Tracing Lines ─────</div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">Color & Handwriting</div>
+                    <div class="layout-sub">Drawing + 3-line tracing grid</div>
+                  </div>
+                </div>
+
+                <!-- Layout 6: 2x2 Grid (4 Activity Panels) -->
+                <div class="layout-card" data-layout="grid_4" onclick="applyPageLayout('grid_4')">
+                  <div class="layout-mini-preview preview-grid-4">
+                    <div class="mini-box mini-q">1</div>
+                    <div class="mini-box mini-q">2</div>
+                    <div class="mini-box mini-q">3</div>
+                    <div class="mini-box mini-q">4</div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">2 × 2 Quadrant Grid</div>
+                    <div class="layout-sub">4 Mini illustrations</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- DRAWER CONTENT 2: MEDIA LIBRARY -->
+            <div class="drawer-content" id="dcontent-media">
+              <div class="media-upload-top">
+                <button class="btn btn-primary full-width" onclick="triggerMediaUpload()">
+                  📤 Upload Images from PC
+                </button>
+              </div>
+
+              <div class="media-helper-note">
+                💡 <strong>How it works:</strong> Click any image below and choose whether to set it as <strong>1. Reference Image</strong>, <strong>2. Drawing Image</strong>, or <strong>3. Title Text</strong>!
+              </div>
+
+              <div class="media-items-list" id="media-items-list">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+          </aside>
+
+          <!-- Left Mini Toolbar (Shortcuts) -->
+          <div class="canvas-toolbar">
+            <button class="tool-btn active" title="Select Tool" id="tool-select">↖</button>
+            <button class="tool-btn" title="Add Text" onclick="addNewTextElement()">🔤</button>
+            <button class="tool-btn" title="Add Border Frame" onclick="addNewBorderElement()">⬜</button>
+            <div class="tool-sep"></div>
+            <button class="tool-btn" title="Fit to View" onclick="fitCanvasView()">⛶</button>
+            <button class="tool-btn" title="Zoom In" onclick="changeZoom(0.1)">+</button>
+            <button class="tool-btn" title="Zoom Out" onclick="changeZoom(-0.1)">−</button>
+            <button class="tool-btn active" id="toggle-guides-btn" title="Toggle Guides" onclick="toggleGuides()">👁</button>
+            <button class="tool-btn active" id="toggle-snap-btn" title="Toggle Snapping" onclick="toggleSnap()">🧲</button>
+          </div>
+
+          <!-- Canvas Viewport -->
+          <div class="canvas-viewport" id="viewport-container">
+            <div class="canvas-stage" id="canvas-stage">
+              <!-- Physical Paper Page -->
+              <div class="paper-page" id="paper-page">
+                
+                <!-- KDP Guides Layer -->
+                <div class="kdp-guides-layer" id="guides-layer">
+                  <div class="bleed-box" id="guide-bleed">
+                    <span class="guide-tag bleed-tag">Bleed Envelope (+0.125 in)</span>
+                  </div>
+                  <div class="safe-margin-box" id="guide-safe">
+                    <span class="guide-tag safe-tag">Safe Printable Area</span>
+                  </div>
+                  <div class="inside-gutter-zone" id="guide-gutter">
+                    <span class="gutter-text">Inside Binding Gutter</span>
+                  </div>
+                  <div class="center-crosshair-v"></div>
+                  <div class="center-crosshair-h"></div>
+                </div>
+
+                <!-- Elements Container -->
+                <div class="elements-layer" id="elements-layer">
+                  <!-- Elements injected dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Viewport Bottom Status Info -->
+            <div class="viewport-status">
+              <span id="coord-readout">X: 0.00 in | Y: 0.00 in</span>
+              <span id="zoom-readout">Zoom: 100%</span>
+              <span id="page-num-readout">Page 1 of 4</span>
+              <span id="layout-readout">Layout: Top Ref + Big Drawing</span>
+            </div>
+          </div>
+
+          <!-- Right Properties Inspector -->
+          <aside class="properties-sidebar">
+            <div class="sidebar-header">
+              <h3 id="prop-header-title">Properties</h3>
+              <span class="badge" id="selected-type-badge">No Selection</span>
+            </div>
+
+            <div class="sidebar-content" id="sidebar-content">
+              <div class="prop-group">
+                <div class="group-title">Position & Dimensions (Inches)</div>
+                <div class="prop-grid-2">
+                  <div class="prop-field">
+                    <label>X (in)</label>
+                    <input type="number" id="prop-x" step="0.05" oninput="onPropChange()">
+                  </div>
+                  <div class="prop-field">
+                    <label>Y (in)</label>
+                    <input type="number" id="prop-y" step="0.05" oninput="onPropChange()">
+                  </div>
+                  <div class="prop-field">
+                    <label>Width (in)</label>
+                    <input type="number" id="prop-w" step="0.05" oninput="onPropChange()">
+                  </div>
+                  <div class="prop-field">
+                    <label>Height (in)</label>
+                    <input type="number" id="prop-h" step="0.05" oninput="onPropChange()">
+                  </div>
+                </div>
+              </div>
+
+              <div class="prop-group">
+                <div class="group-title">Quick Alignment</div>
+                <div class="align-btn-grid">
+                  <button class="btn btn-sm" onclick="alignActive('left')">⇤ Left</button>
+                  <button class="btn btn-sm" onclick="alignActive('center_h')">⇥ Center ⇤</button>
+                  <button class="btn btn-sm" onclick="alignActive('right')">Right ⇥</button>
+                  <button class="btn btn-sm" onclick="alignActive('top')">⤊ Top</button>
+                  <button class="btn btn-sm" onclick="alignActive('center_v')">⤋ Middle ⤊</button>
+                  <button class="btn btn-sm" onclick="alignActive('bottom')">Bottom ⤋</button>
+                </div>
+                <div class="align-fit-row">
+                  <button class="btn btn-sm btn-outline full-width" onclick="alignActive('fit_safe')">Fit to Safe Area</button>
+                </div>
+              </div>
+
+              <!-- Image Specific Properties -->
+              <div class="prop-group" id="prop-image-group" style="display: none;">
+                <div class="group-title">Image Slot Controls</div>
+                <button class="btn btn-sm btn-primary full-width mb-2" onclick="switchDrawerTab('media')">📁 Choose from Media Library...</button>
+                <button class="btn btn-sm btn-outline full-width mt-2" onclick="triggerMediaUpload()">📤 Upload New Image File...</button>
+              </div>
+
+              <!-- Text Specific Properties -->
+              <div class="prop-group" id="prop-text-group" style="display: none;">
+                <div class="group-title">Typography & Text</div>
+                <div class="prop-field">
+                  <label>Text Content</label>
+                  <input type="text" id="prop-text-content" oninput="onPropChange()">
+                </div>
+                <div class="prop-grid-2">
+                  <div class="prop-field">
+                    <label>Font Family</label>
+                    <select id="prop-font-family" onchange="onPropChange()">
+                      <option value="Plus Jakarta Sans">Plus Jakarta</option>
+                      <option value="Comic Sans MS">Comic Display</option>
+                      <option value="Arial">Arial</option>
+                      <option value="Impact">Impact Bold</option>
+                      <option value="Georgia">Georgia Serif</option>
+                    </select>
+                  </div>
+                  <div class="prop-field">
+                    <label>Size (pt)</label>
+                    <input type="number" id="prop-font-size" value="28" min="8" max="144" oninput="onPropChange()">
+                  </div>
+                </div>
+                <div class="prop-grid-2">
+                  <div class="prop-field">
+                    <label>Color</label>
+                    <input type="color" id="prop-color" value="#111827" oninput="onPropChange()">
+                  </div>
+                  <div class="prop-field">
+                    <label>Alignment</label>
+                    <select id="prop-text-align" onchange="onPropChange()">
+                      <option value="center">Center</option>
+                      <option value="left">Left</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="prop-group">
+                <div class="group-title">Element Actions</div>
+                <button class="btn btn-sm btn-outline full-width" onclick="duplicateActiveElement()">⎘ Duplicate Element</button>
+                <button class="btn btn-sm btn-danger full-width mt-2" onclick="deleteActiveElement()">🗑 Delete Element</button>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <!-- Bottom Page Timeline Ribbon -->
+        <div class="page-timeline-ribbon">
+          <div class="timeline-header">
+            <span class="timeline-title">📖 Pages Timeline</span>
+            <div class="timeline-actions">
+              <button class="btn btn-sm btn-primary" onclick="addNewPage()">➕ Add Page</button>
+              <button class="btn btn-sm btn-secondary" onclick="triggerBatchUpload()">⚡ Batch Import</button>
+              <button class="btn btn-sm" onclick="duplicateCurrentPage()">⎘ Duplicate</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteCurrentPage()">🗑 Delete</button>
+            </div>
+          </div>
+          <div class="thumbnails-container" id="thumbnails-strip">
+            <!-- Thumbnails injected dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: QUALITY CHECK -->
+      <section class="tab-panel" id="panel-preflight">
+        <div class="preflight-container">
+          <div class="section-title-bar">
+            <h2>KDP Preflight Quality Verification</h2>
+            <p>Automated diagnostic engine checking dimensions, bleed margins, DPI resolution, and text safety.</p>
+          </div>
+
+          <div class="check-results-list">
+            <div class="check-item pass">
+              <div class="check-icon">✓</div>
+              <div class="check-info">
+                <h4>Trim Dimensions Match Specification</h4>
+                <p>Page size is set to 8.50 x 11.00 inches (612.0 x 792.0 pt) with uniform sizing.</p>
+              </div>
+              <span class="check-badge pass">PASS</span>
+            </div>
+
+            <div class="check-item pass">
+              <div class="check-icon">✓</div>
+              <div class="check-info">
+                <h4>Full Bleed Envelope Valid</h4>
+                <p>Outer bleed boundary is set to +0.125 in (9.0 pt) satisfying Amazon KDP color/interior guidelines.</p>
+              </div>
+              <span class="check-badge pass">PASS</span>
+            </div>
+
+            <div class="check-item pass">
+              <div class="check-info">✓</div>
+              <div class="check-info">
+                <h4>Inside Binding Gutter Compliant</h4>
+                <p>Inside gutter margin is set to 0.500 in, exceeding the minimum 0.375 in requirement for books under 150 pages.</p>
+              </div>
+              <span class="check-badge pass">PASS</span>
+            </div>
+
+            <div class="check-item warning">
+              <div class="check-icon">⚠</div>
+              <div class="check-info">
+                <h4>Page Count Advisory</h4>
+                <p>Current project has active pages. Amazon KDP paperback books require a minimum of 24 pages for spine binding.</p>
+              </div>
+              <span class="check-badge warning">ADVISORY</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: PREVIEW -->
+      <section class="tab-panel" id="panel-preview">
+        <div class="preview-container">
+          <div class="section-title-bar">
+            <h2>Realistic Two-Page Book Spread Preview</h2>
+            <p>Inspect book spine binding alignment, gutter margins, and facing page layouts.</p>
+          </div>
+
+          <div class="spread-viewport">
+            <div class="spread-book">
+              <!-- Left Page (Even) -->
+              <div class="spread-page left-page">
+                <div class="page-header-num">Page 2</div>
+                <div class="spread-inner-content">
+                  <div class="mini-title">BABY ELEPHANT</div>
+                  <div class="mini-art-placeholder">🐘 Large Coloring Illustration</div>
+                </div>
+              </div>
+              
+              <!-- Spine Crease -->
+              <div class="book-spine-crease"></div>
+
+              <!-- Right Page (Odd) -->
+              <div class="spread-page right-page">
+                <div class="page-header-num">Page 3</div>
+                <div class="spread-inner-content">
+                  <div class="mini-title">PLAYFUL MONKEY</div>
+                  <div class="mini-art-placeholder">🐒 Large Coloring Illustration</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- MODAL 1: CREATE NEW BOOK WIZARD -->
+    <div class="modal-overlay" id="new-project-modal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>✨ Create New KDP Book Project</h3>
+          <button class="close-btn" onclick="closeModal('new-project-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>Book Production Type</label>
+            <select id="modal-book-type" class="form-control">
+              <option value="coloring_book">🎨 Coloring Book (Active V1)</option>
+              <option value="tracing_book">✍️ Tracing Book (Coming Soon)</option>
+              <option value="activity_book">🧩 Activity Book (Coming Soon)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Project Title / Book Name</label>
+            <input type="text" id="modal-project-name" class="form-control" value="Dinosaur Adventure Coloring Book">
+          </div>
+          <div class="form-row">
+            <label>Author / Brand Name</label>
+            <input type="text" id="modal-author-name" class="form-control" value="Creative Kids Studio">
+          </div>
+          <div class="form-row">
+            <label>KDP Trim Size</label>
+            <select id="modal-trim-preset" class="form-control">
+              <option value="8.5x11">8.5 x 11 in (Standard Coloring Book)</option>
+              <option value="8x10">8 x 10 in (Activity Book)</option>
+              <option value="8.5x8.5">8.5 x 8.5 in (Square Book)</option>
+              <option value="6x9">6 x 9 in (Trade)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Initial Pages to Generate</label>
+            <select id="modal-page-count" class="form-control">
+              <option value="10">10 Standard Pages</option>
+              <option value="25">25 Standard Pages (KDP Ready)</option>
+              <option value="50">50 Large Book Pages</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="modal-has-bleed" checked>
+              <span>Enable Full Page Bleed (+0.125 in outer trim)</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('new-project-modal')">Cancel</button>
+          <button class="btn btn-primary" onclick="submitCreateProject()">🚀 Create Project & Open Canvas</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 2: OPEN EXISTING FOLDER -->
+    <div class="modal-overlay" id="open-folder-modal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>📂 Open Project Workspace</h3>
+          <button class="close-btn" onclick="closeModal('open-folder-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">
+            Select a project from your local offline directory or pick a recent sample workspace:
+          </p>
+
+          <div class="project-pick-list">
+            <div class="pick-item" onclick="loadSampleProject('Animal Kingdom Coloring Book', 4)">
+              <div class="pick-icon">🎨</div>
+              <div class="pick-text">
+                <div class="pick-title">Animal Kingdom Coloring Book</div>
+                <div class="pick-sub">4 pages • 8.5 x 11 in • Bleed: Active</div>
+              </div>
+              <button class="btn btn-sm btn-primary">Open</button>
+            </div>
+
+            <div class="pick-item" onclick="loadSampleProject('Cute Animals & Pets Coloring', 8)">
+              <div class="pick-icon">🐶</div>
+              <div class="pick-text">
+                <div class="pick-title">Cute Animals & Pets Coloring</div>
+                <div class="pick-sub">8 pages • 8.5 x 11 in • Bleed: Active</div>
+              </div>
+              <button class="btn btn-sm btn-primary">Open</button>
+            </div>
+
+            <div class="pick-item" onclick="loadSampleProject('Vehicle & Trucks Activity Book', 12)">
+              <div class="pick-icon">🚗</div>
+              <div class="pick-text">
+                <div class="pick-title">Vehicle & Trucks Activity Book</div>
+                <div class="pick-sub">12 pages • 8.5 x 11 in • Bleed: Active</div>
+              </div>
+              <button class="btn btn-sm btn-primary">Open</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('open-folder-modal')">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="toast-container" id="toast-container"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
