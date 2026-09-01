@@ -75,9 +75,9 @@ let currentProject = {
       title: "Playful Lion",
       layout: "kdp_top_ref",
       elements: [
-        { id: "elem_ref_1", type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: "Playful Lion Reference", image_src: null },
-        { id: "elem_title_1", type: "title", x: 220, y: 70, w: 255, h: 75, text: "LION", font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
-        { id: "elem_main_1", type: "main_image", x: 35, y: 200, w: 440, h: 430, text: "Playful Lion Drawing", image_src: null },
+        { id: "elem_ref_1", type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: "Playful Lion Reference", image_src: null },
+        { id: "elem_title_1", type: "title", x: 235, y: 70, w: 240, h: 80, text: "LION", font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+        { id: "elem_main_1", type: "main_image", x: 35, y: 220, w: 440, h: 410, text: "Playful Lion Drawing", image_src: null },
         { id: "elem_frame_1", type: "border", x: 25, y: 15, w: 460, h: 630 }
       ]
     },
@@ -94,9 +94,9 @@ let currentProject = {
       title: "Gentle Elephant",
       layout: "kdp_top_ref",
       elements: [
-        { id: "elem_ref_2", type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: "Gentle Elephant Reference", image_src: null },
-        { id: "elem_title_2", type: "title", x: 220, y: 70, w: 255, h: 75, text: "ELEPHANT", font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
-        { id: "elem_main_2", type: "main_image", x: 35, y: 200, w: 440, h: 430, text: "Gentle Elephant Drawing", image_src: null },
+        { id: "elem_ref_2", type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: "Gentle Elephant Reference", image_src: null },
+        { id: "elem_title_2", type: "title", x: 235, y: 70, w: 240, h: 80, text: "ELEPHANT", font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+        { id: "elem_main_2", type: "main_image", x: 35, y: 220, w: 440, h: 410, text: "Gentle Elephant Drawing", image_src: null },
         { id: "elem_frame_2", type: "border", x: 25, y: 15, w: 460, h: 630 }
       ]
     },
@@ -1585,9 +1585,9 @@ function submitCreateProject() {
       title: `Page ${contentNum}`,
       layout: "kdp_top_ref",
       elements: [
-        { id: `elem_ref_${drawingPageNum}`, type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: `Ref ${contentNum}`, image_src: null },
-        { id: `elem_title_${drawingPageNum}`, type: "title", x: 220, y: 70, w: 255, h: 75, text: `DRAWING ${contentNum}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
-        { id: `elem_main_${drawingPageNum}`, type: "main_image", x: 35, y: 200, w: 440, h: 430, text: `Drawing ${contentNum}`, image_src: null },
+        { id: `elem_ref_${drawingPageNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${contentNum}`, image_src: null },
+        { id: `elem_title_${drawingPageNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${contentNum}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+        { id: `elem_main_${drawingPageNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${contentNum}`, image_src: null },
         { id: `elem_frame_${drawingPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
       ]
     });
@@ -1947,10 +1947,12 @@ function applyPageLayout(layoutKey) {
 
   if (layoutKey === "kdp_top_ref" || layoutKey === "top_ref") {
     page.page_type = "content";
+    const projFont = currentProject.settings?.default_font_family || "Fredoka";
+    const projOutline = currentProject.settings?.default_font_mode !== "solid";
     newElements = [
-      { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: "Reference Image", image_src: existingRefImg },
-      { id: `elem_title_${Date.now()}`, type: "title", x: 220, y: 70, w: 255, h: 75, text: existingTitle.toUpperCase(), font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
-      { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 200, w: 440, h: 430, text: "Coloring Drawing", image_src: existingMainImg },
+      { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: "Reference Image", image_src: existingRefImg },
+      { id: `elem_title_${Date.now()}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: existingTitle.toUpperCase(), font_size: 40, color: "#ffffff", is_outline: projOutline, font_family: projFont, letter_spacing: 2 },
+      { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: "Coloring Drawing", image_src: existingMainImg },
       { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
     ];
   } else if (layoutKey === "full_page") {
@@ -2356,6 +2358,26 @@ function onPropChange() {
     const strokeInput = document.getElementById("prop-stroke-color");
     if (strokeInput) elem.stroke_color = strokeInput.value;
 
+    // Save as project-wide default typography so every canvas page inherits this font style
+    if (!currentProject.settings) currentProject.settings = {};
+    currentProject.settings.default_font_family = elem.font_family;
+    currentProject.settings.default_font_mode = elem.is_outline ? "outline" : "solid";
+    currentProject.settings.default_stroke_color = elem.stroke_color;
+    currentProject.settings.default_text_color = elem.color;
+
+    // Automatically sync font family, style mode, and stroke to all title elements across the whole book
+    currentProject.pages.forEach(p => {
+      (p.elements || []).forEach(el => {
+        if (el.type === "title") {
+          el.font_family = elem.font_family;
+          el.is_outline = elem.is_outline;
+          el.stroke_color = elem.stroke_color;
+          if (elem.is_outline) el.color = elem.color;
+          el.letter_spacing = elem.letter_spacing;
+        }
+      });
+    });
+
     const elNode = document.getElementById(elem.id);
     if (elNode) {
       elNode.innerText = elem.text;
@@ -2524,6 +2546,11 @@ function addNewPage() {
   const drawPageNum = currentProject.pages.length + 1;
   const blankPageNum = currentProject.pages.length + 2;
 
+  const projFont = currentProject.settings?.default_font_family || "Fredoka";
+  const projOutline = currentProject.settings?.default_font_mode !== "solid";
+  const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
+  const projColor = currentProject.settings?.default_text_color || (projOutline ? "#ffffff" : "#111827");
+
   // 1. Add Drawing Page
   currentProject.pages.push({
     page_number: drawPageNum,
@@ -2531,9 +2558,9 @@ function addNewPage() {
     title: `Page ${contentCount}`,
     layout: "kdp_top_ref",
     elements: [
-      { id: `elem_ref_${drawPageNum}`, type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: `Ref ${contentCount}`, image_src: null },
-      { id: `elem_title_${drawPageNum}`, type: "title", x: 220, y: 70, w: 255, h: 75, text: `PAGE ${contentCount}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
-      { id: `elem_main_${drawPageNum}`, type: "main_image", x: 35, y: 200, w: 440, h: 430, text: `Drawing ${contentCount}`, image_src: null },
+      { id: `elem_ref_${drawPageNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${contentCount}`, image_src: null },
+      { id: `elem_title_${drawPageNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `PAGE ${contentCount}`, font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
+      { id: `elem_main_${drawPageNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${contentCount}`, image_src: null },
       { id: `elem_frame_${drawPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
     ]
   });
@@ -2620,6 +2647,10 @@ function renderTimeline() {
       typeBadge = `<div style="font-size:9px;color:var(--warning);font-weight:700;">[Disclaimer]</div>`;
     } else if (page.page_type === "front_matter_contents") {
       typeBadge = `<div style="font-size:9px;color:var(--secondary);font-weight:700;">[Contents]</div>`;
+    } else if (page.page_type === "front_matter_belongs_to") {
+      typeBadge = `<div style="font-size:9px;color:#ec4899;font-weight:700;">[Belongs To]</div>`;
+    } else if (page.page_type === "front_matter_color_test") {
+      typeBadge = `<div style="font-size:9px;color:#8b5cf6;font-weight:700;">[Palette]</div>`;
     } else if (page.page_type === "blank_verso") {
       typeBadge = `<div style="font-size:9px;color:#94a3b8;font-weight:700;">[Blank Back]</div>`;
     }
@@ -2631,7 +2662,7 @@ function renderTimeline() {
       const mainEl = page.elements ? page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src) : null;
       previewContent = mainEl 
         ? `<img src="${mainEl.image_src}">` 
-        : `<span style="font-size:16px;">${page.page_type === 'front_matter_disclaimer' ? '📜' : (page.page_type === 'front_matter_contents' ? '📋' : '🎨')}</span>`;
+        : `<span style="font-size:16px;">${page.page_type === 'front_matter_disclaimer' ? '📜' : (page.page_type === 'front_matter_contents' ? '📋' : (page.page_type === 'front_matter_belongs_to' ? '🏷️' : (page.page_type === 'front_matter_color_test' ? '🧪' : '🎨')))}</span>`;
     }
 
     card.innerHTML = `
@@ -2676,6 +2707,11 @@ function handleBatchImagesUpload(event) {
   recordHistoryState(`Batch Import ${files.length} Images`);
   showToast(`⚡ Processing ${files.length} images into single-sided coloring pages...`, "info");
 
+  const projFont = currentProject.settings?.default_font_family || "Fredoka";
+  const projOutline = currentProject.settings?.default_font_mode !== "solid";
+  const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
+  const projColor = currentProject.settings?.default_text_color || (projOutline ? "#ffffff" : "#111827");
+
   let loadedCount = 0;
   files.forEach((file, idx) => {
     const reader = new FileReader();
@@ -2702,9 +2738,9 @@ function handleBatchImagesUpload(event) {
         title: cleanTitle,
         layout: "kdp_top_ref",
         elements: [
-          { id: `elem_ref_${Date.now()}_${idx}`, type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: cleanTitle, image_src: dataUrl },
-          { id: `elem_title_${Date.now()}_${idx}`, type: "title", x: 220, y: 70, w: 255, h: 75, text: cleanTitle.toUpperCase(), font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
-          { id: `elem_main_${Date.now()}_${idx}`, type: "main_image", x: 35, y: 200, w: 440, h: 430, text: cleanTitle, image_src: dataUrl },
+          { id: `elem_ref_${Date.now()}_${idx}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: cleanTitle, image_src: dataUrl },
+          { id: `elem_title_${Date.now()}_${idx}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: cleanTitle.toUpperCase(), font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
+          { id: `elem_main_${Date.now()}_${idx}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: cleanTitle, image_src: dataUrl },
           { id: `elem_frame_${Date.now()}_${idx}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
         ]
       });
@@ -2894,6 +2930,11 @@ function autoFillTo24Pages() {
   const needed = 24 - currentCount;
   const pairsNeeded = Math.ceil(needed / 2);
 
+  const projFont = currentProject.settings?.default_font_family || "Fredoka";
+  const projOutline = currentProject.settings?.default_font_mode !== "solid";
+  const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
+  const projColor = currentProject.settings?.default_text_color || (projOutline ? "#ffffff" : "#111827");
+
   for (let i = 0; i < pairsNeeded; i++) {
     const drawPageNum = currentProject.pages.length + 1;
     const blankPageNum = currentProject.pages.length + 2;
@@ -2905,9 +2946,9 @@ function autoFillTo24Pages() {
       title: `Page ${contentCount}`,
       layout: "kdp_top_ref",
       elements: [
-        { id: `elem_ref_${drawPageNum}`, type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: `Ref ${contentCount}`, image_src: null },
-        { id: `elem_title_${drawPageNum}`, type: "title", x: 220, y: 70, w: 255, h: 75, text: `PAGE ${contentCount}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
-        { id: `elem_main_${drawPageNum}`, type: "main_image", x: 35, y: 200, w: 440, h: 430, text: `Drawing ${contentCount}`, image_src: null },
+        { id: `elem_ref_${drawPageNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${contentCount}`, image_src: null },
+        { id: `elem_title_${drawPageNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `PAGE ${contentCount}`, font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
+        { id: `elem_main_${drawPageNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${contentCount}`, image_src: null },
         { id: `elem_frame_${drawPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
       ]
     });
