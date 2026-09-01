@@ -2440,6 +2440,8 @@ function updateMediaSelectionUI() {
   });
 }
 
+let pendingMediaDeleteAction = null;
+
 function deleteSingleMedia(mediaId) {
   if (currentProject.is_locked) {
     showToast("🔒 Cannot delete: Project is locked!", "warning");
@@ -2450,18 +2452,26 @@ function deleteSingleMedia(mediaId) {
   const item = projectMedia.find(m => m.id === mediaId);
   if (!item) return;
 
-  if (!confirm(`Delete image "${item.name}" from the project media library?`)) {
-    return;
+  pendingMediaDeleteAction = { type: "single", mediaId: mediaId, name: item.name };
+
+  const modal = document.getElementById("media-delete-confirm-modal");
+  const title = document.getElementById("media-delete-modal-title");
+  const msg = document.getElementById("media-delete-modal-msg");
+  const sub = document.getElementById("media-delete-modal-sub");
+  const prevBox = document.getElementById("media-delete-modal-preview");
+  const prevImg = document.getElementById("media-delete-modal-img");
+  const actionBtn = document.getElementById("media-delete-confirm-action-btn");
+
+  if (title) title.innerText = "🗑 Delete Image from Media";
+  if (msg) msg.innerText = `Delete "${item.name}" from Media Library?`;
+  if (sub) sub.innerText = `File: ${item.fileName || item.name} (${item.sizeKb || 0} KB). This image will be removed from this project's library.`;
+  if (prevBox && prevImg) {
+    prevBox.style.display = "block";
+    prevImg.src = item.dataUrl;
   }
+  if (actionBtn) actionBtn.innerText = "🗑 Yes, Delete Image";
 
-  recordHistoryState(`Delete Media "${item.name}"`);
-  currentProject.media = projectMedia.filter(m => m.id !== mediaId);
-  selectedMediaIds.delete(mediaId);
-
-  renderMediaLibrary();
-  syncActiveProjectUI();
-  markProjectDirty();
-  showToast(`🗑 Deleted "${item.name}"!`, "info");
+  if (modal) modal.classList.add("active");
 }
 
 function deleteSelectedMedia() {
@@ -2473,19 +2483,22 @@ function deleteSelectedMedia() {
   const count = selectedMediaIds.size;
   if (count === 0) return;
 
-  if (!confirm(`Are you sure you want to delete ${count} selected image(s)?`)) {
-    return;
-  }
+  pendingMediaDeleteAction = { type: "bulk", count: count };
 
-  recordHistoryState(`Delete ${count} Media Files`);
-  const projectMedia = currentProject.media || [];
-  currentProject.media = projectMedia.filter(m => !selectedMediaIds.has(m.id));
-  selectedMediaIds.clear();
+  const modal = document.getElementById("media-delete-confirm-modal");
+  const title = document.getElementById("media-delete-modal-title");
+  const msg = document.getElementById("media-delete-modal-msg");
+  const sub = document.getElementById("media-delete-modal-sub");
+  const prevBox = document.getElementById("media-delete-modal-preview");
+  const actionBtn = document.getElementById("media-delete-confirm-action-btn");
 
-  renderMediaLibrary();
-  syncActiveProjectUI();
-  markProjectDirty();
-  showToast(`🗑 Deleted ${count} image(s) from media library!`, "info");
+  if (title) title.innerText = `🗑 Bulk Delete (${count} Images)`;
+  if (msg) msg.innerText = `Delete all ${count} selected images?`;
+  if (sub) sub.innerText = `These ${count} selected images will be removed from this project's media library.`;
+  if (prevBox) prevBox.style.display = "none";
+  if (actionBtn) actionBtn.innerText = `🗑 Delete ${count} Selected`;
+
+  if (modal) modal.classList.add("active");
 }
 
 function clearAllMedia() {
@@ -2500,13 +2513,62 @@ function clearAllMedia() {
     return;
   }
 
-  if (!confirm(`⚠️ Clear ALL ${projectMedia.length} image(s) from this project's media library?`)) {
-    return;
+  pendingMediaDeleteAction = { type: "clear", count: projectMedia.length };
+
+  const modal = document.getElementById("media-delete-confirm-modal");
+  const title = document.getElementById("media-delete-modal-title");
+  const msg = document.getElementById("media-delete-modal-msg");
+  const sub = document.getElementById("media-delete-modal-sub");
+  const prevBox = document.getElementById("media-delete-modal-preview");
+  const actionBtn = document.getElementById("media-delete-confirm-action-btn");
+
+  if (title) title.innerText = "🧹 Clear Entire Media Library";
+  if (msg) msg.innerText = `⚠️ Clear ALL ${projectMedia.length} image(s) from this project?`;
+  if (sub) sub.innerText = "All uploaded artwork in this project will be deleted. This cannot be undone.";
+  if (prevBox) prevBox.style.display = "none";
+  if (actionBtn) actionBtn.innerText = "🧹 Yes, Clear All Media";
+
+  if (modal) modal.classList.add("active");
+}
+
+function executeMediaDeleteAction() {
+  const modal = document.getElementById("media-delete-confirm-modal");
+  if (modal) modal.classList.remove("active");
+
+  if (!pendingMediaDeleteAction) return;
+
+  if (pendingMediaDeleteAction.type === "single") {
+    const mediaId = pendingMediaDeleteAction.mediaId;
+    const name = pendingMediaDeleteAction.name;
+    recordHistoryState(`Delete Media "${name}"`);
+    currentProject.media = (currentProject.media || []).filter(m => m.id !== mediaId);
+    selectedMediaIds.delete(mediaId);
+    renderMediaLibrary();
+    syncActiveProjectUI();
+    markProjectDirty();
+    showToast(`🗑 Deleted "${name}"!`, "info");
+  } else if (pendingMediaDeleteAction.type === "bulk") {
+    const count = pendingMediaDeleteAction.count;
+    recordHistoryState(`Delete ${count} Media Files`);
+    const projectMedia = currentProject.media || [];
+    currentProject.media = projectMedia.filter(m => !selectedMediaIds.has(m.id));
+    selectedMediaIds.clear();
+    renderMediaLibrary();
+    syncActiveProjectUI();
+    markProjectDirty();
+    showToast(`🗑 Deleted ${count} image(s) from media library!`, "info");
+  } else if (pendingMediaDeleteAction.type === "clear") {
+    recordHistoryState("Clear All Media");
+    currentProject.media = [];
+    selectedMediaIds.clear();
+    renderMediaLibrary();
+    syncActiveProjectUI();
+    markProjectDirty();
+    showToast("🧹 All media cleared from project!", "info");
   }
 
-  recordHistoryState("Clear All Media");
-  currentProject.media = [];
-  selectedMediaIds.clear();
+  pendingMediaDeleteAction = null;
+}
 
   renderMediaLibrary();
   syncActiveProjectUI();
@@ -3850,7 +3912,45 @@ function deleteCurrentPage() {
   showToast(`🗑 Deleted Page ${deletedNum} & Auto-Renumbered Remaining Pages!`, "info");
 }
 
-// Timeline Ribbon - Displays clean working canvases with in-between + insert slots and card actions
+// Timeline Ribbon - Displays clean working canvases with in-between + insert slots, drag-and-drop swapping, and card actions
+let draggedTimelinePageIndex = null;
+
+function reorderPage(fromIdx, toIdx) {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot reorder: Project is locked!", "warning");
+    return;
+  }
+  if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= currentProject.pages.length || toIdx >= currentProject.pages.length) return;
+
+  const pages = currentProject.pages;
+  const pageToMove = pages[fromIdx];
+  const pageTitle = pageToMove.title || `Page ${fromIdx + 1}`;
+
+  recordHistoryState(`Move "${pageTitle}" from Page ${fromIdx + 1} to ${toIdx + 1}`);
+
+  // Remove from old position and insert at new position
+  pages.splice(fromIdx, 1);
+  pages.splice(toIdx, 0, pageToMove);
+
+  renumberPages();
+  syncContentsPage();
+
+  // Keep currently active page selected properly
+  if (currentPageIndex === fromIdx) {
+    currentPageIndex = toIdx;
+  } else if (fromIdx < currentPageIndex && toIdx >= currentPageIndex) {
+    currentPageIndex--;
+  } else if (fromIdx > currentPageIndex && toIdx <= currentPageIndex) {
+    currentPageIndex++;
+  }
+
+  renderTimeline();
+  selectPage(currentPageIndex);
+  markProjectDirty();
+
+  showToast(`🔀 Swapped & Moved "${pageTitle}" to Page ${toIdx + 1}!`, "success");
+}
+
 function renderTimeline() {
   const strip = document.getElementById("thumbnails-strip");
   if (!strip) return;
@@ -3859,7 +3959,7 @@ function renderTimeline() {
   const bType = currentProject.book_type || "coloring_book";
   const pages = currentProject.pages || [];
 
-  // Helper to create an in-between insert slot
+  // Helper to create an in-between insert slot with drop support
   const createInsertSlot = (targetIdx) => {
     const slot = document.createElement("div");
     slot.className = "timeline-insert-slot";
@@ -3868,6 +3968,30 @@ function renderTimeline() {
         +
       </button>
     `;
+
+    slot.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      slot.classList.add("drag-over");
+    });
+
+    slot.addEventListener("dragleave", () => {
+      slot.classList.remove("drag-over");
+    });
+
+    slot.addEventListener("drop", (e) => {
+      e.preventDefault();
+      slot.classList.remove("drag-over");
+      const fromIdx = draggedTimelinePageIndex !== null ? draggedTimelinePageIndex : parseInt(e.dataTransfer.getData("text/plain"));
+      if (isNaN(fromIdx) || fromIdx < 0 || fromIdx >= currentProject.pages.length) return;
+      let toIdx = targetIdx;
+      if (fromIdx < targetIdx) toIdx = targetIdx - 1;
+      toIdx = Math.max(0, Math.min(currentProject.pages.length - 1, toIdx));
+      if (fromIdx !== toIdx) {
+        reorderPage(fromIdx, toIdx);
+      }
+    });
+
     return slot;
   };
 
@@ -3878,7 +4002,75 @@ function renderTimeline() {
     const card = document.createElement("div");
     const isBlank = page.page_type === "blank_verso" || page.layout === "blank_page";
     card.className = `thumb-card ${idx === currentPageIndex ? 'active' : ''} ${isBlank ? 'blank-card' : ''}`;
+    card.setAttribute("draggable", "true");
+    card.dataset.pageIndex = idx;
     card.onclick = () => selectPage(idx);
+
+    // Drag and drop event listeners
+    card.addEventListener("dragstart", (e) => {
+      if (currentProject.is_locked) {
+        e.preventDefault();
+        return;
+      }
+      draggedTimelinePageIndex = idx;
+      card.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", idx.toString());
+    });
+
+    card.addEventListener("dragend", () => {
+      card.classList.remove("dragging");
+      document.querySelectorAll(".thumb-card").forEach(c => {
+        c.classList.remove("drag-over-left", "drag-over-right");
+      });
+      draggedTimelinePageIndex = null;
+    });
+
+    card.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (draggedTimelinePageIndex === null || draggedTimelinePageIndex === idx) return;
+
+      const rect = card.getBoundingClientRect();
+      const midX = rect.left + rect.width / 2;
+      if (e.clientX < midX) {
+        card.classList.add("drag-over-left");
+        card.classList.remove("drag-over-right");
+      } else {
+        card.classList.add("drag-over-right");
+        card.classList.remove("drag-over-left");
+      }
+    });
+
+    card.addEventListener("dragleave", () => {
+      card.classList.remove("drag-over-left", "drag-over-right");
+    });
+
+    card.addEventListener("drop", (e) => {
+      e.preventDefault();
+      card.classList.remove("drag-over-left", "drag-over-right");
+
+      const fromIdx = draggedTimelinePageIndex !== null ? draggedTimelinePageIndex : parseInt(e.dataTransfer.getData("text/plain"));
+      if (isNaN(fromIdx) || fromIdx === idx || fromIdx < 0 || fromIdx >= currentProject.pages.length) return;
+
+      const rect = card.getBoundingClientRect();
+      const midX = rect.left + rect.width / 2;
+      let toIdx = idx;
+      if (e.clientX >= midX && fromIdx < idx) {
+        toIdx = idx;
+      } else if (e.clientX >= midX && fromIdx > idx) {
+        toIdx = idx + 1;
+      } else if (e.clientX < midX && fromIdx < idx) {
+        toIdx = idx - 1;
+      } else if (e.clientX < midX && fromIdx > idx) {
+        toIdx = idx;
+      }
+
+      toIdx = Math.max(0, Math.min(currentProject.pages.length - 1, toIdx));
+      if (fromIdx === toIdx) return;
+
+      reorderPage(fromIdx, toIdx);
+    });
 
     let pageLabel = `Page ${idx + 1}`;
     let previewContent = "";
