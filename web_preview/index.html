@@ -77,7 +77,6 @@
             <div class="hero-buttons">
               <button class="btn btn-lg btn-primary" id="dash-new-btn" onclick="openNewProjectModal()">✨ Create New Project</button>
               <button class="btn btn-lg btn-outline" id="dash-open-btn" onclick="openExistingFolderModal()">📂 Open Existing Project</button>
-              <button class="btn btn-lg btn-outline" style="border-color: #ef4444; color: #f87171;" onclick="promptClearAllCache()" title="Clear project cache and temporary buffers">🧹 Clear Cache</button>
             </div>
           </div>
           <div class="hero-stats">
@@ -132,146 +131,6 @@
             </div>
             <div class="recent-list" id="recent-projects-list">
               <!-- Rendered dynamically with Lock / Delete buttons -->
-            </div>
-          </div>
-        </div>
-
-        <!-- AMAZON KDP ROYALTY & PRICE ESTIMATOR -->
-        <div class="dash-card kdp-estimator-card">
-          <div class="card-header">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 22px;">📊</span>
-              <div>
-                <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-main);">Amazon KDP Royalty & Pricing Profit Calculator</h3>
-                <p style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-muted);">Real-time printing cost calculation, minimum list price, profit margin, and monthly earnings projection</p>
-              </div>
-            </div>
-            <button class="btn btn-sm btn-outline" onclick="syncEstimatorWithCurrentBook()">⚡ Sync Active Book</button>
-          </div>
-          
-          <div class="estimator-body">
-            <div class="estimator-inputs-grid">
-              <!-- Marketplace -->
-              <div class="est-field">
-                <label>Amazon Marketplace</label>
-                <select id="est-marketplace" class="form-control" onchange="calculateKdpRoyalty()">
-                  <option value="US" selected>🇺🇸 Amazon.com (USD $)</option>
-                  <option value="UK">🇬🇧 Amazon.co.uk (GBP £)</option>
-                  <option value="EU">🇩🇪 / 🇫🇷 Amazon.de / .fr (EUR €)</option>
-                  <option value="CA">🇨🇦 Amazon.ca (CAD $)</option>
-                  <option value="AU">🇦🇺 Amazon.com.au (AUD $)</option>
-                </select>
-              </div>
-
-              <!-- Ink & Paper Interior -->
-              <div class="est-field">
-                <label>Interior Ink & Paper Type</label>
-                <select id="est-interior" class="form-control" onchange="calculateKdpRoyalty()">
-                  <option value="bw" selected>⬛ Black & White with White Paper (Standard KDP)</option>
-                  <option value="color_std">🎨 Standard Color Interior</option>
-                  <option value="color_prem">✨ Premium Color Interior</option>
-                </select>
-              </div>
-
-              <!-- Page Count -->
-              <div class="est-field">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <label>Total Page Count (N)</label>
-                  <span id="est-page-count-val" style="font-weight: 800; color: #6366f1;">40 Pages</span>
-                </div>
-                <input type="range" id="est-pages-slider" min="24" max="250" step="2" value="40" class="form-control" oninput="onEstPageSlider(this.value)">
-              </div>
-
-              <!-- List Price -->
-              <div class="est-field">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <label>Your Amazon List Price</label>
-                  <span id="est-min-price-hint" style="font-size: 10.5px; color: var(--text-muted);">Min: $3.84</span>
-                </div>
-                <div style="display: flex; gap: 6px; align-items: center;">
-                  <span id="est-curr-symbol" style="font-weight: 800; font-size: 16px; color: var(--text-main);">$</span>
-                  <input type="number" id="est-list-price" class="form-control" value="7.99" min="3.5" max="99.99" step="0.5" oninput="calculateKdpRoyalty()">
-                </div>
-                <div class="est-presets">
-                  <button type="button" class="est-preset-btn" onclick="setEstPrice(5.99)">$5.99</button>
-                  <button type="button" class="est-preset-btn" onclick="setEstPrice(6.99)">$6.99</button>
-                  <button type="button" class="est-preset-btn" onclick="setEstPrice(7.99)">$7.99</button>
-                  <button type="button" class="est-preset-btn" onclick="setEstPrice(8.99)">$8.99</button>
-                  <button type="button" class="est-preset-btn" onclick="setEstPrice(9.99)">$9.99</button>
-                  <button type="button" class="est-preset-btn" onclick="setEstPrice(12.99)">$12.99</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Financial Output Cards -->
-            <div class="est-outputs-grid">
-              <div class="est-result-card">
-                <div class="res-icon">🖨️</div>
-                <div class="res-info">
-                  <div class="res-lbl">Printing Cost / Book</div>
-                  <div class="res-val" id="est-res-print-cost">$2.30</div>
-                  <div class="res-sub">Amazon KDP Fixed + Page Rate</div>
-                </div>
-              </div>
-
-              <div class="est-result-card highlight">
-                <div class="res-icon">💵</div>
-                <div class="res-info">
-                  <div class="res-lbl">Author Profit / Royalty</div>
-                  <div class="res-val" id="est-res-royalty">$2.49</div>
-                  <div class="res-sub">60% List Price − Printing Cost</div>
-                </div>
-              </div>
-
-              <div class="est-result-card">
-                <div class="res-icon">📈</div>
-                <div class="res-info">
-                  <div class="res-lbl">Profit Margin</div>
-                  <div class="res-val" id="est-res-margin">31.2%</div>
-                  <div class="res-sub">Net Profit / Retail Price</div>
-                </div>
-              </div>
-
-              <div class="est-result-card">
-                <div class="res-icon">🎯</div>
-                <div class="res-info">
-                  <div class="res-lbl">Minimum List Price</div>
-                  <div class="res-val" id="est-res-min-price">$3.84</div>
-                  <div class="res-sub">Zero Profit Breakeven Threshold</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Projected Monthly Passive Income Tier Table -->
-            <div class="est-tiers-box">
-              <div class="tiers-header">
-                <span>💰 Projected Passive Income Simulator</span>
-                <span style="font-size: 11px; color: var(--text-muted);">Estimated net royalties based on monthly copies sold</span>
-              </div>
-              <div class="est-tiers-grid">
-                <div class="tier-card">
-                  <div class="tier-copies">50 Copies / mo</div>
-                  <div class="tier-royalty" id="est-tier-50">$124.50</div>
-                  <div class="tier-lbl">Starter Launch</div>
-                </div>
-                <div class="tier-card">
-                  <div class="tier-copies">200 Copies / mo</div>
-                  <div class="tier-royalty" id="est-tier-200">$498.00</div>
-                  <div class="tier-lbl">Active Evergreen</div>
-                </div>
-                <div class="tier-card best">
-                  <div class="tier-badge">POPULAR</div>
-                  <div class="tier-copies">500 Copies / mo</div>
-                  <div class="tier-royalty" id="est-tier-500">$1,245.00</div>
-                  <div class="tier-lbl">Q4 Holiday Surge</div>
-                </div>
-                <div class="tier-card royal">
-                  <div class="tier-badge">BESTSELLER</div>
-                  <div class="tier-copies">1,000 Copies / mo</div>
-                  <div class="tier-royalty" id="est-tier-1000">$2,490.00</div>
-                  <div class="tier-lbl">Amazon Top Ranked</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -1387,28 +1246,6 @@
 
         <div class="proc-footer-note">
           🔒 Screen interaction is locked during processing to ensure 100% data integrity.
-        </div>
-      </div>
-    </div>
-
-    <!-- CLEAR CACHE CONFIRMATION MODAL -->
-    <div class="modal-overlay" id="clear-cache-modal">
-      <div class="modal-card" style="max-width: 480px;">
-        <div class="modal-header">
-          <h3>🧹 Clear Project Cache & Buffers</h3>
-          <button class="modal-close" onclick="closeModal('clear-cache-modal')">×</button>
-        </div>
-        <div class="modal-body" style="padding: 20px;">
-          <div style="font-size: 13px; color: var(--text-main); margin-bottom: 12px; line-height: 1.5;">
-            Are you sure you want to clear all project cache and temporary localStorage buffers?
-          </div>
-          <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; font-size: 12px; color: #ef4444; margin-bottom: 16px;">
-            ⚠️ This will clear all browser-cached project snapshots, undo/redo history, and re-query all project files directly from your disk.
-          </div>
-          <div style="display: flex; justify-content: flex-end; gap: 8px;">
-            <button class="btn btn-outline" onclick="closeModal('clear-cache-modal')">Cancel</button>
-            <button class="btn btn-danger" onclick="executeClearAllCache()">🧹 Yes, Clear Cache</button>
-          </div>
         </div>
       </div>
     </div>
