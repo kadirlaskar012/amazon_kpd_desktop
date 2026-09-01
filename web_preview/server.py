@@ -20,6 +20,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from app.storage.project_storage import ProjectStorage
 from app.core.pdf_exporter import KDPPdfExporter
 from app.core.cover_exporter import KDPCoverExporter
+from app.core.image_processor import KDPImageProcessor
 from app.generators.sudoku_generator import SudokuGenerator
 from app.generators.tic_tac_toe_generator import TicTacToeGenerator
 from app.generators.maze_generator import MazeGenerator
@@ -322,6 +323,35 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
                 return
 
+        elif req_path == "/api/projects/process_image":
+            data_url = req_data.get("data_url", "")
+            clean_bg = bool(req_data.get("clean_bg", True))
+            auto_crop = bool(req_data.get("auto_crop", True))
+            compress = bool(req_data.get("compress", True))
+            bg_threshold = int(req_data.get("bg_threshold", 220))
+
+            try:
+                opt_url, w, h, size_kb = KDPImageProcessor.process_coloring_image(
+                    data_url, clean_bg=clean_bg, auto_crop=auto_crop, compress=compress, bg_threshold=bg_threshold
+                )
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "status": "success",
+                    "data_url": opt_url,
+                    "width": w,
+                    "height": h,
+                    "size_kb": size_kb
+                }).encode("utf-8"))
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                return
+
         elif req_path == "/api/projects/upload_asset":
             project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "Default")).resolve()
             assets_dir = project_dir / "assets"
@@ -329,9 +359,21 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
 
             filename = req_data.get("filename", "image.png")
             data_url = req_data.get("data_url", "")
+            clean_bg = bool(req_data.get("clean_bg", True))
+            auto_crop = bool(req_data.get("auto_crop", True))
 
-            if "," in data_url:
-                header, encoded = data_url.split(",", 1)
+            # Auto-optimize and compress coloring images on upload
+            opt_data_url = data_url
+            opt_size_kb = 0
+            try:
+                opt_data_url, w, h, opt_size_kb = KDPImageProcessor.process_coloring_image(
+                    data_url, clean_bg=clean_bg, auto_crop=auto_crop, compress=True
+                )
+            except Exception:
+                opt_data_url = data_url
+
+            if "," in opt_data_url:
+                header, encoded = opt_data_url.split(",", 1)
                 file_bytes = base64.b64decode(encoded)
                 target_path = assets_dir / filename
                 with open(target_path, "wb") as f:
@@ -340,7 +382,12 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"status": "uploaded", "asset_path": str(assets_dir / filename)}).encode("utf-8"))
+            self.wfile.write(json.dumps({
+                "status": "uploaded", 
+                "asset_path": str(assets_dir / filename),
+                "data_url": opt_data_url,
+                "size_kb": opt_size_kb
+            }).encode("utf-8"))
             return
 
         elif req_path == "/api/generators/sudoku":

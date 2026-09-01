@@ -1931,33 +1931,48 @@ function handleMediaLibraryUpload(event) {
   }
 
   recordHistoryState("Upload Media");
+  showToast(`⚡ Optimizing & cleaning ${files.length} image(s)...`, "info");
 
   let loaded = 0;
   files.forEach((file) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target.result;
+    reader.onload = async (e) => {
+      const rawDataUrl = e.target.result;
       const cleanTitle = cleanFileName(file.name);
+
+      let finalDataUrl = rawDataUrl;
+      let finalSizeKb = Math.round(file.size / 1024);
+
+      try {
+        const resp = await fetch("/api/projects/upload_asset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            project_dir: currentProject.project_dir,
+            filename: file.name,
+            data_url: rawDataUrl,
+            clean_bg: true,
+            auto_crop: true
+          })
+        });
+        const data = await resp.json();
+        if (data.data_url) {
+          finalDataUrl = data.data_url;
+          finalSizeKb = data.size_kb || finalSizeKb;
+        }
+      } catch (err) {
+        console.warn("Image auto-opt fallback:", err);
+      }
 
       const mediaItem = {
         id: `med_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         name: cleanTitle,
         fileName: file.name,
-        dataUrl: dataUrl,
-        sizeKb: Math.round(file.size / 1024)
+        dataUrl: finalDataUrl,
+        sizeKb: finalSizeKb
       };
 
       currentProject.media.unshift(mediaItem);
-
-      fetch("/api/projects/upload_asset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          project_dir: currentProject.project_dir,
-          filename: file.name,
-          data_url: dataUrl
-        })
-      }).catch(() => {});
 
       loaded++;
       if (loaded === files.length) {
@@ -1965,7 +1980,7 @@ function handleMediaLibraryUpload(event) {
         switchDrawerTab("media");
         syncActiveProjectUI();
         markProjectDirty();
-        showToast(`📁 Uploaded ${files.length} image(s) into "${currentProject.folder_name}/assets"!`, "success");
+        showToast(`✨ Auto-Cleaned, Auto-Cropped & Compressed ${files.length} image(s)!`, "success");
 
         const activeElem = getActiveElement();
         if (activeElem && (activeElem.type === "ref_image" || activeElem.type === "main_image")) {
@@ -3178,23 +3193,43 @@ function deleteCurrentPage() {
   showToast(`🗑 Deleted Page ${deletedNum} & Auto-Renumbered Remaining Pages!`, "info");
 }
 
-// Timeline Ribbon - Displays clean working canvases (Sudoku, Tic-Tac-Toe, Maze, Word Search, or Drawing)
+// Timeline Ribbon - Displays clean working canvases with in-between + insert slots and card actions
 function renderTimeline() {
   const strip = document.getElementById("thumbnails-strip");
   if (!strip) return;
   strip.innerHTML = "";
 
   const bType = currentProject.book_type || "coloring_book";
+  const pages = currentProject.pages || [];
 
-  currentProject.pages.forEach((page, idx) => {
+  // Helper to create an in-between insert slot
+  const createInsertSlot = (targetIdx) => {
+    const slot = document.createElement("div");
+    slot.className = "timeline-insert-slot";
+    slot.innerHTML = `
+      <button class="timeline-insert-btn" onclick="openInsertPageMenu(${targetIdx}, event)" title="➕ Insert Page Here">
+        +
+      </button>
+    `;
+    return slot;
+  };
+
+  // Add initial insert slot before first page
+  strip.appendChild(createInsertSlot(0));
+
+  pages.forEach((page, idx) => {
     const card = document.createElement("div");
-    card.className = `thumb-card ${idx === currentPageIndex ? 'active' : ''}`;
+    const isBlank = page.page_type === "blank_verso" || page.layout === "blank_page";
+    card.className = `thumb-card ${idx === currentPageIndex ? 'active' : ''} ${isBlank ? 'blank-card' : ''}`;
     card.onclick = () => selectPage(idx);
 
     let pageLabel = `Page ${idx + 1}`;
     let previewContent = "";
 
-    if (page.puzzles || page.layout === "sudoku" || bType === "sudoku") {
+    if (isBlank) {
+      pageLabel = `Blank ${idx + 1}`;
+      previewContent = `<span style="font-size:16px;">⚪</span>`;
+    } else if (page.puzzles || page.layout === "sudoku" || bType === "sudoku") {
       pageLabel = `Sudoku ${idx + 1}`;
       previewContent = `<span style="font-size:16px;">🔢</span>`;
     } else if (page.games || page.layout === "tic_tac_toe" || bType === "tic_tac_toe") {
@@ -3213,15 +3248,267 @@ function renderTimeline() {
     }
 
     card.innerHTML = `
+      <div class="thumb-card-actions">
+        <button class="thumb-action-btn" onclick="openRenameModalForIndex(${idx}, event)" title="✏️ Rename Page">✏️</button>
+        <button class="thumb-action-btn" onclick="duplicatePageAtIndex(${idx}, event)" title="📋 Duplicate Page">📋</button>
+        <button class="thumb-action-btn btn-del" onclick="deletePageAtIndex(${idx}, event)" title="🗑 Delete Page">🗑</button>
+      </div>
       <div class="thumb-page-num">${pageLabel}</div>
       <div class="thumb-preview-box">${previewContent}</div>
-      <div class="thumb-title">${page.title || pageLabel}</div>
+      <div class="thumb-title" title="${page.title || pageLabel}">${page.title || pageLabel}</div>
     `;
     strip.appendChild(card);
+
+    // In-between insert slot after this page
+    strip.appendChild(createInsertSlot(idx + 1));
   });
 
   const countBadge = document.getElementById("stat-page-count");
   if (countBadge) countBadge.innerText = currentProject.pages.length;
+}
+
+// In-between Page Insert Menu & Logic
+function openInsertPageMenu(targetIndex, event) {
+  if (event) event.stopPropagation();
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot insert: Project is locked!", "warning");
+    return;
+  }
+
+  // Remove any existing popup
+  closeInsertPageMenu();
+
+  const bType = currentProject.book_type || "coloring_book";
+  const contentLabel = bType === "sudoku" ? "🔢 Sudoku Puzzle Page" :
+                       (bType === "tic_tac_toe" ? "⭕ Tic-Tac-Toe Game Page" :
+                       (bType === "maze" ? "🌀 Maze Labyrinth Page" :
+                       (bType === "word_search" ? "🔤 Word Search Page" : "🎨 Drawing / Coloring Page")));
+
+  const menu = document.createElement("div");
+  menu.id = "active-insert-popup-menu";
+  menu.className = "insert-popup-menu";
+
+  menu.innerHTML = `
+    <button class="insert-popup-item" onclick="insertPageAt(${targetIndex}, 'blank')">
+      ⚪ <strong>Insert Blank Page</strong>
+    </button>
+    <button class="insert-popup-item" onclick="insertPageAt(${targetIndex}, 'content')">
+      ${contentLabel}
+    </button>
+  `;
+
+  document.body.appendChild(menu);
+
+  // Position popup near the clicked + button
+  const rect = event.target.getBoundingClientRect();
+  menu.style.left = `${Math.max(10, Math.min(window.innerWidth - 190, rect.left - 70))}px`;
+  menu.style.top = `${rect.top - 78}px`;
+
+  // Close on outside click
+  setTimeout(() => {
+    window.addEventListener("click", closeInsertPageMenu, { once: true });
+  }, 10);
+}
+
+function closeInsertPageMenu() {
+  const existing = document.getElementById("active-insert-popup-menu");
+  if (existing) existing.remove();
+}
+
+async function insertPageAt(targetIndex, pageType = "blank") {
+  closeInsertPageMenu();
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    return;
+  }
+
+  recordHistoryState(`Insert ${pageType === 'blank' ? 'Blank' : 'Content'} Page`);
+  const bType = currentProject.book_type || "coloring_book";
+
+  if (pageType === "blank") {
+    const blankPage = {
+      page_number: targetIndex + 1,
+      page_type: "blank_verso",
+      title: "Blank Back Page",
+      layout: "blank_page",
+      elements: []
+    };
+    currentProject.pages.splice(targetIndex, 0, blankPage);
+  } else {
+    // Content page based on book type
+    if (bType === "sudoku") {
+      try {
+        const resp = await fetch("/api/generators/sudoku", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ count: 1, difficulty: "medium" })
+        });
+        const data = await resp.json();
+        const p = (data.puzzles && data.puzzles[0]) ? data.puzzles[0] : null;
+        const pTitle = `Sudoku #${(targetIndex + 1).toString().padStart(4, '0')}`;
+        currentProject.pages.splice(targetIndex, 0, {
+          page_number: targetIndex + 1,
+          page_type: "content",
+          title: pTitle,
+          layout: "sudoku",
+          puzzles: [p],
+          elements: [
+            { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      } catch (e) {}
+    } else if (bType === "tic_tac_toe") {
+      try {
+        const resp = await fetch("/api/generators/tic_tac_toe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ total_games: 4, games_per_page: 4, grid_size: 3 })
+        });
+        const data = await resp.json();
+        const games = (data.pages && data.pages[0]) ? data.pages[0].games : [];
+        currentProject.pages.splice(targetIndex, 0, {
+          page_number: targetIndex + 1,
+          page_type: "content",
+          title: `Game Page ${targetIndex + 1}`,
+          layout: "tic_tac_toe",
+          games: games,
+          elements: [
+            { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: "TIC-TAC-TOE", font_size: 26, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      } catch (e) {}
+    } else if (bType === "maze") {
+      try {
+        const resp = await fetch("/api/generators/maze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ count: 1, width: 15, height: 20 })
+        });
+        const data = await resp.json();
+        const m = (data.mazes && data.mazes[0]) ? data.mazes[0] : null;
+        const pTitle = `Maze #${(targetIndex + 1).toString().padStart(3, '0')}`;
+        currentProject.pages.splice(targetIndex, 0, {
+          page_number: targetIndex + 1,
+          page_type: "content",
+          title: pTitle,
+          layout: "maze",
+          maze: m,
+          elements: [
+            { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      } catch (e) {}
+    } else if (bType === "word_search") {
+      try {
+        const resp = await fetch("/api/generators/word_search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ count: 1, grid_size: 12 })
+        });
+        const data = await resp.json();
+        const ws = (data.puzzles && data.puzzles[0]) ? data.puzzles[0] : null;
+        const pTitle = ws ? ws.title : `Word Search #${(targetIndex + 1).toString().padStart(3, '0')}`;
+        currentProject.pages.splice(targetIndex, 0, {
+          page_number: targetIndex + 1,
+          page_type: "content",
+          title: pTitle,
+          layout: "word_search",
+          word_search: ws,
+          elements: [
+            { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
+            { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          ]
+        });
+      } catch (e) {}
+    } else {
+      // Standard Coloring Page
+      const projFont = currentProject.settings?.default_font_family || "Fredoka";
+      const projOutline = currentProject.settings?.default_font_mode !== "solid";
+      const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
+      const projColor = currentProject.settings?.default_text_color || (projOutline ? "#ffffff" : "#111827");
+      currentProject.pages.splice(targetIndex, 0, {
+        page_number: targetIndex + 1,
+        page_type: "content",
+        title: `Drawing ${targetIndex + 1}`,
+        layout: "kdp_top_ref",
+        elements: [
+          { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${targetIndex + 1}`, image_src: null },
+          { id: `elem_title_${Date.now()}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${targetIndex + 1}`, font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
+          { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${targetIndex + 1}`, image_src: null },
+          { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        ]
+      });
+    }
+  }
+
+  renumberPages();
+  renderTimeline();
+  selectPage(targetIndex);
+  syncActiveProjectUI();
+  markProjectDirty();
+  showToast(`✨ Inserted page at Position ${targetIndex + 1}!`, "success");
+}
+
+function duplicatePageAtIndex(idx, event) {
+  if (event) event.stopPropagation();
+  if (currentProject.is_locked) {
+    showToast("🔒 Project is locked!", "warning");
+    return;
+  }
+
+  const curr = currentProject.pages[idx];
+  if (!curr) return;
+
+  recordHistoryState(`Duplicate Page ${curr.page_number}`);
+  const clone = JSON.parse(JSON.stringify(curr));
+  if (clone.title && !clone.title.includes("(Copy)")) {
+    clone.title = `${clone.title} (Copy)`;
+  }
+
+  currentProject.pages.splice(idx + 1, 0, clone);
+  renumberPages();
+  renderTimeline();
+  selectPage(idx + 1);
+  syncActiveProjectUI();
+  markProjectDirty();
+  showToast(`📋 Duplicated to Page ${idx + 2}!`, "success");
+}
+
+function deletePageAtIndex(idx, event) {
+  if (event) event.stopPropagation();
+  if (currentProject.is_locked) {
+    showToast("🔒 Project is locked!", "warning");
+    return;
+  }
+
+  if (currentProject.pages.length <= 1) {
+    showToast("A book must contain at least one page.", "info");
+    return;
+  }
+
+  recordHistoryState(`Delete Page ${idx + 1}`);
+  const deletedNum = idx + 1;
+  currentProject.pages.splice(idx, 1);
+
+  renumberPages();
+  const target = Math.min(idx, currentProject.pages.length - 1);
+  currentPageIndex = Math.max(0, target);
+  activeElementId = null;
+
+  renderTimeline();
+  selectPage(currentPageIndex);
+  syncActiveProjectUI();
+  markProjectDirty();
+  showToast(`🗑 Deleted Page ${deletedNum}!`, "info");
+}
+
+function openRenameModalForIndex(idx, event) {
+  if (event) event.stopPropagation();
+  selectPage(idx);
+  openRenameModal("page");
 }
 
 function selectPage(index) {
@@ -3262,10 +3549,34 @@ function handleBatchImagesUpload(event) {
   let loadedCount = 0;
   files.forEach((file, idx) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target.result;
+    reader.onload = async (e) => {
+      const rawDataUrl = e.target.result;
       const cleanTitle = cleanFileName(file.name);
       const autoFontSize = calculateAutoTitleFontSize(cleanTitle, 40);
+
+      let finalDataUrl = rawDataUrl;
+      let finalSizeKb = Math.round(file.size / 1024);
+
+      try {
+        const resp = await fetch("/api/projects/upload_asset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            project_dir: currentProject.project_dir,
+            filename: file.name,
+            data_url: rawDataUrl,
+            clean_bg: true,
+            auto_crop: true
+          })
+        });
+        const data = await resp.json();
+        if (data.data_url) {
+          finalDataUrl = data.data_url;
+          finalSizeKb = data.size_kb || finalSizeKb;
+        }
+      } catch (err) {
+        console.warn("Batch image opt fallback:", err);
+      }
 
       if (!currentProject.media) currentProject.media = [];
 
@@ -3273,20 +3584,20 @@ function handleBatchImagesUpload(event) {
         id: `med_batch_${Date.now()}_${idx}`,
         name: cleanTitle,
         fileName: file.name,
-        dataUrl: dataUrl,
-        sizeKb: Math.round(file.size / 1024)
+        dataUrl: finalDataUrl,
+        sizeKb: finalSizeKb
       });
 
-      // Add Drawing Page
+      // Add Drawing Page with optimized image
       currentProject.pages.push({
         page_number: currentProject.pages.length + 1,
         page_type: "content",
         title: cleanTitle,
         layout: "kdp_top_ref",
         elements: [
-          { id: `elem_ref_${Date.now()}_${idx}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: cleanTitle, image_src: dataUrl },
+          { id: `elem_ref_${Date.now()}_${idx}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: cleanTitle, image_src: finalDataUrl },
           { id: `elem_title_${Date.now()}_${idx}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: cleanTitle.toUpperCase(), font_size: autoFontSize, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
-          { id: `elem_main_${Date.now()}_${idx}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: cleanTitle, image_src: dataUrl },
+          { id: `elem_main_${Date.now()}_${idx}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: cleanTitle, image_src: finalDataUrl },
           { id: `elem_frame_${Date.now()}_${idx}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
         ]
       });
@@ -3300,7 +3611,7 @@ function handleBatchImagesUpload(event) {
         markProjectDirty();
         selectPage(currentProject.pages.length - files.length);
         switchTab("canvas");
-        showToast(`🎉 Batch Created ${files.length} Drawing Pages (Title font auto-adjusted)!`, "success");
+        showToast(`🎉 Batch Created ${files.length} Auto-Cleaned & Optimized Drawing Pages!`, "success");
       }
     };
     reader.readAsDataURL(file);
