@@ -1,5 +1,5 @@
 /**
- * KDP Book Production Studio - Complete Application Engine with Automatic Front Matter System (Disclaimer & Synchronized Contents), PDF Export & Spread Preview
+ * KDP Book Production Studio - Complete Application Engine with Undo/Redo History, Automatic Front Matter, PDF Export & Spread Preview
  */
 
 let defaultRootLocation = "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects";
@@ -104,6 +104,12 @@ let currentZoom = 1.0;
 let showGuides = true;
 let snapToGuides = true;
 
+// Undo / Redo History Engine
+let undoStack = [];
+let redoStack = [];
+const MAX_HISTORY = 40;
+let isHistoryAction = false;
+
 // Auto-Save System State
 let isDirty = false;
 let autoSaveTimer = null;
@@ -118,6 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadInitialProject();
   fetchRecentProjects();
   setupCanvasInteractions();
+  updateUndoRedoButtons();
 
   // Background Auto-Save Cron (Every 10 seconds)
   setInterval(() => {
@@ -128,24 +135,147 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================
+// Undo / Redo History Stack Implementation
+// ==========================================
+function recordHistoryState(actionName = "Edit") {
+  if (isHistoryAction) return;
+
+  try {
+    const snapshot = {
+      project: JSON.parse(JSON.stringify(currentProject)),
+      pageIndex: currentPageIndex,
+      activeElementId: activeElementId,
+      action: actionName
+    };
+
+    undoStack.push(snapshot);
+    if (undoStack.length > MAX_HISTORY) {
+      undoStack.shift();
+    }
+
+    // Reset Redo stack whenever a new user action is performed
+    redoStack = [];
+    updateUndoRedoButtons();
+  } catch (e) {
+    console.warn("History recording error:", e);
+  }
+}
+
+function performUndo() {
+  if (undoStack.length === 0) {
+    showToast("Nothing to undo.", "info");
+    return;
+  }
+
+  isHistoryAction = true;
+  try {
+    const currentState = {
+      project: JSON.parse(JSON.stringify(currentProject)),
+      pageIndex: currentPageIndex,
+      activeElementId: activeElementId,
+      action: "Current State"
+    };
+    redoStack.push(currentState);
+
+    const previousState = undoStack.pop();
+    currentProject = previousState.project;
+    currentPageIndex = Math.min(previousState.pageIndex, currentProject.pages.length - 1);
+    activeElementId = previousState.activeElementId;
+
+    renumberPages();
+    syncActiveProjectUI();
+    loadPageIntoCanvas(currentPageIndex);
+    renderTimeline();
+    markProjectDirty();
+    updateUndoRedoButtons();
+
+    showToast(`↶ Undo: ${previousState.action || 'Action'}`, "info");
+  } catch (e) {
+    console.error("Undo error:", e);
+  } finally {
+    isHistoryAction = false;
+  }
+}
+
+function performRedo() {
+  if (redoStack.length === 0) {
+    showToast("Nothing to redo.", "info");
+    return;
+  }
+
+  isHistoryAction = true;
+  try {
+    const currentState = {
+      project: JSON.parse(JSON.stringify(currentProject)),
+      pageIndex: currentPageIndex,
+      activeElementId: activeElementId,
+      action: "Current State"
+    };
+    undoStack.push(currentState);
+
+    const nextState = redoStack.pop();
+    currentProject = nextState.project;
+    currentPageIndex = Math.min(nextState.pageIndex, currentProject.pages.length - 1);
+    activeElementId = nextState.activeElementId;
+
+    renumberPages();
+    syncActiveProjectUI();
+    loadPageIntoCanvas(currentPageIndex);
+    renderTimeline();
+    markProjectDirty();
+    updateUndoRedoButtons();
+
+    showToast(`↷ Redo: ${nextState.action || 'Action'}`, "info");
+  } catch (e) {
+    console.error("Redo error:", e);
+  } finally {
+    isHistoryAction = false;
+  }
+}
+
+function updateUndoRedoButtons() {
+  const btnUndoH = document.getElementById("btn-undo-header");
+  const btnRedoH = document.getElementById("btn-redo-header");
+  const toolUndo = document.getElementById("tool-undo");
+  const toolRedo = document.getElementById("tool-redo");
+
+  const canUndo = undoStack.length > 0;
+  const canRedo = redoStack.length > 0;
+
+  if (btnUndoH) {
+    btnUndoH.disabled = !canUndo;
+    btnUndoH.title = canUndo ? `Undo: ${undoStack[undoStack.length - 1].action} (Ctrl+Z)` : "Undo (Ctrl+Z)";
+  }
+  if (btnRedoH) {
+    btnRedoH.disabled = !canRedo;
+    btnRedoH.title = canRedo ? `Redo: ${redoStack[redoStack.length - 1].action} (Ctrl+Y)` : "Redo (Ctrl+Y)";
+  }
+  if (toolUndo) {
+    toolUndo.disabled = !canUndo;
+    toolUndo.title = canUndo ? `Undo: ${undoStack[undoStack.length - 1].action} (Ctrl+Z)` : "Undo (Ctrl+Z)";
+  }
+  if (toolRedo) {
+    toolRedo.disabled = !canRedo;
+    toolRedo.title = canRedo ? `Redo: ${redoStack[redoStack.length - 1].action} (Ctrl+Y)` : "Redo (Ctrl+Y)";
+  }
+}
+
+// ==========================================
 // Title Resolver & Cleaner
 // ==========================================
 function resolveCleanPageTitle(page, idx = 1) {
   if (!page) return `Page ${idx}`;
 
-  // 1. Check explicit title if not generic 'Page N'
   if (page.title && page.title.trim() && !/^Page\s*\d+$/i.test(page.title.trim())) {
     return cleanTitleString(page.title.trim());
   }
 
-  // 2. Check title element on canvas
   if (page.elements && Array.isArray(page.elements)) {
     const titleElem = page.elements.find(e => e.type === "title");
     if (titleElem && titleElem.text && !/^PAGE\s*\d+$/i.test(titleElem.text.trim())) {
       return cleanTitleString(titleElem.text.trim());
     }
 
-    // 3. Check image element filename or label
     const imgElem = page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && (e.text || e.fileName));
     if (imgElem) {
       const candidate = imgElem.fileName || imgElem.text;
@@ -189,7 +319,6 @@ function renumberPages() {
       page.title = "Table of Contents";
     } else {
       page.page_type = "content";
-      // Auto-update default titles
       if (!page.title || /^Page\s*\d+$/i.test(page.title.trim())) {
         page.title = `Page ${contentPageCounter}`;
       }
@@ -207,13 +336,12 @@ function renumberPages() {
     }
   });
 
-  // Auto-sync Contents page if enabled
   syncContentsPage();
 }
 
 function syncContentsPage() {
   const cfg = currentProject.front_matter_config || {};
-  if (cfg.auto_sync_contents === false) return; // Respect user manual mode
+  if (cfg.auto_sync_contents === false) return;
 
   const contentsPage = currentProject.pages.find(p => p.page_type === "front_matter_contents" || p.layout === "contents_standard");
   if (!contentsPage || contentsPage.is_locked) return;
@@ -248,7 +376,6 @@ function syncContentsPage() {
       });
     });
   } else {
-    // Dual column layout
     const col1 = contentPages.slice(0, maxRows);
     const col2 = contentPages.slice(maxRows, maxRows * 2);
 
@@ -298,11 +425,12 @@ function regenerateFrontMatterPages() {
     return;
   }
 
+  recordHistoryState("Regenerate Front Matter");
+
   const projName = currentProject.name || "Untitled Book";
   const authorName = currentProject.author || "Creative Kids Studio";
   const year = new Date().getFullYear();
 
-  // Filter out existing front matter
   const contentPages = currentProject.pages.filter(p => p.page_type !== "front_matter_disclaimer" && p.page_type !== "front_matter_contents");
 
   const disclaimerPage = {
@@ -348,6 +476,7 @@ function regenerateFrontMatterPages() {
 }
 
 function forceSyncContents() {
+  recordHistoryState("Force Sync Contents");
   syncContentsPage();
   loadPageIntoCanvas(currentPageIndex);
   renderTimeline();
@@ -356,6 +485,7 @@ function forceSyncContents() {
 }
 
 function onFrontMatterConfigChange() {
+  recordHistoryState("Front Matter Config Change");
   if (!currentProject.front_matter_config) currentProject.front_matter_config = {};
   
   const autoFm = document.getElementById("setting-auto-front-matter");
@@ -690,6 +820,9 @@ function executeDeleteProject() {
         media: [],
         pages: []
       };
+      undoStack = [];
+      redoStack = [];
+      updateUndoRedoButtons();
       syncActiveProjectUI();
       switchTab("dashboard");
     }
@@ -715,6 +848,25 @@ function setupGlobalKeyboardShortcuts() {
   window.addEventListener("keydown", (e) => {
     const activeTagName = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
     const isInputActive = activeTagName === "input" || activeTagName === "textarea" || activeTagName === "select";
+
+    // Undo: Ctrl+Z (or Cmd+Z)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
+      if (!isInputActive) {
+        e.preventDefault();
+        performUndo();
+        return;
+      }
+    }
+
+    // Redo: Ctrl+Y or Ctrl+Shift+Z
+    if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "z")) {
+      if (!isInputActive) {
+        e.preventDefault();
+        performRedo();
+        return;
+      }
+    }
 
     if (e.key === "Enter") {
       const renameModal = document.getElementById("rename-modal");
@@ -805,6 +957,7 @@ function setupGlobalKeyboardShortcuts() {
       const elem = getActiveElement();
       if (elem) {
         e.preventDefault();
+        recordHistoryState("Nudge Element");
         const step = e.shiftKey ? 10 : 1;
 
         if (e.key === "ArrowUp") elem.y = Math.max(0, elem.y - step);
@@ -890,6 +1043,8 @@ function submitRenameModal() {
     closeModal("rename-modal");
     return;
   }
+
+  recordHistoryState(`Rename ${renameTargetType}`);
 
   if (renameTargetType === "page") {
     const page = currentProject.pages[currentPageIndex];
@@ -977,7 +1132,7 @@ function renderRecentProjects() {
           </div>
           <div class="recent-path">${p.path}</div>
         </div>
-        <div class="recent-meta">
+        <div class="meta-row">
           <span class="badge">${p.page_count || 0} Pages</span>
           <button class="btn btn-sm btn-primary" onclick="openProjectByPath('${p.path.replace(/\\/g, '\\\\')}')">Open</button>
           <button class="btn btn-sm btn-outline" onclick="toggleProjectLock('${p.path.replace(/\\/g, '\\\\')}')" title="${isLocked ? 'Unlock Project' : 'Lock Project'}">
@@ -1081,7 +1236,6 @@ function syncActiveProjectUI() {
     lockBtn.innerText = lockBtnText;
   }
 
-  // Sync Settings Inputs
   const authorInput = document.getElementById("setting-author-name");
   if (authorInput) authorInput.value = currentProject.author || "Creative Kids Studio";
   
@@ -1103,6 +1257,7 @@ function syncActiveProjectUI() {
 
   renderTimeline();
   renderMediaLibrary();
+  updateUndoRedoButtons();
 }
 
 // ==========================================
@@ -1165,7 +1320,6 @@ function submitCreateProject() {
 
   const pagesList = [];
 
-  // 1. Insert Front Matter if enabled
   if (autoFrontMatter) {
     pagesList.push({
       page_number: 1,
@@ -1201,7 +1355,6 @@ function submitCreateProject() {
     });
   }
 
-  // 2. Add Content Pages
   const startNum = pagesList.length + 1;
   for (let i = 0; i < count; i++) {
     const docPageNum = startNum + i;
@@ -1268,6 +1421,8 @@ function finishProjectSetup(proj) {
   currentProject = proj;
   currentPageIndex = 0;
   activeElementId = null;
+  undoStack = [];
+  redoStack = [];
 
   renumberPages();
   localStorage.setItem("kdp_active_project_path", currentProject.project_dir);
@@ -1298,6 +1453,9 @@ function openProjectByPath(path) {
       }
       currentPageIndex = 0;
       activeElementId = null;
+      undoStack = [];
+      redoStack = [];
+
       renumberPages();
       localStorage.setItem("kdp_active_project_path", currentProject.project_dir);
       localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
@@ -1340,6 +1498,8 @@ function handleMediaLibraryUpload(event) {
   if (!currentProject.media) {
     currentProject.media = [];
   }
+
+  recordHistoryState("Upload Media");
 
   let loaded = 0;
   files.forEach((file) => {
@@ -1459,6 +1619,8 @@ function applyMediaToSlot(mediaId, slotType) {
     return;
   }
 
+  recordHistoryState(`Apply Media (${slotType})`);
+
   const item = (currentProject.media || []).find(m => m.id === mediaId);
   if (!item) return;
 
@@ -1534,6 +1696,8 @@ function applyPageLayout(layoutKey) {
     showToast("🔒 Cannot change layout: Project is locked!", "warning");
     return;
   }
+
+  recordHistoryState(`Apply Layout: ${getLayoutName(layoutKey)}`);
 
   const page = currentProject.pages[currentPageIndex];
   if (!page) return;
@@ -1728,13 +1892,14 @@ function loadPageIntoCanvas(index) {
   }
 }
 
-// Drag & Resize Canvas Interactions
+// Drag & Resize Canvas Interactions with Undo History
 function setupCanvasInteractions() {
   let isDragging = false;
   let isResizing = false;
   let activeHandle = null;
   let startX = 0, startY = 0;
   let elemStart = { x: 0, y: 0, w: 0, h: 0 };
+  let hasMoved = false;
 
   const stage = document.getElementById("canvas-stage");
   if (!stage) return;
@@ -1749,6 +1914,7 @@ function setupCanvasInteractions() {
       startY = e.clientY;
       const elem = getActiveElement();
       if (elem) elemStart = { ...elem };
+      hasMoved = false;
       e.preventDefault();
       return;
     }
@@ -1760,6 +1926,7 @@ function setupCanvasInteractions() {
       startY = e.clientY;
       const elem = getActiveElement();
       if (elem) elemStart = { ...elem };
+      hasMoved = false;
       e.preventDefault();
     } else {
       setActiveElement(null);
@@ -1783,12 +1950,20 @@ function setupCanvasInteractions() {
     const dy = (e.clientY - startY) / currentZoom;
 
     if (isDragging) {
+      if (!hasMoved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
+        recordHistoryState("Move Element");
+        hasMoved = true;
+      }
       elem.x = Math.max(0, Math.min(510 - elem.w, elemStart.x + dx));
       elem.y = Math.max(0, Math.min(660 - elem.h, elemStart.y + dy));
       applyElementStyles(elem);
       updatePropertiesInspector();
       markProjectDirty();
     } else if (isResizing) {
+      if (!hasMoved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
+        recordHistoryState("Resize Element");
+        hasMoved = true;
+      }
       if (activeHandle === "br") {
         elem.w = Math.max(30, elemStart.w + dx);
         elem.h = Math.max(30, elemStart.h + dy);
@@ -1816,6 +1991,7 @@ function setupCanvasInteractions() {
     isDragging = false;
     isResizing = false;
     activeHandle = null;
+    hasMoved = false;
   });
 }
 
@@ -1887,6 +2063,8 @@ function onPropChange() {
   const elem = getActiveElement();
   if (!elem) return;
 
+  recordHistoryState("Edit Properties");
+
   elem.x = parseFloat(document.getElementById("prop-x").value || 0) * 60.0;
   elem.y = parseFloat(document.getElementById("prop-y").value || 0) * 60.0;
   elem.w = parseFloat(document.getElementById("prop-w").value || 1) * 60.0;
@@ -1916,6 +2094,8 @@ function alignActive(mode) {
   const elem = getActiveElement();
   if (!elem) return;
 
+  recordHistoryState(`Align ${mode.replace('_', ' ')}`);
+
   const safe = { x: 33, y: 25, w: 452, h: 610 };
 
   if (mode === "left") elem.x = safe.x;
@@ -1943,6 +2123,8 @@ function addNewTextElement() {
     showToast("🔒 Cannot add element: Project is locked!", "warning");
     return;
   }
+
+  recordHistoryState("Add Text Element");
 
   const page = currentProject.pages[currentPageIndex];
   if (!page) return;
@@ -1973,6 +2155,8 @@ function addNewBorderElement() {
     return;
   }
 
+  recordHistoryState("Add Border Frame");
+
   const page = currentProject.pages[currentPageIndex];
   if (!page) return;
 
@@ -1999,6 +2183,8 @@ function duplicateActiveElement() {
   const elem = getActiveElement();
   if (!elem) return;
 
+  recordHistoryState("Duplicate Element");
+
   const page = currentProject.pages[currentPageIndex];
   const clone = { ...elem, id: `elem_dup_${Date.now()}`, x: elem.x + 15, y: elem.y + 15 };
   page.elements.push(clone);
@@ -2018,6 +2204,7 @@ function deleteActiveElement() {
   if (!page) return;
 
   if (activeElementId) {
+    recordHistoryState("Delete Element");
     page.elements = page.elements.filter(e => e.id !== activeElementId);
     setActiveElement(null);
     loadPageIntoCanvas(currentPageIndex);
@@ -2034,6 +2221,8 @@ function addNewPage() {
     showToast("🔒 Project is locked!", "warning");
     return;
   }
+
+  recordHistoryState("Add New Page");
 
   const num = currentProject.pages.length + 1;
   currentProject.pages.push({
@@ -2063,6 +2252,8 @@ function duplicateCurrentPage() {
   const curr = currentProject.pages[currentPageIndex];
   if (!curr) return;
 
+  recordHistoryState(`Duplicate Page ${curr.page_number}`);
+
   const num = currentProject.pages.length + 1;
   const clone = JSON.parse(JSON.stringify(curr));
   clone.page_number = num;
@@ -2087,6 +2278,8 @@ function deleteCurrentPage() {
     showToast("A book must contain at least one page.", "info");
     return;
   }
+
+  recordHistoryState(`Delete Page ${currentPageIndex + 1}`);
 
   const deletedNum = currentPageIndex + 1;
   currentProject.pages.splice(currentPageIndex, 1);
@@ -2166,6 +2359,7 @@ function handleBatchImagesUpload(event) {
   const files = Array.from(event.target.files);
   if (!files.length) return;
 
+  recordHistoryState(`Batch Import ${files.length} Images`);
   showToast(`⚡ Processing ${files.length} images into coloring pages...`, "info");
 
   let loadedCount = 0;
@@ -2242,6 +2436,7 @@ function fitCanvasView() {
 }
 
 function saveSettings() {
+  recordHistoryState("Update Project Settings");
   markProjectDirty();
   showToast("Settings applied & saved successfully!", "success");
   switchTab("canvas");

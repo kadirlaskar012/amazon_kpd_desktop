@@ -153,6 +153,18 @@ body {
   gap: 12px;
 }
 
+.undo-redo-btn-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.btn:disabled, .tool-btn:disabled, button:disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  pointer-events: auto;
+}
+
 /* Auto-Save Live Status Pill */
 .autosave-status-pill {
   display: flex;

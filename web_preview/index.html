@@ -44,6 +44,12 @@
       </nav>
 
       <div class="top-actions" id="header-canvas-actions">
+        <!-- Undo / Redo Actions -->
+        <div class="undo-redo-btn-group">
+          <button class="btn btn-outline btn-sm" id="btn-undo-header" onclick="performUndo()" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+          <button class="btn btn-outline btn-sm" id="btn-redo-header" onclick="performRedo()" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷ Redo</button>
+        </div>
+
         <!-- Live Auto-Save Indicator -->
         <div class="autosave-status-pill" id="autosave-indicator" title="Automatic disk persistence is active">
           <span class="pulse-dot"></span>
@@ -382,6 +388,9 @@
 
           <!-- Left Mini Toolbar (Shortcuts) -->
           <div class="canvas-toolbar">
+            <button class="tool-btn" id="tool-undo" title="Undo (Ctrl+Z)" onclick="performUndo()" disabled>↶</button>
+            <button class="tool-btn" id="tool-redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" onclick="performRedo()" disabled>↷</button>
+            <div class="tool-sep"></div>
             <button class="tool-btn active" title="Select Tool (V)" id="tool-select">↖</button>
             <button class="tool-btn" title="Add Text (T)" onclick="addNewTextElement()">🔤</button>
             <button class="tool-btn" title="Add Border Frame (B)" onclick="addNewBorderElement()">⬜</button>
@@ -780,6 +789,8 @@
         </div>
         <div class="modal-body">
           <div class="shortcuts-grid">
+            <div class="sc-row"><kbd>Ctrl</kbd> + <kbd>Z</kbd> <span>Undo Last Action</span></div>
+            <div class="sc-row"><kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> <span>Redo Last Action</span></div>
             <div class="sc-row"><kbd>Delete</kbd> / <kbd>Backspace</kbd> <span>Delete Selected Element</span></div>
             <div class="sc-row"><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <span>Nudge Element (1 pt)</span></div>
             <div class="sc-row"><kbd>Shift</kbd> + <kbd>Arrow</kbd> <span>Fast Nudge Element (10 pt)</span></div>
