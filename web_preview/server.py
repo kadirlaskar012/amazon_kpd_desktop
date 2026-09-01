@@ -195,8 +195,11 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             proj_name = req_data.get("name", "KDP_Book").replace(" ", "_")
             out_pdf = exports_dir / f"{proj_name}_KDP_Print_Ready.pdf"
 
+            single_sided = req_data.get("single_sided", True)
+            blank_page_note = req_data.get("blank_page_note", False)
+
             try:
-                KDPPdfExporter.generate_pdf(req_data, out_pdf)
+                KDPPdfExporter.generate_pdf(req_data, out_pdf, single_sided=single_sided, blank_page_note=blank_page_note)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()

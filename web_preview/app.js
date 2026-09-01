@@ -1,5 +1,5 @@
 /**
- * KDP Book Production Studio - Complete Application Engine with Undo/Redo History, Automatic Front Matter, PDF Export & Spread Preview
+ * KDP Book Production Studio - Complete Application Engine with Undo/Redo History, Automatic Front Matter, Pre-flight PDF Export Preview & Amazon KDP Single-Sided Blank Page Rules
  */
 
 let defaultRootLocation = "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects";
@@ -616,26 +616,145 @@ function saveProject(isManual = false) {
 }
 
 // ==========================================
-// 300 DPI Amazon KDP PDF Exporter
+// 300 DPI Amazon KDP PDF Exporter & Pre-flight Modal
 // ==========================================
 function exportProjectPdf() {
-  showToast("⚙️ Generating 300 DPI Amazon KDP Print-Ready PDF...", "info");
+  openExportPdfModal();
+}
+
+function openExportPdfModal() {
+  const modal = document.getElementById("export-pdf-modal");
+  if (!modal) return;
+
+  // Sync Specs Info
+  const trimWidthIn = (currentProject.settings.trim_width_pt / 72.0).toFixed(1);
+  const trimHeightIn = (currentProject.settings.trim_height_pt / 72.0).toFixed(1);
+  const trimLabel = document.getElementById("exp-spec-trim");
+  if (trimLabel) trimLabel.innerText = `${trimWidthIn} × ${trimHeightIn} in`;
+
+  const bleedLabel = document.getElementById("exp-spec-bleed");
+  if (bleedLabel) {
+    bleedLabel.innerText = currentProject.settings.has_bleed ? "+0.125 in (9 pt) Bleed" : "No Bleed (Trim Box)";
+  }
+
+  const pathLabel = document.getElementById("exp-target-path-preview");
+  if (pathLabel) {
+    const filename = `${currentProject.name.replace(/ /g, '_')}_KDP_Print_Ready.pdf`;
+    pathLabel.innerText = `📁 ${currentProject.project_dir}\\exports\\${filename}`;
+  }
+
+  updateExportModalPreview();
+  modal.classList.add("active");
+}
+
+function updateExportModalPreview() {
+  const container = document.getElementById("export-pages-grid");
+  const totalLabel = document.getElementById("exp-spec-pages");
+  const countLabel = document.getElementById("exp-grid-count");
+  if (!container) return;
+
+  const singleSided = document.getElementById("exp-opt-single-sided") ? document.getElementById("exp-opt-single-sided").checked : true;
+  const blankNote = document.getElementById("exp-opt-blank-note") ? document.getElementById("exp-opt-blank-note").checked : false;
+
+  const pages = currentProject.pages || [];
+  let html = "";
+  let totalOutputPages = 0;
+
+  pages.forEach((p, idx) => {
+    totalOutputPages++;
+    const isDisclaimer = p.page_type === "front_matter_disclaimer";
+    const isContents = p.page_type === "front_matter_contents";
+    const isContent = !isDisclaimer && !isContents;
+
+    const mainEl = p.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src);
+    const thumbImg = mainEl 
+      ? `<img src="${mainEl.image_src}">` 
+      : `<span style="font-size:24px;">${isDisclaimer ? '📜' : (isContents ? '📋' : '🎨')}</span>`;
+
+    html += `
+      <div class="export-page-card">
+        <div class="export-page-badge recto">Page ${totalOutputPages} • ${isDisclaimer ? 'Disclaimer' : (isContents ? 'Contents' : 'Drawing')}</div>
+        <div class="export-page-thumb">${thumbImg}</div>
+        <div class="export-page-title">${p.title || `Page ${p.page_number}`}</div>
+      </div>
+    `;
+
+    // Amazon KDP Single-Sided Blank Back Page Insertion
+    if (singleSided) {
+      if (isContent) {
+        totalOutputPages++;
+        html += `
+          <div class="export-page-card blank-verso">
+            <div class="export-page-badge verso">Page ${totalOutputPages} • Blank Back</div>
+            <div class="export-page-thumb" style="background:#f8fafc;">
+              <span style="font-size:10px;color:#94a3b8;text-align:center;padding:6px;">
+                ${blankNote ? '🛡️ Bleed-Safe Blank' : '⚪ Blank White Page'}
+              </span>
+            </div>
+            <div class="export-page-title" style="color:#94a3b8;">Blank Verso</div>
+          </div>
+        `;
+      } else if (isDisclaimer || isContents) {
+        const isLastFrontMatter = (idx + 1 < pages.length && pages[idx + 1].page_type === "content");
+        if (isLastFrontMatter) {
+          totalOutputPages++;
+          html += `
+            <div class="export-page-card blank-verso">
+              <div class="export-page-badge verso">Page ${totalOutputPages} • Blank Back</div>
+              <div class="export-page-thumb" style="background:#f8fafc;">
+                <span style="font-size:10px;color:#94a3b8;text-align:center;padding:6px;">⚪ Blank Verso</span>
+              </div>
+              <div class="export-page-title" style="color:#94a3b8;">Blank Verso</div>
+            </div>
+          `;
+        }
+      }
+    }
+  });
+
+  container.innerHTML = html;
+  if (totalLabel) totalLabel.innerText = `${totalOutputPages} Total PDF Pages`;
+  if (countLabel) countLabel.innerText = `${totalOutputPages} Pages`;
+}
+
+function executePdfExport(openInBrowser = true) {
+  const singleSided = document.getElementById("exp-opt-single-sided") ? document.getElementById("exp-opt-single-sided").checked : true;
+  const blankNote = document.getElementById("exp-opt-blank-note") ? document.getElementById("exp-opt-blank-note").checked : false;
+
+  showToast("⚙️ Generating 300 DPI Amazon KDP PDF...", "info");
+
+  const payload = {
+    ...currentProject,
+    single_sided: singleSided,
+    blank_page_note: blankNote
+  };
 
   fetch("/api/projects/export_pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(currentProject)
+    body: JSON.stringify(payload)
   })
   .then(r => r.json())
   .then(data => {
+    closeModal("export-pdf-modal");
     if (data.status === "success" && data.download_url) {
-      showToast(`🎉 PDF Generated: ${data.filename}! Opening in browser...`, "success");
-      window.open(data.download_url, "_blank");
+      showToast(`🎉 PDF Generated: ${data.filename}!`, "success");
+      if (openInBrowser) {
+        window.open(data.download_url, "_blank");
+      } else {
+        const a = document.createElement("a");
+        a.href = data.download_url;
+        a.download = data.filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } else {
       showToast(`⚠️ PDF Export failed: ${data.error || 'Unknown error'}`, "danger");
     }
   })
   .catch(err => {
+    closeModal("export-pdf-modal");
     showToast(`⚠️ PDF Export error: ${err.message}`, "danger");
   });
 }
