@@ -2818,8 +2818,6 @@ kbd {
 
 /* =====================================================
    FULLSCREEN BLOCKING IMAGE OPTIMIZATION MODAL & RADIAL BAR
-/* =====================================================
-   FULLSCREEN BLOCKING IMAGE OPTIMIZATION MODAL & RADIAL BAR
 ===================================================== */
 .blocking-processing-overlay {
   position: fixed !important;

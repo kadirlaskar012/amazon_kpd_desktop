@@ -107,6 +107,23 @@ let autoSaveTimer = null;
 let renameTargetType = "page";
 let projectToDelete = null;
 
+function loadInitialProject() {
+  const savedPath = localStorage.getItem("kdp_active_project_path");
+  const savedData = localStorage.getItem("kdp_active_project_data");
+  if (savedData) {
+    try {
+      currentProject = JSON.parse(savedData);
+    } catch (e) {
+      console.warn("Could not parse saved project data:", e);
+    }
+  } else if (savedPath) {
+    openProjectByPath(savedPath);
+    return;
+  }
+  renumberPages();
+  syncActiveProjectUI();
+}
+
 // UI Initialization
 document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
@@ -2126,6 +2143,7 @@ async function handleMediaLibraryUpload(event) {
     const origSizeKb = Math.round(file.size / 1024);
 
     updateImageProcessingProgress(i, files.length, file.name, "🪄 [1/3] Purifying White Background (#FFFFFF)...", totalKbSaved);
+    await new Promise(r => setTimeout(r, 180));
 
     let rawDataUrl = "";
     try {
@@ -2136,6 +2154,7 @@ async function handleMediaLibraryUpload(event) {
     }
 
     updateImageProcessingProgress(i, files.length, file.name, "🎯 [2/3] Auto-focusing & cropping artwork borders...", totalKbSaved);
+    await new Promise(r => setTimeout(r, 180));
 
     let finalDataUrl = rawDataUrl;
     let finalSizeKb = origSizeKb;
@@ -2177,7 +2196,7 @@ async function handleMediaLibraryUpload(event) {
     lastMediaItem = mediaItem;
 
     updateImageProcessingProgress(i + 1, files.length, file.name, "✅ Complete!", totalKbSaved);
-    await new Promise(r => setTimeout(r, 120));
+    await new Promise(r => setTimeout(r, 220));
   }
 
   renderMediaLibrary();
@@ -2185,6 +2204,7 @@ async function handleMediaLibraryUpload(event) {
   syncActiveProjectUI();
   markProjectDirty();
 
+  await new Promise(r => setTimeout(r, 350));
   closeImageProcessingModal();
   const savedLabel = totalKbSaved > 1024 ? `${(totalKbSaved / 1024).toFixed(1)} MB` : `${totalKbSaved} KB`;
   showToast(`✨ Auto-Cleaned, Auto-Cropped & Compressed ${files.length} image(s)! Saved ~${savedLabel}!`, "success");
@@ -2234,6 +2254,7 @@ async function handleBatchImportUpload(event) {
     const origSizeKb = Math.round(file.size / 1024);
 
     updateImageProcessingProgress(i, files.length, file.name, "🪄 [1/3] Purifying White Background (#FFFFFF)...", totalKbSaved);
+    await new Promise(r => setTimeout(r, 180));
 
     let rawDataUrl = "";
     try {
@@ -2244,6 +2265,7 @@ async function handleBatchImportUpload(event) {
     }
 
     updateImageProcessingProgress(i, files.length, file.name, "🎯 [2/3] Auto-detecting & centering artwork...", totalKbSaved);
+    await new Promise(r => setTimeout(r, 180));
 
     let finalDataUrl = rawDataUrl;
     let finalSizeKb = origSizeKb;
@@ -2342,7 +2364,7 @@ async function handleBatchImportUpload(event) {
     currentProject.pages.push(newPage);
 
     updateImageProcessingProgress(i + 1, files.length, file.name, "✅ Page Generated!", totalKbSaved);
-    await new Promise(r => setTimeout(r, 120));
+    await new Promise(r => setTimeout(r, 220));
   }
 
   renumberPages();
@@ -2353,6 +2375,7 @@ async function handleBatchImportUpload(event) {
   syncActiveProjectUI();
   markProjectDirty();
 
+  await new Promise(r => setTimeout(r, 350));
   closeImageProcessingModal();
   const savedLabel = totalKbSaved > 1024 ? `${(totalKbSaved / 1024).toFixed(1)} MB` : `${totalKbSaved} KB`;
   showToast(`🎉 Batch imported & created ${files.length} coloring pages (Saved ~${savedLabel})!`, "success");
@@ -2898,26 +2921,36 @@ function loadPageIntoCanvas(index) {
         elDiv.innerHTML = `<img src="${elem.image_src}">`;
       } else {
         elDiv.innerHTML = `
-          <div class="placeholder-hint">
+          <div class="placeholder-hint" onclick="event.stopPropagation(); setActiveElement('${elem.id}'); triggerMediaUpload();" style="cursor: pointer;" title="Click to Upload Reference Image">
             <span class="icon">📷</span>
             <span class="txt">Ref Image</span>
-            <span class="sub">(Click to select)</span>
+            <span class="sub">➕ Click to Upload</span>
           </div>
         `;
       }
+      elDiv.ondblclick = (e) => {
+        e.stopPropagation();
+        setActiveElement(elem.id);
+        triggerMediaUpload();
+      };
     } else if (elem.type === "main_image") {
       elDiv.classList.add("elem-main-box");
       if (elem.image_src) {
         elDiv.innerHTML = `<img src="${elem.image_src}">`;
       } else {
         elDiv.innerHTML = `
-          <div class="placeholder-hint">
+          <div class="placeholder-hint" onclick="event.stopPropagation(); setActiveElement('${elem.id}'); triggerMediaUpload();" style="cursor: pointer;" title="Click to Upload Drawing Artwork">
             <span class="icon">🎨</span>
             <span class="txt">Drawing Area (75%)</span>
-            <span class="sub">(Click to select)</span>
+            <span class="sub">➕ Click to Upload Artwork</span>
           </div>
         `;
       }
+      elDiv.ondblclick = (e) => {
+        e.stopPropagation();
+        setActiveElement(elem.id);
+        triggerMediaUpload();
+      };
     } else if (elem.type === "title") {
       elDiv.classList.add("elem-title-box");
       elDiv.innerText = elem.text || "Title";
