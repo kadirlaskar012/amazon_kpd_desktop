@@ -1,5 +1,5 @@
 /**
- * KDP Book Production Studio - Project Workspace, Auto-Renumbering, Lock Protection & Robust Persistence Engine
+ * KDP Book Production Studio - Complete Application Engine with PDF Export, Spread Preview & Context-Aware Header
  */
 
 let defaultRootLocation = "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects";
@@ -74,6 +74,7 @@ let currentProject = {
 
 let recentProjectsList = [];
 let currentPageIndex = 0;
+let currentSpreadIndex = 0;
 let activeElementId = null;
 let currentZoom = 1.0;
 let showGuides = true;
@@ -133,7 +134,7 @@ function renumberPages() {
 }
 
 // ==========================================
-// Robust Initial Project Loader & Persistence
+// Robust Initial Project Loader & Tab Memory
 // ==========================================
 function loadInitialProject() {
   // 1. Instant recovery from local cache
@@ -154,7 +155,11 @@ function loadInitialProject() {
   loadPageIntoCanvas(currentPageIndex);
   renderTimeline();
 
-  // 2. Sync from backend disk if active path is stored
+  // 2. Restore active tab (e.g. Canvas Editor stays active on refresh!)
+  const savedTab = localStorage.getItem("kdp_active_tab") || "canvas";
+  switchTab(savedTab);
+
+  // 3. Sync from backend disk if active path is stored
   const activePath = localStorage.getItem("kdp_active_project_path") || currentProject.project_dir;
   if (activePath) {
     fetch(`/api/projects/load?path=${encodeURIComponent(activePath)}`)
@@ -167,6 +172,7 @@ function loadInitialProject() {
           loadPageIntoCanvas(currentPageIndex);
           renderTimeline();
           renderMediaLibrary();
+          if (savedTab === "preview") renderSpreadPreview();
         }
       })
       .catch(() => {});
@@ -242,13 +248,121 @@ function saveProject(isManual = false) {
 }
 
 // ==========================================
+// 300 DPI Amazon KDP PDF Exporter
+// ==========================================
+function exportProjectPdf() {
+  showToast("⚙️ Generating 300 DPI Amazon KDP Print-Ready PDF...", "info");
+
+  fetch("/api/projects/export_pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(currentProject)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.status === "success" && data.download_url) {
+      showToast(`🎉 PDF Generated: ${data.filename}! Opening in browser...`, "success");
+      window.open(data.download_url, "_blank");
+    } else {
+      showToast(`⚠️ PDF Export failed: ${data.error || 'Unknown error'}`, "danger");
+    }
+  })
+  .catch(err => {
+    showToast(`⚠️ PDF Export error: ${err.message}`, "danger");
+  });
+}
+
+// ==========================================
+// Spread Preview (Realistic 2-Page Book View)
+// ==========================================
+function renderSpreadPreview() {
+  const container = document.getElementById("spread-book-container");
+  const indicator = document.getElementById("spread-page-indicator");
+  if (!container) return;
+
+  const totalPages = currentProject.pages ? currentProject.pages.length : 0;
+  if (totalPages === 0) {
+    container.innerHTML = `<div style="padding:40px;color:#94a3b8;">No pages available in this project.</div>`;
+    return;
+  }
+
+  // Each spread shows 2 facing pages (Left: even or index, Right: odd or index+1)
+  const leftIdx = currentSpreadIndex * 2;
+  const rightIdx = leftIdx + 1;
+
+  const leftPage = currentProject.pages[leftIdx];
+  const rightPage = rightIdx < totalPages ? currentProject.pages[rightIdx] : null;
+
+  if (indicator) {
+    indicator.innerText = rightPage 
+      ? `Spread: Pages ${leftPage.page_number} - ${rightPage.page_number} (of ${totalPages})`
+      : `Spread: Page ${leftPage.page_number} (Final Page)`;
+  }
+
+  const renderPageHtml = (page, isLeft) => {
+    if (!page) {
+      return `
+        <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}" style="background:#f8fafc;display:flex;align-items:center;justify-content:center;">
+          <div style="color:#94a3b8;font-size:12px;font-style:italic;">[ End of Book / Blank Page ]</div>
+        </div>
+      `;
+    }
+
+    const titleEl = page.elements.find(e => e.type === "title");
+    const mainEl = page.elements.find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src);
+    const refEl = page.elements.find(e => e.type === "ref_image" && e.image_src);
+
+    const titleText = titleEl ? titleEl.text : (page.title || `PAGE ${page.page_number}`);
+    const imgContent = mainEl 
+      ? `<div class="spread-img-box"><img src="${mainEl.image_src}"></div>`
+      : `<div class="spread-img-placeholder"><span>🎨</span><span>Drawing Area</span></div>`;
+
+    return `
+      <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
+        <div class="spread-page-header">Page ${page.page_number}</div>
+        <div class="spread-inner-content">
+          ${refEl ? `<div style="font-size:10px;color:#64748b;font-weight:700;">Ref: ${refEl.text || 'Reference'}</div>` : ''}
+          ${imgContent}
+          <div class="spread-title-text">${titleText}</div>
+        </div>
+      </div>
+    `;
+  };
+
+  container.innerHTML = `
+    ${renderPageHtml(leftPage, true)}
+    <div class="book-spine-crease"></div>
+    ${renderPageHtml(rightPage, false)}
+  `;
+}
+
+function prevSpreadPage() {
+  if (currentSpreadIndex > 0) {
+    currentSpreadIndex--;
+    renderSpreadPreview();
+  } else {
+    showToast("Beginning of book.", "info");
+  }
+}
+
+function nextSpreadPage() {
+  const totalPages = currentProject.pages ? currentProject.pages.length : 0;
+  const maxSpread = Math.floor((totalPages - 1) / 2);
+  if (currentSpreadIndex < maxSpread) {
+    currentSpreadIndex++;
+    renderSpreadPreview();
+  } else {
+    showToast("End of book.", "info");
+  }
+}
+
+// ==========================================
 // Project Lock / Unlock & Deletion Engine
 // ==========================================
 function toggleActiveProjectLock() {
   currentProject.is_locked = !currentProject.is_locked;
   syncActiveProjectUI();
   
-  // Persist lock status to disk
   fetch("/api/projects/toggle_lock", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -319,7 +433,6 @@ function executeDeleteProject() {
     showToast(`🗑 Permanently deleted "${targetName}" and all files!`, "success");
     fetchRecentProjects();
 
-    // If active project was deleted, reset workspace
     if (currentProject.project_dir === targetPath) {
       localStorage.removeItem("kdp_active_project_path");
       localStorage.removeItem("kdp_active_project_data");
@@ -366,7 +479,7 @@ function setupGlobalKeyboardShortcuts() {
     const activeTagName = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
     const isInputActive = activeTagName === "input" || activeTagName === "textarea" || activeTagName === "select";
 
-    // 1. Enter Key Handler (Modals & Element Actions)
+    // 1. Enter Key Handler
     if (e.key === "Enter") {
       const renameModal = document.getElementById("rename-modal");
       if (renameModal && renameModal.classList.contains("active")) {
@@ -387,7 +500,6 @@ function setupGlobalKeyboardShortcuts() {
         return;
       }
 
-      // If on canvas and an element is selected
       if (!isInputActive) {
         const activeElem = getActiveElement();
         if (activeElem) {
@@ -443,9 +555,9 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    // 6. Delete / Backspace Key Handler (Deletes Selected Element OR Current Page)
+    // 6. Delete / Backspace -> Delete Element or Page
     if (e.key === "Delete" || e.key === "Backspace") {
-      if (isInputActive) return; // Allow normal text editing when typing in input
+      if (isInputActive) return;
 
       e.preventDefault();
       if (activeElementId) {
@@ -458,7 +570,7 @@ function setupGlobalKeyboardShortcuts() {
 
     if (isInputActive) return;
 
-    // 7. Arrow Keys -> Nudge Selected Element
+    // 7. Arrow Keys -> Nudge Element
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
       const elem = getActiveElement();
       if (elem) {
@@ -477,7 +589,7 @@ function setupGlobalKeyboardShortcuts() {
       }
     }
 
-    // 8. [ and ] or PageUp/PageDown -> Previous / Next Page
+    // 8. [ and ] -> Previous / Next Page
     if (e.key === "[" || e.key === "PageUp") {
       e.preventDefault();
       if (currentPageIndex > 0) {
@@ -495,7 +607,7 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    // 9. Hotkeys: G (Guides), S (Snap), T (Add Text), B (Add Border)
+    // 9. Hotkeys: G (Guides), S (Snap), T (Text), B (Border)
     if (e.key.toLowerCase() === "g") {
       toggleGuides();
     } else if (e.key.toLowerCase() === "s" && !e.ctrlKey) {
@@ -663,7 +775,7 @@ function renderRecentProjects() {
   }
 }
 
-// Navigation Tabs
+// Navigation Tabs & Context-Aware Header
 function setupNavigation() {
   document.querySelectorAll(".nav-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -674,6 +786,8 @@ function setupNavigation() {
 }
 
 function switchTab(tabId) {
+  localStorage.setItem("kdp_active_tab", tabId);
+
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
 
@@ -682,10 +796,18 @@ function switchTab(tabId) {
   if (targetBtn) targetBtn.classList.add("active");
   if (targetPanel) targetPanel.classList.add("active");
 
+  // Top Actions (Project Pill, Save, Keys, PDF Export) should ONLY be visible in Canvas Editor
+  const headerCanvasActions = document.getElementById("header-canvas-actions");
+  if (headerCanvasActions) {
+    headerCanvasActions.style.display = (tabId === "canvas") ? "flex" : "none";
+  }
+
   if (tabId === "canvas") {
     loadPageIntoCanvas(currentPageIndex);
     renderTimeline();
     renderMediaLibrary();
+  } else if (tabId === "preview") {
+    renderSpreadPreview();
   }
 }
 
@@ -707,13 +829,11 @@ function syncActiveProjectUI() {
   const lockText = isLocked ? "LOCKED" : "UNLOCKED";
   const lockBtnText = isLocked ? "🔓 Unlock Project" : "🔒 Lock Project";
 
-  // Top Nav Project Pill
   const navProjName = document.getElementById("nav-project-name");
   if (navProjName) {
     navProjName.innerText = `${lockIcon} ${currentProject.name}`;
   }
 
-  // Active Project Card Banner
   document.getElementById("active-proj-title").innerText = currentProject.name;
   document.getElementById("active-proj-path").innerText = `📁 ${currentProject.project_dir}`;
   document.getElementById("active-proj-meta").innerHTML = `
@@ -722,7 +842,6 @@ function syncActiveProjectUI() {
     <span>Trim: 8.5x11 in</span>
   `;
 
-  // Dynamic Lock Badges and Buttons
   const lockBadge = document.getElementById("active-proj-lock-badge");
   if (lockBadge) {
     lockBadge.className = `badge ${isLocked ? 'locked' : 'unlocked'}`;
@@ -1669,7 +1788,6 @@ function deleteCurrentPage() {
   const deletedNum = currentPageIndex + 1;
   currentProject.pages.splice(currentPageIndex, 1);
 
-  // Auto-renumber all remaining pages sequentially (e.g. 7, 8, 9, 10 become 1, 2, 3, 4)
   renumberPages();
 
   const target = Math.min(currentPageIndex, currentProject.pages.length - 1);

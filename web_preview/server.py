@@ -1,6 +1,6 @@
 """
-KDP Book Production Studio - Web Preview Server with Project, Lock & Delete API.
-Serves the interactive web preview studio on http://localhost:8080 and handles local project persistence & portability.
+KDP Book Production Studio - Web Preview Server with Project, Lock, Delete & PDF Export API.
+Serves the interactive web preview studio on http://localhost:8080, handles local persistence & PDF rendering.
 """
 
 import http.server
@@ -13,11 +13,12 @@ import shutil
 import urllib.parse
 from pathlib import Path
 
-# Add project root to sys.path so we can use app.storage.project_storage
+# Add project root to sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.storage.project_storage import ProjectStorage
+from app.core.pdf_exporter import KDPPdfExporter
 
 # Ensure UTF-8 output encoding for Windows consoles
 if hasattr(sys.stdout, "reconfigure"):
@@ -116,6 +117,24 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": f"Project not found at {json_file}"}).encode("utf-8"))
                 return
 
+        elif req_path.startswith("/api/exports/") or req_path == "/api/exports":
+            query_params = urllib.parse.parse_qs(parsed.query)
+            raw_file = query_params.get("path", [""])[0]
+            if raw_file and Path(raw_file).exists():
+                pdf_file = Path(raw_file)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/pdf")
+                self.send_header("Content-Disposition", f"inline; filename=\"{pdf_file.name}\"")
+                self.send_header("Content-Length", str(pdf_file.stat().st_size))
+                self.end_headers()
+                with open(pdf_file, "rb") as f:
+                    shutil.copyfileobj(f, self.wfile)
+                return
+            else:
+                self.send_response(404)
+                self.end_headers()
+                return
+
         return super().do_GET()
 
     def do_POST(self):
@@ -166,6 +185,35 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"status": "saved", "path": str(project_file)}).encode("utf-8"))
             return
+
+        elif req_path == "/api/projects/export_pdf":
+            # Generate 300 DPI KDP compliant PDF
+            project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "My_Project")).resolve()
+            exports_dir = project_dir / "exports"
+            exports_dir.mkdir(parents=True, exist_ok=True)
+
+            proj_name = req_data.get("name", "KDP_Book").replace(" ", "_")
+            out_pdf = exports_dir / f"{proj_name}_KDP_Print_Ready.pdf"
+
+            try:
+                KDPPdfExporter.generate_pdf(req_data, out_pdf)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                resp = {
+                    "status": "success",
+                    "pdf_path": str(out_pdf),
+                    "filename": out_pdf.name,
+                    "download_url": f"/api/exports/{urllib.parse.quote(out_pdf.name)}?path={urllib.parse.quote(str(out_pdf))}"
+                }
+                self.wfile.write(json.dumps(resp).encode("utf-8"))
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                return
 
         elif req_path == "/api/projects/toggle_lock":
             raw_path = req_data.get("path", "")
@@ -259,7 +307,7 @@ def run_server(port=PORT):
     try:
         with socketserver.TCPServer(("", port), StudioRequestHandler) as httpd:
             print("==================================================")
-            print("KDP Studio Live Web Preview & File API Running!")
+            print("KDP Studio Live Web Preview & PDF Exporter API Running!")
             print(f"URL: http://localhost:{port}")
             print(f"Default Project Folder: {DEFAULT_PROJECTS_DIR}")
             print("==================================================")

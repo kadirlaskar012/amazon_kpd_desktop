@@ -2019,3 +2019,171 @@ kbd {
   0% { transform: translateY(0); opacity: 1; }
   100% { transform: translateY(20px); opacity: 0; }
 }
+
+/* ===================================================
+   BUTTON STYLES & EXPORT PDF BUTTON
+   =================================================== */
+.btn-success {
+  background-color: var(--secondary) !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  border: 1px solid var(--secondary) !important;
+}
+
+.btn-success:hover {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+/* ===================================================
+   SPREAD PREVIEW REALISTIC 2-PAGE BOOK VIEW
+   =================================================== */
+.preview-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.spread-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 900px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  border-radius: 10px;
+}
+
+.spread-viewport {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 30px 10px;
+  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.spread-book {
+  display: flex;
+  position: relative;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  max-width: 860px;
+}
+
+.spread-page {
+  width: 380px;
+  height: 500px;
+  background-color: #ffffff;
+  padding: 24px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.spread-page.left-page {
+  border-right: 1px solid #e2e8f0;
+  box-shadow: inset -15px 0 20px -10px rgba(0, 0, 0, 0.12);
+}
+
+.spread-page.right-page {
+  border-left: 1px solid #e2e8f0;
+  box-shadow: inset 15px 0 20px -10px rgba(0, 0, 0, 0.12);
+}
+
+.book-spine-crease {
+  width: 16px;
+  background: linear-gradient(90deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.18) 100%);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.spread-inner-content {
+  flex: 1;
+  border: 1.5px solid #1e293b;
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+
+.spread-page-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  width: 100%;
+}
+
+.spread-page.left-page .spread-page-header {
+  text-align: left;
+}
+
+.spread-page.right-page .spread-page-header {
+  text-align: right;
+}
+
+.spread-title-text {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.spread-img-box {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.spread-img-box img {
+  max-width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+}
+
+.spread-img-placeholder {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 12px;
+  gap: 6px;
+}
+

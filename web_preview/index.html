@@ -43,7 +43,7 @@
         </button>
       </nav>
 
-      <div class="top-actions">
+      <div class="top-actions" id="header-canvas-actions">
         <!-- Live Auto-Save Indicator -->
         <div class="autosave-status-pill" id="autosave-indicator" title="Automatic disk persistence is active">
           <span class="pulse-dot"></span>
@@ -56,7 +56,8 @@
         </div>
 
         <button class="btn btn-outline btn-sm" onclick="openShortcutsModal()" title="Keyboard Shortcuts Reference">⌨️ Keys</button>
-        <button class="btn btn-primary" id="btn-save-project" onclick="saveProject(true)">💾 Save (Ctrl+S)</button>
+        <button class="btn btn-primary btn-sm" id="btn-save-project" onclick="saveProject(true)">💾 Save (Ctrl+S)</button>
+        <button class="btn btn-success btn-sm" id="btn-export-pdf" onclick="exportProjectPdf()" title="Generate & Download 300 DPI Amazon KDP PDF">📄 Export PDF</button>
       </div>
     </header>
 
@@ -544,33 +545,21 @@
       <!-- TAB 5: PREVIEW -->
       <section class="tab-panel" id="panel-preview">
         <div class="preview-container">
-          <div class="section-title-bar">
-            <h2>Realistic Two-Page Book Spread Preview</h2>
-            <p>Inspect book spine binding alignment, gutter margins, and facing page layouts.</p>
+          <div class="section-title-bar" style="text-align: center;">
+            <h2>📖 Realistic Two-Page Book Spread Preview</h2>
+            <p>Inspect book spine binding alignment, gutter margins, and facing page layouts exactly as they will look in print.</p>
+          </div>
+
+          <div class="spread-controls-bar">
+            <button class="btn btn-outline btn-sm" onclick="prevSpreadPage()">◀ Previous Spread</button>
+            <span style="font-weight: 700; font-size: 13px;" id="spread-page-indicator">Spread: Pages 2 - 3</span>
+            <button class="btn btn-outline btn-sm" onclick="nextSpreadPage()">Next Spread ▶</button>
+            <button class="btn btn-success btn-sm" onclick="exportProjectPdf()">📄 Export Print-Ready PDF</button>
           </div>
 
           <div class="spread-viewport">
-            <div class="spread-book">
-              <!-- Left Page (Even) -->
-              <div class="spread-page left-page">
-                <div class="page-header-num">Page 2</div>
-                <div class="spread-inner-content">
-                  <div class="mini-title">Page 2</div>
-                  <div class="mini-art-placeholder">Page 2 Drawing Area</div>
-                </div>
-              </div>
-              
-              <!-- Spine Crease -->
-              <div class="book-spine-crease"></div>
-
-              <!-- Right Page (Odd) -->
-              <div class="spread-page right-page">
-                <div class="page-header-num">Page 3</div>
-                <div class="spread-inner-content">
-                  <div class="mini-title">Page 3</div>
-                  <div class="mini-art-placeholder">Page 3 Drawing Area</div>
-                </div>
-              </div>
+            <div class="spread-book" id="spread-book-container">
+              <!-- Rendered dynamically by renderSpreadPreview() -->
             </div>
           </div>
         </div>
