@@ -14,19 +14,29 @@ from app.core.units import Unit, in_to_pt, pt_to_in
 
 class BookType(str, Enum):
     COLORING_BOOK = "coloring_book"
-    TRACING_BOOK = "tracing_book"
+    SUDOKU = "sudoku"
+    TIC_TAC_TOE = "tic_tac_toe"
     ACTIVITY_BOOK = "activity_book"
     PUZZLE_BOOK = "puzzle_book"
+    MAZE = "maze"
     DOT_TO_DOT = "dot_to_dot"
+    TRACING = "tracing"
+    WORD_SEARCH = "word_search"
+    LEARNING = "learning"
 
     @property
     def display_name(self) -> str:
         names = {
             BookType.COLORING_BOOK: "Coloring Book",
-            BookType.TRACING_BOOK: "Tracing Book",
+            BookType.SUDOKU: "Sudoku Book",
+            BookType.TIC_TAC_TOE: "Tic-Tac-Toe Book",
             BookType.ACTIVITY_BOOK: "Activity Book",
             BookType.PUZZLE_BOOK: "Puzzle Book",
-            BookType.DOT_TO_DOT: "Dot-to-Dot",
+            BookType.MAZE: "Maze Book",
+            BookType.DOT_TO_DOT: "Dot-to-Dot Book",
+            BookType.TRACING: "Tracing Book",
+            BookType.WORD_SEARCH: "Word Search Book",
+            BookType.LEARNING: "Kids Learning Workbook",
         }
         return names.get(self, self.value.replace("_", " ").title())
 

@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "min_pages": 24,
+  "max_pages": 828,
+  "standard_bleed_in": 0.125,
+  "target_dpi": 300,
+  "min_acceptable_dpi": 150,
+  "min_pages_for_spine_text": 79,
+  "paper_thickness_formulas": {
+    "white": 0.002252,
+    "cream": 0.0025,
+    "color": 0.002347
+  },
+  "gutter_margin_rules": [
+    { "min_pages": 24, "max_pages": 150, "gutter_in": 0.375 },
+    { "min_pages": 151, "max_pages": 300, "gutter_in": 0.500 },
+    { "min_pages": 301, "max_pages": 500, "gutter_in": 0.625 },
+    { "min_pages": 501, "max_pages": 828, "gutter_in": 0.750 }
+  ],
+  "supported_trim_sizes": [
+    { "id": "8.5x11", "name": "8.5 x 11 in", "width_in": 8.5, "height_in": 11.0, "category": "Children's & Coloring" },
+    { "id": "8x10", "name": "8 x 10 in", "width_in": 8.0, "height_in": 10.0, "category": "Workbooks & Activities" },
+    { "id": "8.5x8.5", "name": "8.5 x 8.5 in", "width_in": 8.5, "height_in": 8.5, "category": "Square Picture Books" },
+    { "id": "7x10", "name": "7 x 10 in", "width_in": 7.0, "height_in": 10.0, "category": "Medium Activity Books" },
+    { "id": "6x9", "name": "6 x 9 in", "width_in": 6.0, "height_in": 9.0, "category": "Trade / Puzzles" },
+    { "id": "5.5x8.5", "name": "5.5 x 8.5 in", "width_in": 5.5, "height_in": 8.5, "category": "Compact Novels & Puzzles" }
+  ]
+}

@@ -52,36 +52,79 @@ class ModuleRegistry:
         return cls._instance
 
     def _register_default_modules(self) -> None:
-        # V1 Active Module
+        # V1 Active Module: Coloring Book
         self.register_module(ColoringBookModule())
 
-        # Future Plugin Modules
+        # 2. Sudoku Book
         self.register_module(
             PlaceholderBookModule(
-                BookType.TRACING_BOOK,
-                "Tracing Book",
-                "Alphabet, number, word, and curve line tracing sheets for early childhood education.",
+                BookType.SUDOKU,
+                "Sudoku Book",
+                "Generate 9x9 Sudoku puzzles (Easy, Medium, Hard, Expert) with automatic solution pages.",
             )
         )
+        # 3. Tic-Tac-Toe Book
+        self.register_module(
+            PlaceholderBookModule(
+                BookType.TIC_TAC_TOE,
+                "Tic-Tac-Toe Book",
+                "Printable 3x3 game pages with custom headers, scores, player tags, and multiple grids per page.",
+            )
+        )
+        # 4. Activity Book
         self.register_module(
             PlaceholderBookModule(
                 BookType.ACTIVITY_BOOK,
                 "Activity Book",
-                "Mazes, matching games, spot-the-difference, and counting worksheets.",
+                "Mixed activities: Mazes, matching games, spot-the-difference, counting, and pattern worksheets.",
             )
         )
+        # 5. Puzzle Book
         self.register_module(
             PlaceholderBookModule(
                 BookType.PUZZLE_BOOK,
                 "Puzzle Book",
-                "Word searches, crosswords, sudoku, and logic grid generators.",
+                "Crosswords, word scrambles, logic puzzles, and number grids.",
             )
         )
+        # 6. Maze Book
+        self.register_module(
+            PlaceholderBookModule(
+                BookType.MAZE,
+                "Maze Book",
+                "Algorithmic labyrinth generation with guaranteed single path solutions.",
+            )
+        )
+        # 7. Dot-to-Dot Book
         self.register_module(
             PlaceholderBookModule(
                 BookType.DOT_TO_DOT,
-                "Dot-to-Dot",
-                "Numbered sequential connect-the-dots illustration generator.",
+                "Dot-to-Dot Book",
+                "Numbered point sequences and animal connect-the-dots worksheets.",
+            )
+        )
+        # 8. Tracing Book
+        self.register_module(
+            PlaceholderBookModule(
+                BookType.TRACING,
+                "Tracing Book",
+                "Alphabet, numbers, dotted words, and handwriting practice lines.",
+            )
+        )
+        # 9. Word Search Book
+        self.register_module(
+            PlaceholderBookModule(
+                BookType.WORD_SEARCH,
+                "Word Search Book",
+                "Multi-directional word search puzzles with themed vocabulary and solution keys.",
+            )
+        )
+        # 10. Kids Learning Workbook
+        self.register_module(
+            PlaceholderBookModule(
+                BookType.LEARNING,
+                "Kids Learning Workbook",
+                "Early childhood math, shapes, vocabulary, and handwriting readiness workbooks.",
             )
         )
 
