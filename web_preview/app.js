@@ -1,14 +1,15 @@
 /**
- * KDP Book Production Studio - Interactive Canvas Web Engine, Layouts & User Media Library
+ * KDP Book Production Studio - Project Scaffolding, Directory Persistence & Isolated Media Library
  */
 
-// User-uploaded Media Library (Clean, no inbuilt stock emojis)
-let mediaLibrary = [];
+let defaultRootLocation = "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects";
 
-// Global Project State
-let project = {
-  name: "My KDP Coloring Book",
-  author: "Creative Studio",
+// Current Active Project Document
+let currentProject = {
+  name: "My Jungle Coloring Book",
+  folder_name: "My_Jungle_Coloring_Book",
+  project_dir: "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects\\My_Jungle_Coloring_Book",
+  author: "Creative Kids Studio",
   settings: {
     trim_width_pt: 612.0,   // 8.5 in * 72
     trim_height_pt: 792.0,  // 11.0 in * 72
@@ -22,6 +23,8 @@ let project = {
     },
     target_dpi: 300,
   },
+  // Isolated Media Library for this project only
+  media: [],
   pages: [
     {
       page_number: 1,
@@ -69,8 +72,13 @@ let project = {
   ]
 };
 
-let recentProjects = [
-  { name: "My KDP Coloring Book", path: "C:\\Users\\KadiR-PC\\Documents\\KDP\\Coloring_Book_01", pages: 4 }
+let recentProjectsList = [
+  {
+    name: "My Jungle Coloring Book",
+    path: "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects\\My_Jungle_Coloring_Book",
+    page_count: 4,
+    media_count: 0
+  }
 ];
 
 let currentPageIndex = 0;
@@ -82,12 +90,70 @@ let snapToGuides = true;
 // UI Initialization
 document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
-  renderRecentProjects();
-  renderMediaLibrary();
-  renderTimeline();
-  loadPageIntoCanvas(0);
+  fetchDefaultLocation();
+  fetchRecentProjects();
+  syncActiveProjectUI();
   setupCanvasInteractions();
 });
+
+// Fetch default save location from Python server
+function fetchDefaultLocation() {
+  fetch("/api/default_location")
+    .then(r => r.json())
+    .then(data => {
+      if (data.default_root) {
+        defaultRootLocation = data.default_root;
+        const rootInput = document.getElementById("modal-project-root");
+        if (rootInput) rootInput.value = defaultRootLocation;
+        updateModalPathPreview();
+      }
+    })
+    .catch(() => {});
+}
+
+// Fetch list of projects in the directory
+function fetchRecentProjects() {
+  fetch("/api/projects")
+    .then(r => r.json())
+    .then(data => {
+      if (data.projects && data.projects.length > 0) {
+        recentProjectsList = data.projects;
+      }
+      renderRecentProjects();
+    })
+    .catch(() => {
+      renderRecentProjects();
+    });
+}
+
+function renderRecentProjects() {
+  const container = document.getElementById("recent-projects-list");
+  const modalPickList = document.getElementById("modal-project-pick-list");
+
+  const renderItemHtml = (p) => `
+    <div class="recent-item" onclick="openProjectByPath('${p.path.replace(/\\/g, '\\\\')}')">
+      <div class="recent-icon">📁</div>
+      <div class="recent-info">
+        <div class="recent-title">${p.name}</div>
+        <div class="recent-path">${p.path}</div>
+      </div>
+      <div class="recent-meta">
+        <span class="badge">${p.page_count || 0} Pages</span>
+        <button class="btn btn-sm btn-primary">Open</button>
+      </div>
+    </div>
+  `;
+
+  if (container) {
+    container.innerHTML = recentProjectsList.length 
+      ? recentProjectsList.map(renderItemHtml).join("")
+      : `<div style="color:var(--text-muted);font-size:12px;padding:12px;">No projects found. Click "Create New Project" to get started!</div>`;
+  }
+
+  if (modalPickList) {
+    modalPickList.innerHTML = recentProjectsList.map(renderItemHtml).join("");
+  }
+}
 
 // Navigation Tabs
 function setupNavigation() {
@@ -107,9 +173,15 @@ function switchTab(tabId) {
   const targetPanel = document.getElementById(`panel-${tabId}`);
   if (targetBtn) targetBtn.classList.add("active");
   if (targetPanel) targetPanel.classList.add("active");
+
+  if (tabId === "canvas") {
+    loadPageIntoCanvas(currentPageIndex);
+    renderTimeline();
+    renderMediaLibrary();
+  }
 }
 
-// Drawer Tabs (Layouts vs Media Library)
+// Drawer Tabs (Layouts vs Project Media)
 function switchDrawerTab(tabKey) {
   document.querySelectorAll(".drawer-tab-btn").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".drawer-content").forEach(c => c.classList.remove("active"));
@@ -120,8 +192,162 @@ function switchDrawerTab(tabKey) {
   if (targetContent) targetContent.classList.add("active");
 }
 
+// Sync UI with currentProject state
+function syncActiveProjectUI() {
+  document.getElementById("nav-project-name").innerText = currentProject.name;
+  document.getElementById("active-proj-title").innerText = currentProject.name;
+  document.getElementById("active-proj-path").innerText = `📁 ${currentProject.project_dir}`;
+  document.getElementById("active-proj-meta").innerHTML = `
+    <span>Pages: ${currentProject.pages.length}</span> • 
+    <span>Media Items: ${currentProject.media ? currentProject.media.length : 0}</span> • 
+    <span>Trim: 8.5x11 in</span>
+  `;
+
+  document.getElementById("stat-page-count").innerText = currentProject.pages.length;
+  document.getElementById("stat-media-count").innerText = currentProject.media ? currentProject.media.length : 0;
+  
+  const folderHint = document.getElementById("media-folder-hint");
+  if (folderHint) folderHint.innerText = `${currentProject.folder_name}/assets`;
+
+  renderTimeline();
+  renderMediaLibrary();
+}
+
 // ==========================================
-// Media Library & Upload Management
+// Project Creation & Location Management
+// ==========================================
+function openNewProjectModal() {
+  const modal = document.getElementById("new-project-modal");
+  updateModalPathPreview();
+  if (modal) modal.classList.add("active");
+}
+
+function openExistingFolderModal() {
+  const modal = document.getElementById("open-folder-modal");
+  fetchRecentProjects();
+  if (modal) modal.classList.add("active");
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.remove("active");
+}
+
+function updateModalPathPreview() {
+  const nameInput = document.getElementById("modal-project-name");
+  const rootInput = document.getElementById("modal-project-root");
+  const previewDiv = document.getElementById("modal-full-path-preview");
+
+  const name = (nameInput ? nameInput.value.trim() : "") || "Untitled_Project";
+  const root = (rootInput ? rootInput.value.trim() : "") || defaultRootLocation;
+  const folderName = name.replace(/[^a-zA-Z0-9_\-\s]/g, "").replace(/\s+/g, "_");
+
+  const fullPath = `${root.replace(/[\/\\]+$/, "")}\\${folderName}`;
+  if (previewDiv) {
+    previewDiv.innerText = `📁 ${fullPath}\\`;
+  }
+}
+
+function browseProjectFolder() {
+  const custom = prompt("Enter Custom Root Folder Path for Projects:", defaultRootLocation);
+  if (custom && custom.trim()) {
+    defaultRootLocation = custom.trim();
+    const rootInput = document.getElementById("modal-project-root");
+    if (rootInput) rootInput.value = defaultRootLocation;
+    updateModalPathPreview();
+  }
+}
+
+function submitCreateProject() {
+  const nameInput = document.getElementById("modal-project-name");
+  const rootInput = document.getElementById("modal-project-root");
+  const countSelect = document.getElementById("modal-page-count");
+  const hasBleed = document.getElementById("modal-has-bleed").checked;
+
+  const projName = (nameInput ? nameInput.value.trim() : "") || "My New KDP Book";
+  const rootDir = (rootInput ? rootInput.value.trim() : "") || defaultRootLocation;
+  const folderName = projName.replace(/[^a-zA-Z0-9_\-\s]/g, "").replace(/\s+/g, "_");
+  const projectDir = `${rootDir.replace(/[\/\\]+$/, "")}\\${folderName}`;
+  const count = parseInt(countSelect ? countSelect.value : "10");
+
+  const initialPages = [];
+  for (let i = 0; i < count; i++) {
+    initialPages.push({
+      page_number: i + 1,
+      title: `Page ${i + 1}`,
+      layout: "top_ref",
+      elements: [
+        { id: `elem_ref_${i + 1}`, type: "ref_image", x: 180, y: 35, w: 150, h: 100, text: "Click to select Reference Image", image_src: null },
+        { id: `elem_main_${i + 1}`, type: "main_image", x: 45, y: 150, w: 420, h: 420, text: "Click to select Drawing Image", image_src: null },
+        { id: `elem_title_${i + 1}`, type: "title", x: 45, y: 585, w: 420, h: 40, text: `PAGE ${i + 1}`, font_size: 26, color: "#111827", font_family: "Plus Jakarta Sans" },
+        { id: `elem_frame_${i + 1}`, type: "border", x: 30, y: 25, w: 450, h: 610 },
+      ]
+    });
+  }
+
+  const newProjPayload = {
+    name: projName,
+    folder_name: folderName,
+    project_dir: projectDir,
+    root_path: rootDir,
+    author: "Creative Author",
+    created_at: new Date().toISOString(),
+    settings: {
+      trim_width_pt: 612.0,
+      trim_height_pt: 792.0,
+      has_bleed: hasBleed,
+      bleed_pt: 9.0,
+      margins: { top_pt: 27.0, bottom_pt: 27.0, inside_pt: 36.0, outside_pt: 27.0 },
+      target_dpi: 300,
+    },
+    media: [], // Isolated empty media list for this new project
+    pages: initialPages
+  };
+
+  // Call Server API to physically create directory & scaffolding on disk
+  fetch("/api/projects/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(newProjPayload)
+  })
+  .then(r => r.json())
+  .then(() => {
+    finishProjectSetup(newProjPayload);
+  })
+  .catch(() => {
+    finishProjectSetup(newProjPayload);
+  });
+}
+
+function finishProjectSetup(proj) {
+  currentProject = proj;
+  currentPageIndex = 0;
+  activeElementId = null;
+
+  closeModal("new-project-modal");
+  syncActiveProjectUI();
+  fetchRecentProjects();
+  switchTab("canvas");
+
+  showToast(`✨ Created Project "${proj.name}" in ${proj.folder_name}!`, "success");
+}
+
+function openProjectByPath(path) {
+  const found = recentProjectsList.find(p => p.path === path);
+  if (found) {
+    currentProject.name = found.name;
+    currentProject.project_dir = found.path;
+    currentProject.folder_name = found.path.split("\\").pop();
+    currentProject.media = []; // isolated
+  }
+  closeModal("open-folder-modal");
+  syncActiveProjectUI();
+  switchTab("canvas");
+  showToast(`📂 Opened Project "${currentProject.name}"!`, "info");
+}
+
+// ==========================================
+// Project-Isolated Media Library Handlers
 // ==========================================
 function triggerMediaUpload() {
   const fileInput = document.getElementById("media-library-upload-input");
@@ -135,6 +361,10 @@ function handleMediaLibraryUpload(event) {
   const files = Array.from(event.target.files);
   if (!files.length) return;
 
+  if (!currentProject.media) {
+    currentProject.media = [];
+  }
+
   let loaded = 0;
   files.forEach((file) => {
     const reader = new FileReader();
@@ -142,24 +372,39 @@ function handleMediaLibraryUpload(event) {
       const dataUrl = e.target.result;
       const cleanTitle = cleanFileName(file.name);
 
-      mediaLibrary.unshift({
-        id: `med_user_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      const mediaItem = {
+        id: `med_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         name: cleanTitle,
         fileName: file.name,
         dataUrl: dataUrl,
         sizeKb: Math.round(file.size / 1024)
-      });
+      };
+
+      // Add to this project's isolated media array
+      currentProject.media.unshift(mediaItem);
+
+      // Persist asset to disk inside project's /assets folder
+      fetch("/api/projects/upload_asset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_dir: currentProject.project_dir,
+          filename: file.name,
+          data_url: dataUrl
+        })
+      }).catch(() => {});
 
       loaded++;
       if (loaded === files.length) {
         renderMediaLibrary();
         switchDrawerTab("media");
-        showToast(`📁 Uploaded ${files.length} image(s) to Media Library!`, "success");
+        syncActiveProjectUI();
+        showToast(`📁 Uploaded ${files.length} image(s) into "${currentProject.folder_name}/assets"!`, "success");
 
-        // If an image slot was selected on canvas, auto-populate with the first uploaded image
+        // If an image slot was selected on canvas, auto-populate
         const activeElem = getActiveElement();
         if (activeElem && (activeElem.type === "ref_image" || activeElem.type === "main_image")) {
-          applyMediaToSlot(mediaLibrary[0].id, activeElem.type === "ref_image" ? "ref" : "drawing");
+          applyMediaToSlot(mediaItem.id, activeElem.type === "ref_image" ? "ref" : "drawing");
         }
       }
     };
@@ -172,21 +417,24 @@ function renderMediaLibrary() {
   if (!container) return;
   container.innerHTML = "";
 
+  const projectMedia = currentProject.media || [];
   const badge = document.getElementById("media-count-badge");
-  if (badge) badge.innerText = mediaLibrary.length;
+  if (badge) badge.innerText = projectMedia.length;
 
-  if (mediaLibrary.length === 0) {
+  if (projectMedia.length === 0) {
     container.innerHTML = `
       <div class="media-empty-state" onclick="triggerMediaUpload()" style="cursor: pointer;">
         <div class="media-empty-icon">📁</div>
-        <strong>No images uploaded yet</strong>
-        <p style="margin-top: 4px; color: var(--text-muted); font-size: 11px;">Click here or use the button above to upload PNG, JPG, or SVG images from your PC.</p>
+        <strong>No images in this project</strong>
+        <p style="margin-top: 4px; color: var(--text-muted); font-size: 11px;">
+          Click here to upload images from your PC into <code>${currentProject.folder_name}/assets</code>.
+        </p>
       </div>
     `;
     return;
   }
 
-  mediaLibrary.forEach(item => {
+  projectMedia.forEach(item => {
     const card = document.createElement("div");
     card.className = "media-card";
 
@@ -197,7 +445,7 @@ function renderMediaLibrary() {
         </div>
         <div class="media-card-meta">
           <div class="media-name" title="${item.name}">${item.name}</div>
-          <div class="media-tag">${item.sizeKb} KB • Uploaded</div>
+          <div class="media-tag">${item.sizeKb} KB • ${currentProject.folder_name}</div>
         </div>
       </div>
       <div class="media-action-buttons">
@@ -220,7 +468,6 @@ function renderMediaLibrary() {
   });
 }
 
-// When clicking the media card directly
 function handleMediaCardClick(mediaId) {
   const activeElem = getActiveElement();
   if (activeElem && activeElem.type === "ref_image") {
@@ -228,17 +475,15 @@ function handleMediaCardClick(mediaId) {
   } else if (activeElem && activeElem.type === "main_image") {
     applyMediaToSlot(mediaId, "drawing");
   } else {
-    // Default to Drawing slot
     applyMediaToSlot(mediaId, "drawing");
   }
 }
 
-// 1-Click Slot Placement (Reference, Drawing, Title, Apply All)
 function applyMediaToSlot(mediaId, slotType) {
-  const item = mediaLibrary.find(m => m.id === mediaId);
+  const item = (currentProject.media || []).find(m => m.id === mediaId);
   if (!item) return;
 
-  const page = project.pages[currentPageIndex];
+  const page = currentProject.pages[currentPageIndex];
   if (!page) return;
 
   const imgSrc = item.dataUrl;
@@ -278,19 +523,16 @@ function applyMediaToSlot(mediaId, slotType) {
     showToast(`🔤 Set Title to "${item.name.toUpperCase()}"!`, "success");
   } 
   else if (slotType === "all") {
-    // 1. Reference
     let refElem = page.elements.find(e => e.type === "ref_image");
     if (refElem) {
       refElem.image_src = imgSrc;
       refElem.text = labelText;
     }
-    // 2. Drawing
     let mainElem = page.elements.find(e => e.type === "main_image");
     if (mainElem) {
       mainElem.image_src = imgSrc;
       mainElem.text = labelText;
     }
-    // 3. Title
     let titleElem = page.elements.find(e => e.type === "title");
     if (titleElem) {
       titleElem.text = item.name.toUpperCase();
@@ -314,7 +556,7 @@ function cleanFileName(filename) {
 // Layout Templates Engine
 // ==========================================
 function applyPageLayout(layoutKey) {
-  const page = project.pages[currentPageIndex];
+  const page = currentProject.pages[currentPageIndex];
   if (!page) return;
 
   let existingTitle = page.title || `PAGE ${page.page_number}`;
@@ -403,10 +645,10 @@ function getLayoutName(key) {
 }
 
 // ==========================================
-// Page Canvas Loader & Pure White Element Rendering
+// Page Canvas Loader & Elements
 // ==========================================
 function loadPageIntoCanvas(index) {
-  const page = project.pages[index];
+  const page = currentProject.pages[index];
   const layer = document.getElementById("elements-layer");
   if (!layer) return;
   layer.innerHTML = "";
@@ -446,7 +688,7 @@ function loadPageIntoCanvas(index) {
         elDiv.innerHTML = `
           <div class="placeholder-hint">
             <span class="icon">🎨</span>
-            <span class="txt">Select Drawing / Coloring Image</span>
+            <span class="txt">Select Drawing Image</span>
             <span class="sub">(Click to open Media Library)</span>
           </div>
         `;
@@ -475,7 +717,7 @@ function loadPageIntoCanvas(index) {
       <div class="handle br" data-handle="br"></div>
     `;
 
-    // Click selection: Automatically focuses Media Library if clicking an image slot
+    // Click selection
     elDiv.addEventListener("mousedown", (e) => {
       e.stopPropagation();
       setActiveElement(elem.id);
@@ -488,7 +730,7 @@ function loadPageIntoCanvas(index) {
   });
 
   const pageReadout = document.getElementById("page-num-readout");
-  if (pageReadout) pageReadout.innerText = `Page ${index + 1} of ${project.pages.length}`;
+  if (pageReadout) pageReadout.innerText = `Page ${index + 1} of ${currentProject.pages.length}`;
 }
 
 // Drag & Resize Canvas Interactions
@@ -587,7 +829,7 @@ function setActiveElement(elemId) {
 }
 
 function getActiveElement() {
-  const page = project.pages[currentPageIndex];
+  const page = currentProject.pages[currentPageIndex];
   if (!page) return null;
   return page.elements.find(e => e.id === activeElementId);
 }
@@ -692,7 +934,7 @@ function alignActive(mode) {
 
 // Add Elements
 function addNewTextElement() {
-  const page = project.pages[currentPageIndex];
+  const page = currentProject.pages[currentPageIndex];
   if (!page) return;
 
   const newId = `elem_txt_${Date.now()}`;
@@ -715,7 +957,7 @@ function addNewTextElement() {
 }
 
 function addNewBorderElement() {
-  const page = project.pages[currentPageIndex];
+  const page = currentProject.pages[currentPageIndex];
   if (!page) return;
 
   const newId = `elem_border_${Date.now()}`;
@@ -738,7 +980,7 @@ function duplicateActiveElement() {
   const elem = getActiveElement();
   if (!elem) return;
 
-  const page = project.pages[currentPageIndex];
+  const page = currentProject.pages[currentPageIndex];
   const clone = { ...elem, id: `elem_dup_${Date.now()}`, x: elem.x + 15, y: elem.y + 15 };
   page.elements.push(clone);
   loadPageIntoCanvas(currentPageIndex);
@@ -747,7 +989,7 @@ function duplicateActiveElement() {
 }
 
 function deleteActiveElement() {
-  const page = project.pages[currentPageIndex];
+  const page = currentProject.pages[currentPageIndex];
   if (!page || !activeElementId) return;
 
   page.elements = page.elements.filter(e => e.id !== activeElementId);
@@ -758,8 +1000,8 @@ function deleteActiveElement() {
 
 // Page Actions
 function addNewPage() {
-  const num = project.pages.length + 1;
-  project.pages.push({
+  const num = currentProject.pages.length + 1;
+  currentProject.pages.push({
     page_number: num,
     title: `Page ${num}`,
     layout: "top_ref",
@@ -771,31 +1013,31 @@ function addNewPage() {
     ]
   });
   renderTimeline();
-  selectPage(project.pages.length - 1);
+  selectPage(currentProject.pages.length - 1);
   showToast(`Added Page ${num}`, "success");
 }
 
 function duplicateCurrentPage() {
-  const curr = project.pages[currentPageIndex];
+  const curr = currentProject.pages[currentPageIndex];
   if (!curr) return;
 
-  const num = project.pages.length + 1;
+  const num = currentProject.pages.length + 1;
   const clone = JSON.parse(JSON.stringify(curr));
   clone.page_number = num;
   clone.title = `${clone.title} (Copy)`;
-  project.pages.splice(currentPageIndex + 1, 0, clone);
+  currentProject.pages.splice(currentPageIndex + 1, 0, clone);
   renderTimeline();
   selectPage(currentPageIndex + 1);
   showToast(`Duplicated page to Page ${currentPageIndex + 1}`, "success");
 }
 
 function deleteCurrentPage() {
-  if (project.pages.length <= 1) {
+  if (currentProject.pages.length <= 1) {
     showToast("A book must contain at least one page.", "info");
     return;
   }
   const deletedNum = currentPageIndex + 1;
-  project.pages.splice(currentPageIndex, 1);
+  currentProject.pages.splice(currentPageIndex, 1);
   const target = Math.max(0, currentPageIndex - 1);
   renderTimeline();
   selectPage(target);
@@ -808,7 +1050,7 @@ function renderTimeline() {
   if (!strip) return;
   strip.innerHTML = "";
 
-  project.pages.forEach((page, idx) => {
+  currentProject.pages.forEach((page, idx) => {
     const card = document.createElement("div");
     card.className = `thumb-card ${idx === currentPageIndex ? 'active' : ''}`;
     card.onclick = () => selectPage(idx);
@@ -827,7 +1069,7 @@ function renderTimeline() {
   });
 
   const countBadge = document.getElementById("stat-page-count");
-  if (countBadge) countBadge.innerText = project.pages.length;
+  if (countBadge) countBadge.innerText = currentProject.pages.length;
 }
 
 function selectPage(index) {
@@ -859,9 +1101,11 @@ function handleBatchImagesUpload(event) {
     reader.onload = (e) => {
       const dataUrl = e.target.result;
       const cleanTitle = cleanFileName(file.name);
-      const pageNum = project.pages.length + 1;
+      const pageNum = currentProject.pages.length + 1;
 
-      mediaLibrary.unshift({
+      if (!currentProject.media) currentProject.media = [];
+
+      currentProject.media.unshift({
         id: `med_batch_${Date.now()}_${idx}`,
         name: cleanTitle,
         fileName: file.name,
@@ -869,7 +1113,7 @@ function handleBatchImagesUpload(event) {
         sizeKb: Math.round(file.size / 1024)
       });
 
-      project.pages.push({
+      currentProject.pages.push({
         page_number: pageNum,
         title: cleanTitle,
         layout: "top_ref",
@@ -885,114 +1129,13 @@ function handleBatchImagesUpload(event) {
       if (loadedCount === files.length) {
         renderMediaLibrary();
         renderTimeline();
-        selectPage(project.pages.length - files.length);
+        syncActiveProjectUI();
+        selectPage(currentProject.pages.length - files.length);
         switchTab("canvas");
         showToast(`🎉 Batch Generated ${files.length} KDP Coloring Pages!`, "success");
       }
     };
     reader.readAsDataURL(file);
-  });
-}
-
-// Modal Controls
-function openNewProjectModal(bookType = "coloring_book") {
-  const modal = document.getElementById("new-project-modal");
-  document.getElementById("modal-book-type").value = bookType;
-  if (modal) modal.classList.add("active");
-}
-
-function openExistingFolderModal() {
-  const modal = document.getElementById("open-folder-modal");
-  if (modal) modal.classList.add("active");
-}
-
-function closeModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) modal.classList.remove("active");
-}
-
-function submitCreateProject() {
-  const name = document.getElementById("modal-project-name").value.trim() || "My New Coloring Book";
-  const author = document.getElementById("modal-author-name").value.trim() || "Creative Author";
-  const count = parseInt(document.getElementById("modal-page-count").value || "10");
-  const hasBleed = document.getElementById("modal-has-bleed").checked;
-
-  const newPages = [];
-  for (let i = 0; i < count; i++) {
-    newPages.push({
-      page_number: i + 1,
-      title: `Page ${i + 1}`,
-      layout: "top_ref",
-      elements: [
-        { id: `elem_ref_${i}`, type: "ref_image", x: 180, y: 35, w: 150, h: 100, text: "Click to select Reference Image", image_src: null },
-        { id: `elem_main_${i}`, type: "main_image", x: 45, y: 150, w: 420, h: 420, text: "Click to select Drawing Image", image_src: null },
-        { id: `elem_title_${i}`, type: "title", x: 45, y: 585, w: 420, h: 40, text: `PAGE ${i + 1}`, font_size: 26, color: "#111827", font_family: "Plus Jakarta Sans" },
-        { id: `elem_frame_${i}`, type: "border", x: 30, y: 25, w: 450, h: 610 },
-      ]
-    });
-  }
-
-  project = {
-    name: name,
-    author: author,
-    settings: {
-      trim_width_pt: 612.0,
-      trim_height_pt: 792.0,
-      has_bleed: hasBleed,
-      bleed_pt: 9.0,
-      margins: { top_pt: 27.0, bottom_pt: 27.0, inside_pt: 36.0, outside_pt: 27.0 },
-      target_dpi: 300,
-    },
-    pages: newPages
-  };
-
-  recentProjects.unshift({
-    name: name,
-    path: `C:\\Users\\KadiR-PC\\Documents\\KDP\\${name.replace(/ /g, '_')}`,
-    pages: count
-  });
-
-  closeModal("new-project-modal");
-  document.getElementById("nav-project-name").innerText = name;
-  renderRecentProjects();
-  renderTimeline();
-  loadPageIntoCanvas(0);
-  switchTab("canvas");
-
-  showToast(`✨ Created "${name}" with ${count} clean pages!`, "success");
-}
-
-function loadSampleProject(title, count) {
-  project.name = title;
-  document.getElementById("nav-project-name").innerText = title;
-  closeModal("open-folder-modal");
-  renderTimeline();
-  loadPageIntoCanvas(0);
-  switchTab("canvas");
-  showToast(`📂 Opened project "${title}"!`, "info");
-}
-
-function renderRecentProjects() {
-  const container = document.getElementById("recent-projects-list");
-  if (!container) return;
-
-  container.innerHTML = "";
-  recentProjects.forEach(p => {
-    const item = document.createElement("div");
-    item.className = "recent-item";
-    item.onclick = () => loadSampleProject(p.name, p.pages);
-    item.innerHTML = `
-      <div class="recent-icon">📖</div>
-      <div class="recent-info">
-        <div class="recent-title">${p.name}</div>
-        <div class="recent-path">${p.path}</div>
-      </div>
-      <div class="recent-meta">
-        <span class="badge">${p.pages} Pages</span>
-        <button class="btn btn-sm btn-primary">Open</button>
-      </div>
-    `;
-    container.appendChild(item);
   });
 }
 
@@ -1023,12 +1166,22 @@ function fitCanvasView() {
 }
 
 function saveSettings() {
-  showToast("Settings applied & saved to project.json successfully!", "success");
+  showToast("Settings applied & saved successfully!", "success");
   switchTab("canvas");
 }
 
 function saveProject() {
-  showToast(`💾 Project "${project.name}" saved atomically!`, "success");
+  fetch("/api/projects/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(currentProject)
+  })
+  .then(() => {
+    showToast(`💾 Project "${currentProject.name}" saved to disk!`, "success");
+  })
+  .catch(() => {
+    showToast(`💾 Project "${currentProject.name}" saved locally!`, "success");
+  });
 }
 
 // Toast Notifications

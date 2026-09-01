@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KDP Book Production Studio - Live Web Preview</title>
+  <title>KDP Book Production Studio - Project Workspace</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -26,13 +26,13 @@
       </div>
 
       <nav class="workflow-ribbon">
-        <button class="nav-btn" data-tab="dashboard">
+        <button class="nav-btn active" data-tab="dashboard">
           <span class="step-num">1</span> Dashboard
         </button>
         <button class="nav-btn" data-tab="settings">
           <span class="step-num">2</span> Book Settings
         </button>
-        <button class="nav-btn active" data-tab="canvas">
+        <button class="nav-btn" data-tab="canvas">
           <span class="step-num">3</span> Canvas Editor
         </button>
         <button class="nav-btn" data-tab="preflight">
@@ -44,9 +44,9 @@
       </nav>
 
       <div class="top-actions">
-        <div class="project-pill" id="current-project-pill">
+        <div class="project-pill" id="current-project-pill" onclick="switchTab('dashboard')" title="Click to Switch Project on Dashboard">
           <span class="status-dot"></span>
-          <span id="nav-project-name">Animal Kingdom Coloring Book</span>
+          <span id="nav-project-name">No Project Loaded</span>
         </div>
         <button class="btn btn-primary" id="btn-save-project" onclick="saveProject()">💾 Save Project</button>
       </div>
@@ -55,27 +55,26 @@
     <!-- Main Workspace Container -->
     <main class="main-content">
       
-      <!-- TAB 1: DASHBOARD -->
-      <section class="tab-panel" id="panel-dashboard">
+      <!-- TAB 1: DASHBOARD (FIRST SCREEN) -->
+      <section class="tab-panel active" id="panel-dashboard">
         <div class="dashboard-hero">
           <div class="hero-left">
             <div class="hero-tag">⚡ Automated Children's Book Creator</div>
             <h1>KDP Book Production Studio</h1>
-            <p>Rapidly generate, design, preflight, and export print-compliant Amazon KDP children's books and coloring workbooks with physical point accuracy.</p>
+            <p>Create dedicated local book projects with automated directory scaffolding, isolated media storage, physical point canvas editing, and KDP print compliance.</p>
             <div class="hero-buttons">
-              <button class="btn btn-lg btn-primary" id="dash-new-btn" onclick="openNewProjectModal()">✨ Create New Book</button>
-              <button class="btn btn-lg btn-secondary" onclick="triggerBatchUpload()">⚡ Batch Import Images</button>
-              <button class="btn btn-lg btn-outline" id="dash-open-btn" onclick="openExistingFolderModal()">📂 Open Existing Folder</button>
+              <button class="btn btn-lg btn-primary" id="dash-new-btn" onclick="openNewProjectModal()">✨ Create New Project</button>
+              <button class="btn btn-lg btn-outline" id="dash-open-btn" onclick="openExistingFolderModal()">📂 Open Existing Project</button>
             </div>
           </div>
           <div class="hero-stats">
             <div class="stat-card">
-              <div class="stat-num" id="stat-page-count">4</div>
+              <div class="stat-num" id="stat-page-count">0</div>
               <div class="stat-lbl">Active Pages</div>
             </div>
             <div class="stat-card">
-              <div class="stat-num">300 DPI</div>
-              <div class="stat-lbl">Target Resolution</div>
+              <div class="stat-num" id="stat-media-count">0</div>
+              <div class="stat-lbl">Project Media</div>
             </div>
             <div class="stat-card">
               <div class="stat-num" id="stat-trim-lbl">8.5 × 11 in</div>
@@ -85,51 +84,32 @@
         </div>
 
         <div class="dash-grid">
-          <!-- Book Types -->
+          <!-- Active Project Status Card -->
           <div class="dash-card">
             <div class="card-header">
-              <h3>Book Production Modules</h3>
-              <span class="sub-lbl">Modular Pluggable Subsystem</span>
+              <h3>Active Project Workspace</h3>
+              <span class="sub-lbl" id="active-proj-status-tag">Status</span>
             </div>
-            <div class="modules-grid">
-              <div class="module-item active">
-                <div class="mod-top">
-                  <span class="mod-icon">🎨</span>
-                  <span class="status-badge active">Active V1</span>
-                </div>
-                <h4>Coloring Book</h4>
-                <p>Reference preview thumbnails, black & white line art, bold titles & frame borders.</p>
-                <div class="btn-group-dual">
-                  <button class="btn btn-sm btn-primary" onclick="openNewProjectModal('coloring_book')">✨ New Coloring Book</button>
-                  <button class="btn btn-sm btn-outline" onclick="switchTab('canvas')">Open Canvas</button>
+            <div class="active-project-card-body" id="active-proj-display">
+              <div class="proj-banner-icon">📖</div>
+              <div class="proj-banner-info">
+                <h4 id="active-proj-title">No Project Loaded</h4>
+                <div class="proj-path-tag" id="active-proj-path">Please create or open a project below</div>
+                <div class="proj-meta-row" id="active-proj-meta">
+                  <span>Pages: 0</span> • <span>Trim: 8.5x11 in</span> • <span>Isolated Assets Folder</span>
                 </div>
               </div>
-              <div class="module-item disabled">
-                <div class="mod-top">
-                  <span class="mod-icon">✍️</span>
-                  <span class="status-badge">Coming Soon</span>
-                </div>
-                <h4>Tracing Book</h4>
-                <p>Alphabet, number, and word line-tracing worksheets for kids.</p>
-                <button class="btn btn-sm btn-disabled" onclick="alert('Tracing Book module is scheduled for future expansion!')">Preview Module</button>
-              </div>
-              <div class="module-item disabled">
-                <div class="mod-top">
-                  <span class="mod-icon">🧩</span>
-                  <span class="status-badge">Coming Soon</span>
-                </div>
-                <h4>Activity Book</h4>
-                <p>Mazes, spot-the-difference, counting, and matching sheets.</p>
-                <button class="btn btn-sm btn-disabled" onclick="alert('Activity Book module is scheduled for future expansion!')">Preview Module</button>
+              <div class="proj-banner-actions">
+                <button class="btn btn-primary full-width" onclick="switchTab('canvas')">Open Canvas Editor ➔</button>
               </div>
             </div>
           </div>
 
-          <!-- Recent Projects -->
+          <!-- Saved / Recent Projects List -->
           <div class="dash-card">
             <div class="card-header">
-              <h3>Recent Projects</h3>
-              <button class="btn-text" onclick="renderRecentProjects()">Refresh</button>
+              <h3>Local Projects Directory</h3>
+              <button class="btn-text" onclick="fetchRecentProjects()">Refresh</button>
             </div>
             <div class="recent-list" id="recent-projects-list">
               <!-- Rendered dynamically -->
@@ -213,10 +193,10 @@
       </section>
 
       <!-- TAB 3: CANVAS EDITOR WITH INTEGRATED MEDIA LIBRARY & LAYOUT SELECTOR -->
-      <section class="tab-panel active" id="panel-canvas">
+      <section class="tab-panel" id="panel-canvas">
         <div class="canvas-workspace">
           
-          <!-- Left Expandable Sidebar (Layouts & Media Library) -->
+          <!-- Left Expandable Sidebar (Layouts & Project-Isolated Media Library) -->
           <aside class="left-studio-drawer">
             <!-- Drawer Tabs Header -->
             <div class="drawer-tabs-header">
@@ -224,7 +204,7 @@
                 📐 Layouts
               </button>
               <button class="drawer-tab-btn" id="dtab-media" onclick="switchDrawerTab('media')">
-                📁 Media Library <span class="badge" id="media-count-badge">8</span>
+                📁 Project Media <span class="badge" id="media-count-badge">0</span>
               </button>
             </div>
 
@@ -312,20 +292,20 @@
               </div>
             </div>
 
-            <!-- DRAWER CONTENT 2: MEDIA LIBRARY -->
+            <!-- DRAWER CONTENT 2: PROJECT-ISOLATED MEDIA LIBRARY -->
             <div class="drawer-content" id="dcontent-media">
-              <div class="media-upload-top">
-                <button class="btn btn-primary full-width" onclick="triggerMediaUpload()">
-                  📤 Upload Images from PC
-                </button>
+              <div class="media-upload-dropzone" onclick="triggerMediaUpload()">
+                <div style="font-size: 24px; margin-bottom: 4px;">📤</div>
+                <h4>Upload Images for this Project</h4>
+                <p>Saved into this project's <code id="media-folder-hint">/assets</code> directory</p>
               </div>
 
               <div class="media-helper-note">
-                💡 <strong>How it works:</strong> Click any image below and choose whether to set it as <strong>1. Reference Image</strong>, <strong>2. Drawing Image</strong>, or <strong>3. Title Text</strong>!
+                💡 <strong>Click any box on canvas</strong> (Reference or Drawing) then click an uploaded image below to insert it!
               </div>
 
               <div class="media-items-list" id="media-items-list">
-                <!-- Rendered dynamically -->
+                <!-- Rendered dynamically for this project only -->
               </div>
             </div>
 
@@ -429,8 +409,8 @@
               <!-- Image Specific Properties -->
               <div class="prop-group" id="prop-image-group" style="display: none;">
                 <div class="group-title">Image Slot Controls</div>
-                <button class="btn btn-sm btn-primary full-width mb-2" onclick="switchDrawerTab('media')">📁 Choose from Media Library...</button>
-                <button class="btn btn-sm btn-outline full-width mt-2" onclick="triggerMediaUpload()">📤 Upload New Image File...</button>
+                <button class="btn btn-sm btn-primary full-width mb-2" onclick="switchDrawerTab('media')">📁 Choose from Project Media...</button>
+                <button class="btn btn-sm btn-outline full-width mt-2" onclick="triggerMediaUpload()">📤 Upload Image File...</button>
               </div>
 
               <!-- Text Specific Properties -->
@@ -560,8 +540,8 @@
               <div class="spread-page left-page">
                 <div class="page-header-num">Page 2</div>
                 <div class="spread-inner-content">
-                  <div class="mini-title">BABY ELEPHANT</div>
-                  <div class="mini-art-placeholder">🐘 Large Coloring Illustration</div>
+                  <div class="mini-title">Page 2</div>
+                  <div class="mini-art-placeholder">Page 2 Drawing Area</div>
                 </div>
               </div>
               
@@ -572,8 +552,8 @@
               <div class="spread-page right-page">
                 <div class="page-header-num">Page 3</div>
                 <div class="spread-inner-content">
-                  <div class="mini-title">PLAYFUL MONKEY</div>
-                  <div class="mini-art-placeholder">🐒 Large Coloring Illustration</div>
+                  <div class="mini-title">Page 3</div>
+                  <div class="mini-art-placeholder">Page 3 Drawing Area</div>
                 </div>
               </div>
             </div>
@@ -583,47 +563,61 @@
 
     </main>
 
-    <!-- MODAL 1: CREATE NEW BOOK WIZARD -->
+    <!-- MODAL 1: CREATE NEW BOOK WIZARD WITH CUSTOM FOLDER LOCATION -->
     <div class="modal-overlay" id="new-project-modal">
-      <div class="modal-card">
+      <div class="modal-card" style="width: 580px;">
         <div class="modal-header">
           <h3>✨ Create New KDP Book Project</h3>
           <button class="close-btn" onclick="closeModal('new-project-modal')">✕</button>
         </div>
         <div class="modal-body">
           <div class="form-row">
-            <label>Book Production Type</label>
-            <select id="modal-book-type" class="form-control">
-              <option value="coloring_book">🎨 Coloring Book (Active V1)</option>
-              <option value="tracing_book">✍️ Tracing Book (Coming Soon)</option>
-              <option value="activity_book">🧩 Activity Book (Coming Soon)</option>
-            </select>
+            <label>Project / Book Name</label>
+            <input type="text" id="modal-project-name" class="form-control" value="My Jungle Coloring Book" oninput="updateModalPathPreview()">
           </div>
+
+          <!-- Project Directory / Save Location Picker -->
           <div class="form-row">
-            <label>Project Title / Book Name</label>
-            <input type="text" id="modal-project-name" class="form-control" value="Dinosaur Adventure Coloring Book">
+            <label>Save Location (Project Root Folder)</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="modal-project-root" class="form-control" value="C:\Users\KadiR-PC\Documents\KDP_Studio_Projects" oninput="updateModalPathPreview()">
+              <button class="btn btn-sm btn-outline" onclick="browseProjectFolder()" style="white-space: nowrap;">Change...</button>
+            </div>
           </div>
-          <div class="form-row">
-            <label>Author / Brand Name</label>
-            <input type="text" id="modal-author-name" class="form-control" value="Creative Kids Studio">
+
+          <!-- Live Auto Folder Preview -->
+          <div class="path-preview-box">
+            <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+              Auto-Generated Project Directory:
+            </div>
+            <div class="path-preview-text" id="modal-full-path-preview">
+              📁 C:\Users\KadiR-PC\Documents\KDP_Studio_Projects\My_Jungle_Coloring_Book\
+            </div>
+            <div style="font-size: 11px; color: var(--secondary); margin-top: 4px;">
+              ✓ Will auto-create <code>project.json</code>, <code>/assets</code> (isolated media), and <code>/exports</code>
+            </div>
           </div>
-          <div class="form-row">
-            <label>KDP Trim Size</label>
-            <select id="modal-trim-preset" class="form-control">
-              <option value="8.5x11">8.5 x 11 in (Standard Coloring Book)</option>
-              <option value="8x10">8 x 10 in (Activity Book)</option>
-              <option value="8.5x8.5">8.5 x 8.5 in (Square Book)</option>
-              <option value="6x9">6 x 9 in (Trade)</option>
-            </select>
+
+          <div class="form-row-dual">
+            <div>
+              <label>KDP Trim Preset</label>
+              <select id="modal-trim-preset" class="form-control">
+                <option value="8.5x11">8.5 x 11 in (Standard Coloring)</option>
+                <option value="8x10">8 x 10 in (Activity Book)</option>
+                <option value="8.5x8.5">8.5 x 8.5 in (Square Book)</option>
+                <option value="6x9">6 x 9 in (Trade)</option>
+              </select>
+            </div>
+            <div>
+              <label>Initial Pages to Create</label>
+              <select id="modal-page-count" class="form-control">
+                <option value="10">10 Standard Pages</option>
+                <option value="25">25 Pages (KDP Paperback)</option>
+                <option value="50">50 Pages</option>
+              </select>
+            </div>
           </div>
-          <div class="form-row">
-            <label>Initial Pages to Generate</label>
-            <select id="modal-page-count" class="form-control">
-              <option value="10">10 Standard Pages</option>
-              <option value="25">25 Standard Pages (KDP Ready)</option>
-              <option value="50">50 Large Book Pages</option>
-            </select>
-          </div>
+
           <div class="form-row">
             <label class="checkbox-label">
               <input type="checkbox" id="modal-has-bleed" checked>
@@ -638,7 +632,7 @@
       </div>
     </div>
 
-    <!-- MODAL 2: OPEN EXISTING FOLDER -->
+    <!-- MODAL 2: OPEN EXISTING FOLDER / PROJECT -->
     <div class="modal-overlay" id="open-folder-modal">
       <div class="modal-card">
         <div class="modal-header">
@@ -647,36 +641,11 @@
         </div>
         <div class="modal-body">
           <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">
-            Select a project from your local offline directory or pick a recent sample workspace:
+            Select a project from your local directory:
           </p>
 
-          <div class="project-pick-list">
-            <div class="pick-item" onclick="loadSampleProject('Animal Kingdom Coloring Book', 4)">
-              <div class="pick-icon">🎨</div>
-              <div class="pick-text">
-                <div class="pick-title">Animal Kingdom Coloring Book</div>
-                <div class="pick-sub">4 pages • 8.5 x 11 in • Bleed: Active</div>
-              </div>
-              <button class="btn btn-sm btn-primary">Open</button>
-            </div>
-
-            <div class="pick-item" onclick="loadSampleProject('Cute Animals & Pets Coloring', 8)">
-              <div class="pick-icon">🐶</div>
-              <div class="pick-text">
-                <div class="pick-title">Cute Animals & Pets Coloring</div>
-                <div class="pick-sub">8 pages • 8.5 x 11 in • Bleed: Active</div>
-              </div>
-              <button class="btn btn-sm btn-primary">Open</button>
-            </div>
-
-            <div class="pick-item" onclick="loadSampleProject('Vehicle & Trucks Activity Book', 12)">
-              <div class="pick-icon">🚗</div>
-              <div class="pick-text">
-                <div class="pick-title">Vehicle & Trucks Activity Book</div>
-                <div class="pick-sub">12 pages • 8.5 x 11 in • Bleed: Active</div>
-              </div>
-              <button class="btn btn-sm btn-primary">Open</button>
-            </div>
+          <div class="project-pick-list" id="modal-project-pick-list">
+            <!-- Rendered dynamically from backend / localStorage -->
           </div>
         </div>
         <div class="modal-footer">
