@@ -1776,6 +1776,28 @@ function handleMediaLibraryUpload(event) {
   });
 }
 
+let mediaSortOrder = "name_asc";
+
+function onMediaSortChange() {
+  const select = document.getElementById("media-sort-select");
+  if (select) mediaSortOrder = select.value;
+  renderMediaLibrary();
+}
+
+function calculateAutoTitleFontSize(text, baseSize = 40) {
+  if (!text) return baseSize;
+  const clean = text.trim();
+  const len = clean.length;
+  // Short names (e.g., "DOG", "CAT", "LION", "COW", "BEAR", "FOX") -> 40px
+  if (len <= 5) return baseSize;
+  // Medium names (e.g., "RABBIT", "MONKEY", "TIGER", "PUPPY") -> 34px
+  if (len <= 7) return Math.min(baseSize, 34);
+  // Longer names (e.g., "ELEPHANT", "GIRAFFE", "DOLPHIN", "PENGUIN") -> 28px
+  if (len <= 9) return Math.min(baseSize, 28);
+  // Very long names (e.g., "HIPPOPOTAMUS", "TYRANNOSAURUS", "BUTTERFLY") -> 22px
+  return Math.min(baseSize, 22);
+}
+
 function renderMediaLibrary() {
   const container = document.getElementById("media-items-list");
   if (!container) return;
@@ -1798,7 +1820,19 @@ function renderMediaLibrary() {
     return;
   }
 
-  projectMedia.forEach(item => {
+  const sortSelect = document.getElementById("media-sort-select");
+  const sortMode = sortSelect ? sortSelect.value : mediaSortOrder;
+
+  let sortedMedia = [...projectMedia];
+  if (sortMode === "name_asc") {
+    sortedMedia.sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: 'base' }));
+  } else if (sortMode === "name_desc") {
+    sortedMedia.sort((a, b) => (b.name || "").localeCompare(a.name || "", undefined, { numeric: true, sensitivity: 'base' }));
+  } else if (sortMode === "oldest") {
+    sortedMedia.reverse();
+  }
+
+  sortedMedia.forEach(item => {
     const card = document.createElement("div");
     card.className = "media-card";
 
@@ -1863,8 +1897,8 @@ function applyMediaToSlot(mediaId, slotType) {
   if (slotType === "ref") {
     let refElem = page.elements.find(e => e.type === "ref_image");
     if (!refElem) {
-      refElem = { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 30, w: 155, h: 145, text: "" };
-      page.elements.unshift(refElem);
+      refElem = { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: labelText, image_src: null };
+      page.elements.push(refElem);
     }
     refElem.image_src = imgSrc;
     refElem.text = labelText;
@@ -1874,7 +1908,7 @@ function applyMediaToSlot(mediaId, slotType) {
   else if (slotType === "drawing") {
     let mainElem = page.elements.find(e => e.type === "main_image");
     if (!mainElem) {
-      mainElem = { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 190, w: 440, h: 440, text: "" };
+      mainElem = { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: labelText, image_src: null };
       page.elements.push(mainElem);
     }
     mainElem.image_src = imgSrc;
@@ -1884,14 +1918,22 @@ function applyMediaToSlot(mediaId, slotType) {
   } 
   else if (slotType === "title") {
     let titleElem = page.elements.find(e => e.type === "title");
+    const autoSize = calculateAutoTitleFontSize(item.name, 40);
+    const projFont = currentProject.settings?.default_font_family || "Fredoka";
+    const projOutline = currentProject.settings?.default_font_mode !== "solid";
+    const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
+    const projColor = currentProject.settings?.default_text_color || (projOutline ? "#ffffff" : "#111827");
+
     if (!titleElem) {
-      titleElem = { id: `elem_title_${Date.now()}`, type: "title", x: 210, y: 65, w: 265, h: 70, font_size: 38, color: "#ffffff", is_outline: true, font_family: "Plus Jakarta Sans" };
+      titleElem = { id: `elem_title_${Date.now()}`, type: "title", x: 235, y: 70, w: 240, h: 80, font_size: autoSize, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 };
       page.elements.push(titleElem);
+    } else {
+      titleElem.font_size = autoSize;
     }
     titleElem.text = item.name.toUpperCase();
     page.title = item.name;
     setActiveElement(titleElem.id);
-    showToast(`🔤 Set Title to "${item.name.toUpperCase()}"!`, "success");
+    showToast(`🔤 Set Title to "${item.name.toUpperCase()}" (Auto-adjusted: ${autoSize}pt)!`, "success");
   } 
   else if (slotType === "all") {
     let refElem = page.elements.find(e => e.type === "ref_image");
@@ -1907,6 +1949,7 @@ function applyMediaToSlot(mediaId, slotType) {
     let titleElem = page.elements.find(e => e.type === "title");
     if (titleElem) {
       titleElem.text = item.name.toUpperCase();
+      titleElem.font_size = calculateAutoTitleFontSize(item.name, 40);
     }
     page.title = item.name;
     showToast(`⚡ Filled Reference, Drawing, and Title with "${item.name}"!`, "success");
@@ -2089,8 +2132,9 @@ function loadPageIntoCanvas(index) {
     } else if (elem.type === "title") {
       elDiv.classList.add("elem-title-box");
       elDiv.innerText = elem.text || "Title";
+      const autoFontSize = calculateAutoTitleFontSize(elem.text || "", elem.font_size || 40);
       elDiv.style.fontFamily = `'${elem.font_family || "Fredoka"}', 'Plus Jakarta Sans', sans-serif`;
-      elDiv.style.fontSize = `${elem.font_size || 38}px`;
+      elDiv.style.fontSize = `${autoFontSize}px`;
       elDiv.style.letterSpacing = `${elem.letter_spacing !== undefined ? elem.letter_spacing : 2}px`;
       elDiv.style.textAlign = elem.alignment || "center";
 
@@ -2345,7 +2389,9 @@ function onPropChange() {
     const modeSelect = document.getElementById("prop-font-mode");
     if (modeSelect) elem.is_outline = (modeSelect.value === "outline");
     
-    elem.font_size = parseInt(document.getElementById("prop-font-size").value || 38);
+    const baseSizeInput = parseInt(document.getElementById("prop-font-size").value || 40);
+    const autoSize = calculateAutoTitleFontSize(elem.text, baseSizeInput);
+    elem.font_size = autoSize;
     
     const spacingSelect = document.getElementById("prop-letter-spacing");
     if (spacingSelect) elem.letter_spacing = parseInt(spacingSelect.value || 2);

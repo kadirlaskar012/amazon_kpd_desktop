@@ -366,6 +366,16 @@
                 <p>Saved into this project's <code id="media-folder-hint">/assets</code> directory</p>
               </div>
 
+              <div class="media-sort-bar" style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0 6px 0; padding: 0 4px;">
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">🔤 Sort Media:</span>
+                <select id="media-sort-select" class="form-control" style="font-size: 11px; padding: 4px 8px; width: 140px; height: auto;" onchange="onMediaSortChange()">
+                  <option value="name_asc" selected>🔤 Name (A → Z)</option>
+                  <option value="name_desc">🔤 Name (Z → A)</option>
+                  <option value="newest">🕒 Newest First</option>
+                  <option value="oldest">🕒 Oldest First</option>
+                </select>
+              </div>
+
               <div class="media-helper-note">
                 💡 <strong>Click any box on canvas</strong> (Reference or Drawing) then click an uploaded image below to insert it!
               </div>
@@ -457,21 +467,6 @@
                     <label>Height (in)</label>
                     <input type="number" id="prop-h" step="0.05" oninput="onPropChange()">
                   </div>
-                </div>
-              </div>
-
-              <div class="prop-group">
-                <div class="group-title">Quick Alignment</div>
-                <div class="align-btn-grid">
-                  <button class="btn btn-sm" onclick="alignActive('left')">⇤ Left</button>
-                  <button class="btn btn-sm" onclick="alignActive('center_h')">⇥ Center ⇤</button>
-                  <button class="btn btn-sm" onclick="alignActive('right')">Right ⇥</button>
-                  <button class="btn btn-sm" onclick="alignActive('top')">⤊ Top</button>
-                  <button class="btn btn-sm" onclick="alignActive('center_v')">⤋ Middle ⤊</button>
-                  <button class="btn btn-sm" onclick="alignActive('bottom')">Bottom ⤋</button>
-                </div>
-                <div class="align-fit-row">
-                  <button class="btn btn-sm btn-outline full-width" onclick="alignActive('fit_safe')">Fit to Safe Area</button>
                 </div>
               </div>
 
