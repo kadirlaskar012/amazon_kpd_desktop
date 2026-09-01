@@ -2031,7 +2031,7 @@ function openImageProcessingModal(totalFiles, title = "Optimizing Artwork for KD
   if (remVal) remVal.innerText = `${totalFiles}`;
   if (savedVal) savedVal.innerText = "0 KB";
 
-  modal.style.display = "flex";
+  modal.classList.add("active");
 }
 
 function updateImageProcessingProgress(currentIdx, totalFiles, fileName, stepText, totalKbSaved = 0) {
@@ -2076,8 +2076,8 @@ function closeImageProcessingModal() {
   const modal = document.getElementById("image-processing-modal");
   if (modal) {
     setTimeout(() => {
-      modal.style.display = "none";
-    }, 550);
+      modal.classList.remove("active");
+    }, 600);
   }
 }
 

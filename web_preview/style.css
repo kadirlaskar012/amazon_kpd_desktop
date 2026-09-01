@@ -2777,18 +2777,25 @@ kbd {
 
 /* =====================================================
    FULLSCREEN BLOCKING IMAGE OPTIMIZATION MODAL & RADIAL BAR
+/* =====================================================
+   FULLSCREEN BLOCKING IMAGE OPTIMIZATION MODAL & RADIAL BAR
 ===================================================== */
 .blocking-processing-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 999999;
-  background: rgba(5, 8, 22, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999999 !important;
+  background: rgba(5, 8, 22, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: all !important;
+  user-select: none !important;
+}
+
+.blocking-processing-overlay.active {
+  display: flex !important;
 }
 
 .processing-card {
