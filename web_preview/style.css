@@ -2741,16 +2741,225 @@ kbd {
   gap: 8px 16px;
 }
 
-.canvas-ws-word-badge {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  padding: 4px 10px;
+/* =====================================================
+   FULLSCREEN BLOCKING IMAGE OPTIMIZATION MODAL & RADIAL BAR
+===================================================== */
+.blocking-processing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: rgba(5, 8, 22, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.processing-card {
+  width: 480px;
+  max-width: 90vw;
+  background: linear-gradient(145deg, #0f172a, #1e1b4b);
+  border: 1.5px solid rgba(99, 102, 241, 0.4);
+  border-radius: 18px;
+  padding: 30px 26px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7), 0 0 50px rgba(99, 102, 241, 0.25);
+  text-align: center;
+  animation: procModalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes procModalPop {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.proc-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.proc-header h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.proc-header p {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-bottom: 18px;
+}
+
+/* Radial Progress Ring SVG */
+.radial-progress-container {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 18px auto;
+}
+
+.radial-progress-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.radial-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 9;
+}
+
+.radial-bar {
+  fill: none;
+  stroke: #6366f1;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-dasharray: 314.16;
+  stroke-dashoffset: 314.16;
+  transition: stroke-dashoffset 0.25s ease, stroke 0.3s ease;
+  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.7));
+}
+
+.radial-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.radial-pct {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+
+.radial-sub {
   font-size: 11px;
   font-weight: 700;
-  color: #1e293b;
-  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-top: -2px;
 }
+
+/* Status Box */
+.proc-status-box {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.proc-file-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.proc-file-icon {
+  font-size: 15px;
+}
+
+.proc-file-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.proc-step-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.spinner-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #38bdf8;
+  animation: pulseDot 1s infinite ease-in-out alternate;
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(0.8); opacity: 0.4; }
+  100% { transform: scale(1.4); opacity: 1; }
+}
+
+/* Metrics Badges Grid */
+.proc-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.proc-metric-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.proc-metric-badge .metric-icon {
+  font-size: 16px;
+}
+
+.proc-metric-badge .metric-lbl {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.proc-metric-badge .metric-val {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.proc-metric-badge.success .metric-val {
+  color: #4ade80;
+}
+
+.proc-metric-badge.warning .metric-val {
+  color: #fbbf24;
+}
+
+.proc-metric-badge.info .metric-val {
+  color: #60a5fa;
+}
+
+.proc-footer-note {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
 
 
 

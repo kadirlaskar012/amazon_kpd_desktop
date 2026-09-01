@@ -1121,6 +1121,73 @@
       </div>
     </div>
 
+    <!-- FULLSCREEN BLOCKING IMAGE OPTIMIZATION MODAL -->
+    <div class="modal-overlay blocking-processing-overlay" id="image-processing-modal" style="display: none;">
+      <div class="modal-card processing-card">
+        <div class="proc-header">
+          <div class="proc-badge">⚡ KDP Image Optimizer & Cleaner</div>
+          <h3 id="proc-title">Processing & Optimizing Artwork</h3>
+          <p id="proc-subtitle">Please wait while your images are automatically cleaned, cropped and compressed...</p>
+        </div>
+
+        <!-- Circular / Radial SVG Progress Ring -->
+        <div class="radial-progress-container">
+          <svg class="radial-progress-svg" viewBox="0 0 120 120">
+            <circle class="radial-bg" cx="60" cy="60" r="50"></circle>
+            <circle class="radial-bar" id="radial-progress-bar" cx="60" cy="60" r="50"></circle>
+          </svg>
+          <div class="radial-content">
+            <span class="radial-pct" id="radial-pct-text">0%</span>
+            <span class="radial-sub" id="radial-count-text">0 / 0</span>
+          </div>
+        </div>
+
+        <!-- Live Step & File Status -->
+        <div class="proc-status-box">
+          <div class="proc-file-indicator">
+            <span class="proc-file-icon">🖼️</span>
+            <span class="proc-file-name" id="proc-current-file">Preparing files...</span>
+          </div>
+          <div class="proc-step-pill" id="proc-current-step">
+            <span class="spinner-dot"></span> 🪄 [1/3] Removing Background & Purifying White (#FFFFFF)...
+          </div>
+        </div>
+
+        <!-- Metrics Summary Badges -->
+        <div class="proc-metrics-grid">
+          <div class="proc-metric-badge success">
+            <span class="metric-icon">✅</span>
+            <div>
+              <div class="metric-lbl">Completed</div>
+              <div class="metric-val" id="proc-metric-done">0</div>
+            </div>
+          </div>
+          <div class="proc-metric-badge warning">
+            <span class="metric-icon">⏳</span>
+            <div>
+              <div class="metric-lbl">Remaining</div>
+              <div class="metric-val" id="proc-metric-remaining">0</div>
+            </div>
+          </div>
+          <div class="proc-metric-badge info">
+            <span class="metric-icon">💾</span>
+            <div>
+              <div class="metric-lbl">Size Saved</div>
+              <div class="metric-val" id="proc-metric-saved">0 KB</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="proc-footer-note">
+          🔒 Screen interaction is locked during processing to ensure 100% data integrity.
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden File Inputs -->
+    <input type="file" id="media-library-upload-input" multiple accept="image/*" style="display: none;" onchange="handleMediaLibraryUpload(event)">
+    <input type="file" id="batch-import-upload-input" multiple accept="image/*" style="display: none;" onchange="handleBatchImportUpload(event)">
+
     <!-- TOAST NOTIFICATION CONTAINER -->
     <div class="toast-container" id="toast-container"></div>
 

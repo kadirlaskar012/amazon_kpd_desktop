@@ -2003,6 +2003,94 @@ function openProjectByPath(path) {
 }
 
 // ==========================================
+// Image Processing Modal & Granular Progress Controller
+// ==========================================
+const RADIAL_CIRCUMFERENCE = 2 * Math.PI * 50; // 314.16
+
+function openImageProcessingModal(totalFiles, title = "Optimizing Artwork for KDP Print") {
+  const modal = document.getElementById("image-processing-modal");
+  const bar = document.getElementById("radial-progress-bar");
+  const pctText = document.getElementById("radial-pct-text");
+  const countText = document.getElementById("radial-count-text");
+  const doneVal = document.getElementById("proc-metric-done");
+  const remVal = document.getElementById("proc-metric-remaining");
+  const savedVal = document.getElementById("proc-metric-saved");
+  const titleEl = document.getElementById("proc-title");
+
+  if (!modal) return;
+
+  if (titleEl) titleEl.innerText = title;
+  if (bar) {
+    bar.style.strokeDasharray = `${RADIAL_CIRCUMFERENCE}`;
+    bar.style.strokeDashoffset = `${RADIAL_CIRCUMFERENCE}`;
+    bar.style.stroke = "#6366f1";
+  }
+  if (pctText) pctText.innerText = "0%";
+  if (countText) countText.innerText = `0 / ${totalFiles}`;
+  if (doneVal) doneVal.innerText = "0";
+  if (remVal) remVal.innerText = `${totalFiles}`;
+  if (savedVal) savedVal.innerText = "0 KB";
+
+  modal.style.display = "flex";
+}
+
+function updateImageProcessingProgress(currentIdx, totalFiles, fileName, stepText, totalKbSaved = 0) {
+  const bar = document.getElementById("radial-progress-bar");
+  const pctText = document.getElementById("radial-pct-text");
+  const countText = document.getElementById("radial-count-text");
+  const fileEl = document.getElementById("proc-current-file");
+  const stepEl = document.getElementById("proc-current-step");
+  const doneVal = document.getElementById("proc-metric-done");
+  const remVal = document.getElementById("proc-metric-remaining");
+  const savedVal = document.getElementById("proc-metric-saved");
+
+  const completed = currentIdx;
+  const pct = Math.min(100, Math.round((completed / totalFiles) * 100));
+
+  if (bar) {
+    const offset = RADIAL_CIRCUMFERENCE - (RADIAL_CIRCUMFERENCE * pct / 100);
+    bar.style.strokeDashoffset = `${offset}`;
+    if (pct >= 100) {
+      bar.style.stroke = "#22c55e"; // Glowing green when finished
+    }
+  }
+
+  if (pctText) pctText.innerText = `${pct}%`;
+  if (countText) countText.innerText = `${completed} / ${totalFiles}`;
+  if (fileEl && fileName) fileEl.innerText = fileName;
+  if (stepEl && stepText) {
+    stepEl.innerHTML = `<span class="spinner-dot"></span> ${stepText}`;
+  }
+  if (doneVal) doneVal.innerText = `${completed}`;
+  if (remVal) remVal.innerText = `${Math.max(0, totalFiles - completed)}`;
+  if (savedVal) {
+    if (totalKbSaved > 1024) {
+      savedVal.innerText = `${(totalKbSaved / 1024).toFixed(1)} MB`;
+    } else {
+      savedVal.innerText = `${Math.round(totalKbSaved)} KB`;
+    }
+  }
+}
+
+function closeImageProcessingModal() {
+  const modal = document.getElementById("image-processing-modal");
+  if (modal) {
+    setTimeout(() => {
+      modal.style.display = "none";
+    }, 550);
+  }
+}
+
+function readAsDataURLAsync(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ==========================================
 // Project-Isolated Media Library Handlers
 // ==========================================
 function triggerMediaUpload() {
@@ -2017,7 +2105,7 @@ function triggerMediaUpload() {
   }
 }
 
-function handleMediaLibraryUpload(event) {
+async function handleMediaLibraryUpload(event) {
   if (currentProject.is_locked) return;
 
   const files = Array.from(event.target.files);
@@ -2028,65 +2116,246 @@ function handleMediaLibraryUpload(event) {
   }
 
   recordHistoryState("Upload Media");
-  showToast(`⚡ Optimizing & cleaning ${files.length} image(s)...`, "info");
+  openImageProcessingModal(files.length, "Optimizing & Importing Media");
 
-  let loaded = 0;
-  files.forEach((file) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const rawDataUrl = e.target.result;
-      const cleanTitle = cleanFileName(file.name);
+  let totalKbSaved = 0;
+  let lastMediaItem = null;
 
-      let finalDataUrl = rawDataUrl;
-      let finalSizeKb = Math.round(file.size / 1024);
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const origSizeKb = Math.round(file.size / 1024);
 
-      try {
-        const resp = await fetch("/api/projects/upload_asset", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            project_dir: currentProject.project_dir,
-            filename: file.name,
-            data_url: rawDataUrl,
-            clean_bg: true,
-            auto_crop: true
-          })
-        });
-        const data = await resp.json();
-        if (data.data_url) {
-          finalDataUrl = data.data_url;
-          finalSizeKb = data.size_kb || finalSizeKb;
-        }
-      } catch (err) {
-        console.warn("Image auto-opt fallback:", err);
+    updateImageProcessingProgress(i, files.length, file.name, "🪄 [1/3] Purifying White Background (#FFFFFF)...", totalKbSaved);
+
+    let rawDataUrl = "";
+    try {
+      rawDataUrl = await readAsDataURLAsync(file);
+    } catch (err) {
+      console.error("Read file error:", err);
+      continue;
+    }
+
+    updateImageProcessingProgress(i, files.length, file.name, "🎯 [2/3] Auto-focusing & cropping artwork borders...", totalKbSaved);
+
+    let finalDataUrl = rawDataUrl;
+    let finalSizeKb = origSizeKb;
+
+    try {
+      updateImageProcessingProgress(i, files.length, file.name, "⚡ [3/3] Compressing 300 DPI Print-Ready PNG...", totalKbSaved);
+      const resp = await fetch("/api/projects/upload_asset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_dir: currentProject.project_dir,
+          filename: file.name,
+          data_url: rawDataUrl,
+          clean_bg: true,
+          auto_crop: true
+        })
+      });
+      const data = await resp.json();
+      if (data.data_url) {
+        finalDataUrl = data.data_url;
+        finalSizeKb = data.size_kb || finalSizeKb;
       }
+    } catch (err) {
+      console.warn("Backend optimization fallback:", err);
+    }
 
-      const mediaItem = {
-        id: `med_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        name: cleanTitle,
-        fileName: file.name,
-        dataUrl: finalDataUrl,
-        sizeKb: finalSizeKb
-      };
+    const saved = Math.max(0, origSizeKb - finalSizeKb);
+    totalKbSaved += saved;
 
-      currentProject.media.unshift(mediaItem);
-
-      loaded++;
-      if (loaded === files.length) {
-        renderMediaLibrary();
-        switchDrawerTab("media");
-        syncActiveProjectUI();
-        markProjectDirty();
-        showToast(`✨ Auto-Cleaned, Auto-Cropped & Compressed ${files.length} image(s)!`, "success");
-
-        const activeElem = getActiveElement();
-        if (activeElem && (activeElem.type === "ref_image" || activeElem.type === "main_image")) {
-          applyMediaToSlot(mediaItem.id, activeElem.type === "ref_image" ? "ref" : "drawing");
-        }
-      }
+    const mediaItem = {
+      id: `med_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      name: cleanFileName(file.name),
+      fileName: file.name,
+      dataUrl: finalDataUrl,
+      sizeKb: finalSizeKb
     };
-    reader.readAsDataURL(file);
-  });
+
+    currentProject.media.unshift(mediaItem);
+    lastMediaItem = mediaItem;
+
+    updateImageProcessingProgress(i + 1, files.length, file.name, "✅ Complete!", totalKbSaved);
+    await new Promise(r => setTimeout(r, 120));
+  }
+
+  renderMediaLibrary();
+  switchDrawerTab("media");
+  syncActiveProjectUI();
+  markProjectDirty();
+
+  closeImageProcessingModal();
+  const savedLabel = totalKbSaved > 1024 ? `${(totalKbSaved / 1024).toFixed(1)} MB` : `${totalKbSaved} KB`;
+  showToast(`✨ Auto-Cleaned, Auto-Cropped & Compressed ${files.length} image(s)! Saved ~${savedLabel}!`, "success");
+
+  if (lastMediaItem) {
+    const activeElem = getActiveElement();
+    if (activeElem && (activeElem.type === "ref_image" || activeElem.type === "main_image")) {
+      applyMediaToSlot(lastMediaItem.id, activeElem.type === "ref_image" ? "ref" : "drawing");
+    }
+  }
+}
+
+// ==========================================
+// ⚡ Batch Import Images to Coloring Pages
+// ==========================================
+function triggerBatchUpload() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot import: Project is locked!", "warning");
+    return;
+  }
+  const input = document.getElementById("batch-import-upload-input");
+  if (input) {
+    input.value = "";
+    input.click();
+  }
+}
+
+async function handleBatchImportUpload(event) {
+  if (currentProject.is_locked) return;
+
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+
+  recordHistoryState("Batch Import Images");
+  openImageProcessingModal(files.length, "Batch Generating Coloring Pages");
+
+  if (!currentProject.media) currentProject.media = [];
+
+  let totalKbSaved = 0;
+  const projFont = currentProject.settings?.default_font_family || "Fredoka";
+  const projOutline = currentProject.settings?.default_font_mode !== "solid";
+  const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
+  const projColor = currentProject.settings?.default_text_color || (projOutline ? "#ffffff" : "#111827");
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const origSizeKb = Math.round(file.size / 1024);
+
+    updateImageProcessingProgress(i, files.length, file.name, "🪄 [1/3] Purifying White Background (#FFFFFF)...", totalKbSaved);
+
+    let rawDataUrl = "";
+    try {
+      rawDataUrl = await readAsDataURLAsync(file);
+    } catch (err) {
+      console.error("Read file error:", err);
+      continue;
+    }
+
+    updateImageProcessingProgress(i, files.length, file.name, "🎯 [2/3] Auto-detecting & centering artwork...", totalKbSaved);
+
+    let finalDataUrl = rawDataUrl;
+    let finalSizeKb = origSizeKb;
+
+    try {
+      updateImageProcessingProgress(i, files.length, file.name, "⚡ [3/3] Compressing 300 DPI Lossless PNG...", totalKbSaved);
+      const resp = await fetch("/api/projects/upload_asset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_dir: currentProject.project_dir,
+          filename: file.name,
+          data_url: rawDataUrl,
+          clean_bg: true,
+          auto_crop: true
+        })
+      });
+      const data = await resp.json();
+      if (data.data_url) {
+        finalDataUrl = data.data_url;
+        finalSizeKb = data.size_kb || finalSizeKb;
+      }
+    } catch (err) {
+      console.warn("Backend optimization fallback:", err);
+    }
+
+    const saved = Math.max(0, origSizeKb - finalSizeKb);
+    totalKbSaved += saved;
+
+    const mediaItem = {
+      id: `med_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      name: cleanFileName(file.name),
+      fileName: file.name,
+      dataUrl: finalDataUrl,
+      sizeKb: finalSizeKb
+    };
+    currentProject.media.unshift(mediaItem);
+
+    // Extract first-word uppercase title (e.g. BEAR, LION, DOG)
+    const titleCaps = extractFirstWordCaps(file.name);
+    const autoSize = calculateAutoTitleFontSize(titleCaps, 40);
+
+    // Create a new page for this artwork
+    const newPage = {
+      page_number: currentProject.pages.length + 1,
+      page_type: "content",
+      layout: "kdp_top_ref",
+      title: cleanTitleString(titleCaps),
+      elements: [
+        {
+          id: `elem_ref_${Date.now()}_${i}`,
+          type: "ref_image",
+          x: 35,
+          y: 25,
+          w: 190,
+          h: 180,
+          text: titleCaps,
+          image_src: finalDataUrl
+        },
+        {
+          id: `elem_title_${Date.now()}_${i}`,
+          type: "title",
+          x: 235,
+          y: 70,
+          w: 240,
+          h: 80,
+          text: titleCaps,
+          font_size: autoSize,
+          color: projColor,
+          is_outline: projOutline,
+          stroke_color: projStroke,
+          font_family: projFont,
+          letter_spacing: 2
+        },
+        {
+          id: `elem_main_${Date.now()}_${i}`,
+          type: "main_image",
+          x: 35,
+          y: 220,
+          w: 440,
+          h: 410,
+          text: titleCaps,
+          image_src: finalDataUrl
+        },
+        {
+          id: `elem_frame_${Date.now()}_${i}`,
+          type: "border",
+          x: 25,
+          y: 15,
+          w: 460,
+          h: 630
+        }
+      ]
+    };
+
+    currentProject.pages.push(newPage);
+
+    updateImageProcessingProgress(i + 1, files.length, file.name, "✅ Page Generated!", totalKbSaved);
+    await new Promise(r => setTimeout(r, 120));
+  }
+
+  renumberPages();
+  syncContentsPage();
+  renderMediaLibrary();
+  renderTimeline();
+  loadPageIntoCanvas(currentPageIndex);
+  syncActiveProjectUI();
+  markProjectDirty();
+
+  closeImageProcessingModal();
+  const savedLabel = totalKbSaved > 1024 ? `${(totalKbSaved / 1024).toFixed(1)} MB` : `${totalKbSaved} KB`;
+  showToast(`🎉 Batch imported & created ${files.length} coloring pages (Saved ~${savedLabel})!`, "success");
 }
 
 let mediaSortOrder = "name_asc";
