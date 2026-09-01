@@ -1,5 +1,5 @@
 /**
- * KDP Book Production Studio - Project Scaffolding, Auto-Save Protection & Keyboard Shortcuts
+ * KDP Book Production Studio - Project Workspace, Lock Protection & Deletion Engine
  */
 
 let defaultRootLocation = "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects";
@@ -10,6 +10,7 @@ let currentProject = {
   folder_name: "My_Jungle_Coloring_Book",
   project_dir: "C:\\Users\\KadiR-PC\\Documents\\KDP_Studio_Projects\\My_Jungle_Coloring_Book",
   author: "Creative Kids Studio",
+  is_locked: false,
   settings: {
     trim_width_pt: 612.0,   // 8.5 in * 72
     trim_height_pt: 792.0,  // 11.0 in * 72
@@ -82,7 +83,8 @@ let snapToGuides = true;
 // Auto-Save System State
 let isDirty = false;
 let autoSaveTimer = null;
-let renameTargetType = "page"; // "page" or "element" or "project"
+let renameTargetType = "page";
+let projectToDelete = null;
 
 // UI Initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -106,11 +108,11 @@ document.addEventListener("DOMContentLoaded", () => {
 // Auto-Save & Crash-Recovery System
 // ==========================================
 function markProjectDirty() {
+  if (currentProject.is_locked) return; // Do not modify locked project
   isDirty = true;
   updateAutoSaveIndicator(true);
 
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
-  // Debounced auto-save after 1.5 seconds of inactivity
   autoSaveTimer = setTimeout(() => {
     saveProject(false);
   }, 1500);
@@ -131,6 +133,11 @@ function updateAutoSaveIndicator(saving) {
 }
 
 function saveProject(isManual = false) {
+  if (currentProject.is_locked) {
+    if (isManual) showToast("🔒 Project is locked (Read-Only)!", "warning");
+    return;
+  }
+
   currentProject.updated_at = new Date().toISOString();
   
   // 1. Save to LocalStorage for instant browser crash recovery
@@ -172,7 +179,6 @@ function restoreAutoSavedProject() {
       const parsed = JSON.parse(saved);
       if (parsed && parsed.name && parsed.pages && parsed.pages.length > 0) {
         currentProject = parsed;
-        console.log("Restored project from auto-save state:", currentProject.name);
       }
     }
   } catch (e) {
@@ -181,14 +187,119 @@ function restoreAutoSavedProject() {
 }
 
 // ==========================================
-// Keyboard Shortcuts Engine (F2, Del, Arrows, Ctrl+S, Ctrl+D, Enter, etc.)
+// Project Lock / Unlock & Deletion Engine
+// ==========================================
+function toggleActiveProjectLock() {
+  currentProject.is_locked = !currentProject.is_locked;
+  syncActiveProjectUI();
+  saveProject(false);
+  fetchRecentProjects();
+  showToast(currentProject.is_locked ? `🔒 Locked "${currentProject.name}"!` : `🔓 Unlocked "${currentProject.name}"!`, "info");
+}
+
+function toggleProjectLock(path) {
+  fetch("/api/projects/toggle_lock", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (currentProject.project_dir === path) {
+      currentProject.is_locked = data.is_locked;
+      syncActiveProjectUI();
+    }
+    fetchRecentProjects();
+    showToast(data.is_locked ? "🔒 Project Locked!" : "🔓 Project Unlocked!", "info");
+  })
+  .catch(() => {
+    fetchRecentProjects();
+  });
+}
+
+function promptDeleteProject(path, name, isLocked) {
+  if (isLocked) {
+    showToast(`🔒 Cannot delete "${name}" because it is LOCKED! Please unlock it first.`, "warning");
+    return;
+  }
+
+  projectToDelete = { path, name };
+  const pathLabel = document.getElementById("delete-modal-project-path");
+  if (pathLabel) {
+    pathLabel.innerText = `📁 ${path}\\`;
+  }
+  const modal = document.getElementById("delete-project-modal");
+  if (modal) modal.classList.add("active");
+}
+
+function executeDeleteProject() {
+  if (!projectToDelete) return;
+
+  const targetPath = projectToDelete.path;
+  const targetName = projectToDelete.name;
+
+  fetch("/api/projects/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path: targetPath })
+  })
+  .then(r => r.json())
+  .then(res => {
+    closeModal("delete-project-modal");
+    if (res.error) {
+      showToast(`⚠️ ${res.error}`, "danger");
+      return;
+    }
+
+    showToast(`🗑 Permanently deleted "${targetName}" and all files!`, "success");
+    fetchRecentProjects();
+
+    // If active project was deleted, reset workspace
+    if (currentProject.project_dir === targetPath) {
+      currentProject = {
+        name: "New Untitled Book",
+        folder_name: "New_Untitled_Book",
+        project_dir: `${defaultRootLocation}\\New_Untitled_Book`,
+        author: "Author",
+        is_locked: false,
+        settings: {
+          trim_width_pt: 612.0,
+          trim_height_pt: 792.0,
+          has_bleed: true,
+          bleed_pt: 9.0,
+          margins: { top_pt: 27.0, bottom_pt: 27.0, inside_pt: 36.0, outside_pt: 27.0 },
+          target_dpi: 300,
+        },
+        media: [],
+        pages: []
+      };
+      syncActiveProjectUI();
+      switchTab("dashboard");
+    }
+  })
+  .catch(() => {
+    closeModal("delete-project-modal");
+    showToast(`Deleted project "${targetName}"!`, "info");
+    fetchRecentProjects();
+  });
+}
+
+function openCustomProjectFolder() {
+  const customPath = prompt("Enter or Paste Full Project Folder Path from any PC / Drive:", defaultRootLocation);
+  if (customPath && customPath.trim()) {
+    openProjectByPath(customPath.trim());
+  }
+}
+
+// ==========================================
+// Keyboard Shortcuts Engine
 // ==========================================
 function setupGlobalKeyboardShortcuts() {
   window.addEventListener("keydown", (e) => {
     const activeTagName = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
     const isInputActive = activeTagName === "input" || activeTagName === "textarea" || activeTagName === "select";
 
-    // 1. Ctrl + S / Cmd + S -> Manual Save
+    // 1. Ctrl + S -> Manual Save
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
       e.preventDefault();
       saveProject(true);
@@ -229,10 +340,7 @@ function setupGlobalKeyboardShortcuts() {
       return;
     }
 
-    // If typing in a text field, do not trigger canvas hotkeys
-    if (isInputActive) {
-      return;
-    }
+    if (isInputActive) return;
 
     // 5. Delete / Backspace -> Delete Selected Element
     if (e.key === "Delete" || e.key === "Backspace") {
@@ -243,12 +351,12 @@ function setupGlobalKeyboardShortcuts() {
       }
     }
 
-    // 6. Arrow Keys -> Nudge Selected Element (1px or 10px with Shift)
+    // 6. Arrow Keys -> Nudge Selected Element
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
       const elem = getActiveElement();
       if (elem) {
         e.preventDefault();
-        const step = e.shiftKey ? 10 : 1; // 10px fast nudge, 1px fine nudge
+        const step = e.shiftKey ? 10 : 1;
 
         if (e.key === "ArrowUp") elem.y = Math.max(0, elem.y - step);
         if (e.key === "ArrowDown") elem.y = Math.min(660 - elem.h, elem.y + step);
@@ -340,7 +448,6 @@ function submitRenameModal() {
     const page = currentProject.pages[currentPageIndex];
     if (page) {
       page.title = val;
-      // Also update any title element on the page
       const titleElem = page.elements.find(e => e.type === "title");
       if (titleElem) titleElem.text = val.toUpperCase();
       renderTimeline();
@@ -372,7 +479,7 @@ function openShortcutsModal() {
 }
 
 // ==========================================
-// Project File API & Default Location
+// Project File API & Directory Scaffolding
 // ==========================================
 function fetchDefaultLocation() {
   fetch("/api/default_location")
@@ -392,7 +499,7 @@ function fetchRecentProjects() {
   fetch("/api/projects")
     .then(r => r.json())
     .then(data => {
-      if (data.projects && data.projects.length > 0) {
+      if (data.projects) {
         recentProjectsList = data.projects;
       }
       renderRecentProjects();
@@ -407,15 +514,26 @@ function renderRecentProjects() {
   const modalPickList = document.getElementById("modal-project-pick-list");
 
   const renderItemHtml = (p) => `
-    <div class="recent-item" onclick="openProjectByPath('${p.path.replace(/\\/g, '\\\\')}')">
-      <div class="recent-icon">📁</div>
-      <div class="recent-info">
-        <div class="recent-title">${p.name}</div>
+    <div class="recent-item">
+      <div class="recent-icon">${p.is_locked ? '🔒' : '📁'}</div>
+      <div class="recent-info" onclick="openProjectByPath('${p.path.replace(/\\/g, '\\\\')}')">
+        <div class="recent-title">
+          <span>${p.name}</span>
+          ${p.is_locked ? '<span class="badge locked">LOCKED</span>' : '<span class="badge unlocked">UNLOCKED</span>'}
+        </div>
         <div class="recent-path">${p.path}</div>
       </div>
       <div class="recent-meta">
         <span class="badge">${p.page_count || 0} Pages</span>
-        <button class="btn btn-sm btn-primary">Open</button>
+        <button class="btn btn-sm btn-primary" onclick="openProjectByPath('${p.path.replace(/\\/g, '\\\\')}')">Open</button>
+        <button class="btn btn-sm btn-outline btn-icon-only" onclick="toggleProjectLock('${p.path.replace(/\\/g, '\\\\')}')" title="${p.is_locked ? 'Unlock Project' : 'Lock Project'}">
+          ${p.is_locked ? '🔓' : '🔒'}
+        </button>
+        <button class="btn btn-sm btn-danger btn-icon-only ${p.is_locked ? 'btn-disabled' : ''}" 
+          onclick="promptDeleteProject('${p.path.replace(/\\/g, '\\\\')}', '${p.name.replace(/'/g, "\\'")}', ${p.is_locked})" 
+          title="Delete Project Folder">
+          🗑
+        </button>
       </div>
     </div>
   `;
@@ -470,7 +588,7 @@ function switchDrawerTab(tabKey) {
 
 // Sync UI with currentProject state
 function syncActiveProjectUI() {
-  document.getElementById("nav-project-name").innerText = currentProject.name;
+  document.getElementById("nav-project-name").innerText = `${currentProject.is_locked ? '🔒 ' : ''}${currentProject.name}`;
   document.getElementById("active-proj-title").innerText = currentProject.name;
   document.getElementById("active-proj-path").innerText = `📁 ${currentProject.project_dir}`;
   document.getElementById("active-proj-meta").innerHTML = `
@@ -478,6 +596,17 @@ function syncActiveProjectUI() {
     <span>Media Items: ${currentProject.media ? currentProject.media.length : 0}</span> • 
     <span>Trim: 8.5x11 in</span>
   `;
+
+  const lockBadge = document.getElementById("active-proj-lock-badge");
+  if (lockBadge) {
+    lockBadge.className = `badge ${currentProject.is_locked ? 'locked' : 'unlocked'}`;
+    lockBadge.innerText = currentProject.is_locked ? "🔒 LOCKED" : "🔓 UNLOCKED";
+  }
+
+  const lockBtn = document.getElementById("active-lock-toggle-btn");
+  if (lockBtn) {
+    lockBtn.innerText = currentProject.is_locked ? "🔓 Unlock Project" : "🔒 Lock Project";
+  }
 
   document.getElementById("stat-page-count").innerText = currentProject.pages.length;
   document.getElementById("stat-media-count").innerText = currentProject.media ? currentProject.media.length : 0;
@@ -567,6 +696,7 @@ function submitCreateProject() {
     project_dir: projectDir,
     root_path: rootDir,
     author: "Creative Author",
+    is_locked: false,
     created_at: new Date().toISOString(),
     settings: {
       trim_width_pt: 612.0,
@@ -576,11 +706,10 @@ function submitCreateProject() {
       margins: { top_pt: 27.0, bottom_pt: 27.0, inside_pt: 36.0, outside_pt: 27.0 },
       target_dpi: 300,
     },
-    media: [], // Isolated empty media list for this new project
+    media: [],
     pages: initialPages
   };
 
-  // Call Server API to physically create directory & scaffolding on disk
   fetch("/api/projects/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -610,24 +739,41 @@ function finishProjectSetup(proj) {
 }
 
 function openProjectByPath(path) {
-  const found = recentProjectsList.find(p => p.path === path);
-  if (found) {
-    currentProject.name = found.name;
-    currentProject.project_dir = found.path;
-    currentProject.folder_name = found.path.split("\\").pop();
-    currentProject.media = [];
-  }
-  closeModal("open-folder-modal");
-  syncActiveProjectUI();
-  switchTab("canvas");
-  markProjectDirty();
-  showToast(`📂 Opened Project "${currentProject.name}"!`, "info");
+  fetch(`/api/projects/load?path=${encodeURIComponent(path)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.project) {
+        currentProject = data.project;
+      } else {
+        const found = recentProjectsList.find(p => p.path === path);
+        if (found) {
+          currentProject.name = found.name;
+          currentProject.project_dir = found.path;
+          currentProject.folder_name = found.path.split("\\").pop();
+          currentProject.is_locked = bool(found.is_locked);
+        }
+      }
+      closeModal("open-folder-modal");
+      syncActiveProjectUI();
+      switchTab("canvas");
+      showToast(`📂 Opened Project "${currentProject.name}"!`, "info");
+    })
+    .catch(() => {
+      closeModal("open-folder-modal");
+      syncActiveProjectUI();
+      switchTab("canvas");
+      showToast(`📂 Opened Project "${currentProject.name}"!`, "info");
+    });
 }
 
 // ==========================================
 // Project-Isolated Media Library Handlers
 // ==========================================
 function triggerMediaUpload() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot upload: Project is locked!", "warning");
+    return;
+  }
   const fileInput = document.getElementById("media-library-upload-input");
   if (fileInput) {
     fileInput.value = "";
@@ -636,6 +782,8 @@ function triggerMediaUpload() {
 }
 
 function handleMediaLibraryUpload(event) {
+  if (currentProject.is_locked) return;
+
   const files = Array.from(event.target.files);
   if (!files.length) return;
 
@@ -658,10 +806,8 @@ function handleMediaLibraryUpload(event) {
         sizeKb: Math.round(file.size / 1024)
       };
 
-      // Add to this project's isolated media array
       currentProject.media.unshift(mediaItem);
 
-      // Persist asset to disk inside project's /assets folder
       fetch("/api/projects/upload_asset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -680,7 +826,6 @@ function handleMediaLibraryUpload(event) {
         markProjectDirty();
         showToast(`📁 Uploaded ${files.length} image(s) into "${currentProject.folder_name}/assets"!`, "success");
 
-        // If an image slot was selected on canvas, auto-populate
         const activeElem = getActiveElement();
         if (activeElem && (activeElem.type === "ref_image" || activeElem.type === "main_image")) {
           applyMediaToSlot(mediaItem.id, activeElem.type === "ref_image" ? "ref" : "drawing");
@@ -759,6 +904,11 @@ function handleMediaCardClick(mediaId) {
 }
 
 function applyMediaToSlot(mediaId, slotType) {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    return;
+  }
+
   const item = (currentProject.media || []).find(m => m.id === mediaId);
   if (!item) return;
 
@@ -836,6 +986,11 @@ function cleanFileName(filename) {
 // Layout Templates Engine
 // ==========================================
 function applyPageLayout(layoutKey) {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot change layout: Project is locked!", "warning");
+    return;
+  }
+
   const page = currentProject.pages[currentPageIndex];
   if (!page) return;
 
@@ -947,7 +1102,6 @@ function loadPageIntoCanvas(index) {
     elDiv.style.width = `${elem.w}px`;
     elDiv.style.height = `${elem.h}px`;
 
-    // Inner element rendering with pure white background
     if (elem.type === "ref_image") {
       elDiv.classList.add("elem-ref-box");
       if (elem.image_src) {
@@ -990,7 +1144,6 @@ function loadPageIntoCanvas(index) {
       elDiv.classList.add("elem-border-box");
     }
 
-    // Handles for resizing
     elDiv.innerHTML += `
       <div class="handle tl" data-handle="tl"></div>
       <div class="handle tr" data-handle="tr"></div>
@@ -998,7 +1151,6 @@ function loadPageIntoCanvas(index) {
       <div class="handle br" data-handle="br"></div>
     `;
 
-    // Click selection
     elDiv.addEventListener("mousedown", (e) => {
       e.stopPropagation();
       setActiveElement(elem.id);
@@ -1026,6 +1178,8 @@ function setupCanvasInteractions() {
   if (!stage) return;
 
   stage.addEventListener("mousedown", (e) => {
+    if (currentProject.is_locked) return; // Read-only
+
     if (e.target.classList.contains("handle")) {
       isResizing = true;
       activeHandle = e.target.getAttribute("data-handle");
@@ -1061,7 +1215,7 @@ function setupCanvasInteractions() {
     }
 
     const elem = getActiveElement();
-    if (!elem) return;
+    if (!elem || currentProject.is_locked) return;
 
     const dx = (e.clientX - startX) / currentZoom;
     const dy = (e.clientY - startY) / currentZoom;
@@ -1166,6 +1320,8 @@ function updatePropertiesInspector() {
 }
 
 function onPropChange() {
+  if (currentProject.is_locked) return;
+
   const elem = getActiveElement();
   if (!elem) return;
 
@@ -1193,6 +1349,8 @@ function onPropChange() {
 
 // Alignment Functions
 function alignActive(mode) {
+  if (currentProject.is_locked) return;
+
   const elem = getActiveElement();
   if (!elem) return;
 
@@ -1219,6 +1377,11 @@ function alignActive(mode) {
 
 // Add Elements
 function addNewTextElement() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot add element: Project is locked!", "warning");
+    return;
+  }
+
   const page = currentProject.pages[currentPageIndex];
   if (!page) return;
 
@@ -1243,6 +1406,11 @@ function addNewTextElement() {
 }
 
 function addNewBorderElement() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot add element: Project is locked!", "warning");
+    return;
+  }
+
   const page = currentProject.pages[currentPageIndex];
   if (!page) return;
 
@@ -1264,6 +1432,8 @@ function addNewBorderElement() {
 }
 
 function duplicateActiveElement() {
+  if (currentProject.is_locked) return;
+
   const elem = getActiveElement();
   if (!elem) return;
 
@@ -1277,6 +1447,11 @@ function duplicateActiveElement() {
 }
 
 function deleteActiveElement() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot delete: Project is locked!", "warning");
+    return;
+  }
+
   const page = currentProject.pages[currentPageIndex];
   if (!page || !activeElementId) return;
 
@@ -1289,6 +1464,11 @@ function deleteActiveElement() {
 
 // Page Actions
 function addNewPage() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Project is locked!", "warning");
+    return;
+  }
+
   const num = currentProject.pages.length + 1;
   currentProject.pages.push({
     page_number: num,
@@ -1308,6 +1488,8 @@ function addNewPage() {
 }
 
 function duplicateCurrentPage() {
+  if (currentProject.is_locked) return;
+
   const curr = currentProject.pages[currentPageIndex];
   if (!curr) return;
 
@@ -1323,6 +1505,11 @@ function duplicateCurrentPage() {
 }
 
 function deleteCurrentPage() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Project is locked!", "warning");
+    return;
+  }
+
   if (currentProject.pages.length <= 1) {
     showToast("A book must contain at least one page.", "info");
     return;
@@ -1374,6 +1561,10 @@ function selectPage(index) {
 
 // Batch Ingestion
 function triggerBatchUpload() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot batch import: Project is locked!", "warning");
+    return;
+  }
   const fileInput = document.getElementById("batch-images-input");
   if (fileInput) {
     fileInput.value = "";
@@ -1382,6 +1573,8 @@ function triggerBatchUpload() {
 }
 
 function handleBatchImagesUpload(event) {
+  if (currentProject.is_locked) return;
+
   const files = Array.from(event.target.files);
   if (!files.length) return;
 

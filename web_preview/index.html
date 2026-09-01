@@ -69,7 +69,7 @@
           <div class="hero-left">
             <div class="hero-tag">⚡ Automated Children's Book Creator</div>
             <h1>KDP Book Production Studio</h1>
-            <p>Create dedicated local book projects with automated directory scaffolding, isolated media storage, physical point canvas editing, and crash-resilient auto-save protection.</p>
+            <p>Create self-contained, 100% portable book project folders with auto-save resilience, project lock protection, and physical directory scaffolding.</p>
             <div class="hero-buttons">
               <button class="btn btn-lg btn-primary" id="dash-new-btn" onclick="openNewProjectModal()">✨ Create New Project</button>
               <button class="btn btn-lg btn-outline" id="dash-open-btn" onclick="openExistingFolderModal()">📂 Open Existing Project</button>
@@ -96,7 +96,10 @@
           <div class="dash-card">
             <div class="card-header">
               <h3>Active Project Workspace</h3>
-              <span class="sub-lbl" id="active-proj-status-tag">Status</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge" id="active-proj-lock-badge">🔓 UNLOCKED</span>
+                <span class="sub-lbl" id="active-proj-status-tag">Ready</span>
+              </div>
             </div>
             <div class="active-project-card-body" id="active-proj-display">
               <div class="proj-banner-icon">📖</div>
@@ -104,11 +107,14 @@
                 <h4 id="active-proj-title">No Project Loaded</h4>
                 <div class="proj-path-tag" id="active-proj-path">Please create or open a project below</div>
                 <div class="proj-meta-row" id="active-proj-meta">
-                  <span>Pages: 0</span> • <span>Trim: 8.5x11 in</span> • <span>Isolated Assets Folder</span>
+                  <span>Pages: 0</span> • <span>Trim: 8.5x11 in</span> • <span>Self-Contained Portable Folder</span>
                 </div>
               </div>
               <div class="proj-banner-actions">
-                <button class="btn btn-primary full-width" onclick="switchTab('canvas')">Open Canvas Editor (Tab 3) ➔</button>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn btn-primary" style="flex: 1;" onclick="switchTab('canvas')">Open Canvas Editor ➔</button>
+                  <button class="btn btn-outline" id="active-lock-toggle-btn" onclick="toggleActiveProjectLock()">🔒 Lock Project</button>
+                </div>
               </div>
             </div>
           </div>
@@ -120,7 +126,7 @@
               <button class="btn-text" onclick="fetchRecentProjects()">Refresh</button>
             </div>
             <div class="recent-list" id="recent-projects-list">
-              <!-- Rendered dynamically -->
+              <!-- Rendered dynamically with Lock / Delete buttons -->
             </div>
           </div>
         </div>
@@ -506,7 +512,7 @@
             </div>
 
             <div class="check-item pass">
-              <div class="check-info">✓</div>
+              <div class="check-icon">✓</div>
               <div class="check-info">
                 <h4>Full Bleed Envelope Valid</h4>
                 <p>Outer bleed boundary is set to +0.125 in (9.0 pt) satisfying Amazon KDP color/interior guidelines.</p>
@@ -643,27 +649,55 @@
 
     <!-- MODAL 2: OPEN EXISTING FOLDER / PROJECT -->
     <div class="modal-overlay" id="open-folder-modal">
-      <div class="modal-card">
+      <div class="modal-card" style="width: 620px;">
         <div class="modal-header">
           <h3>📂 Open Project Workspace</h3>
           <button class="close-btn" onclick="closeModal('open-folder-modal')">✕</button>
         </div>
         <div class="modal-body">
           <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">
-            Select a project from your local directory:
+            Select a project from your local directory or open custom folder path:
           </p>
 
           <div class="project-pick-list" id="modal-project-pick-list">
-            <!-- Rendered dynamically from backend / localStorage -->
+            <!-- Rendered dynamically with Open, Lock, and Delete buttons -->
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-outline" onclick="closeModal('open-folder-modal')">Cancel</button>
+          <button class="btn btn-outline" onclick="openCustomProjectFolder()">📂 Open Custom Folder Path...</button>
         </div>
       </div>
     </div>
 
-    <!-- MODAL 3: RENAME DIALOG (F2 SHORTCUT) -->
+    <!-- MODAL 3: DELETE PROJECT CONFIRMATION MODAL -->
+    <div class="modal-overlay" id="delete-project-modal">
+      <div class="modal-card" style="width: 480px; border-color: var(--danger);">
+        <div class="modal-header" style="background-color: rgba(239, 68, 68, 0.15);">
+          <h3 style="color: var(--danger);">⚠️ Confirm Permanent Project Deletion</h3>
+          <button class="close-btn" onclick="closeModal('delete-project-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">
+            Are you sure you want to delete this entire project?
+          </p>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">
+            This action <strong style="color: var(--danger);">CANNOT</strong> be undone. All project files, uploaded images in <code style="color: var(--danger);">/assets</code>, page layouts, and <code style="color: var(--danger);">project.json</code> will be permanently removed from disk:
+          </p>
+
+          <div class="delete-warning-box">
+            <div style="font-size: 11px; font-weight: 700; color: var(--danger); text-transform: uppercase;">Project Directory to Erase:</div>
+            <div class="delete-target-path" id="delete-modal-project-path">📁 C:\Users\KadiR-PC\Documents\KDP_Studio_Projects\...</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('delete-project-modal')">Cancel</button>
+          <button class="btn btn-danger" id="confirm-delete-project-btn" onclick="executeDeleteProject()">🗑 Yes, Permanently Delete Project</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 4: RENAME DIALOG (F2 SHORTCUT) -->
     <div class="modal-overlay" id="rename-modal">
       <div class="modal-card" style="width: 440px;">
         <div class="modal-header">
@@ -683,7 +717,7 @@
       </div>
     </div>
 
-    <!-- MODAL 4: KEYBOARD SHORTCUTS CHEATSHEET -->
+    <!-- MODAL 5: KEYBOARD SHORTCUTS CHEATSHEET -->
     <div class="modal-overlay" id="shortcuts-modal">
       <div class="modal-card" style="width: 520px;">
         <div class="modal-header">

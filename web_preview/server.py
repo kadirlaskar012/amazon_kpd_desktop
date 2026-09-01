@@ -1,6 +1,6 @@
 """
-KDP Book Production Studio - Web Preview Server with Project & File System API.
-Serves the interactive web preview studio on http://localhost:8080 and handles local project persistence.
+KDP Book Production Studio - Web Preview Server with Project, Lock & Delete API.
+Serves the interactive web preview studio on http://localhost:8080 and handles local project persistence & portability.
 """
 
 import http.server
@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import base64
+import shutil
 import urllib.parse
 from pathlib import Path
 
@@ -47,8 +48,9 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
+        req_path = parsed.path.rstrip("/")
         
-        if parsed.path == "/api/default_location":
+        if req_path == "/api/default_location":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -59,7 +61,7 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(resp).encode("utf-8"))
             return
 
-        elif parsed.path == "/api/projects":
+        elif req_path == "/api/projects":
             # List all valid project directories in DEFAULT_PROJECTS_DIR
             projects = []
             if DEFAULT_PROJECTS_DIR.exists():
@@ -70,10 +72,13 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                                 data = json.load(f)
                             projects.append({
                                 "name": data.get("name", item.name),
+                                "folder_name": item.name,
                                 "path": str(item),
+                                "is_locked": bool(data.get("is_locked", False)),
                                 "page_count": len(data.get("pages", [])),
                                 "media_count": len(data.get("media", [])),
-                                "created_at": data.get("created_at", "")
+                                "created_at": data.get("created_at", ""),
+                                "updated_at": data.get("updated_at", "")
                             })
                         except Exception:
                             pass
@@ -83,10 +88,39 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({"projects": projects}).encode("utf-8"))
             return
 
+        elif req_path == "/api/projects/load":
+            query_params = urllib.parse.parse_qs(parsed.query)
+            raw_path = query_params.get("path", [""])[0]
+            if not raw_path:
+                self.send_response(400)
+                self.end_headers()
+                return
+
+            p = Path(raw_path).resolve()
+            json_file = p if p.name == "project.json" else p / "project.json"
+            if json_file.exists():
+                with open(json_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                data["project_dir"] = str(json_file.parent)
+                data["folder_name"] = json_file.parent.name
+                
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "project": data}).encode("utf-8"))
+                return
+            else:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"Project not found at {json_file}"}).encode("utf-8"))
+                return
+
         return super().do_GET()
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
+        req_path = parsed.path.rstrip("/")
         content_len = int(self.headers.get("Content-Length", 0))
         post_body = self.rfile.read(content_len)
 
@@ -95,16 +129,14 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
         except Exception:
             req_data = {}
 
-        if parsed.path == "/api/projects/create":
-            # Create physical project folder & subdirectories
+        if req_path == "/api/projects/create":
             proj_name = req_data.get("name", "Untitled Project").strip()
             folder_name = req_data.get("folder_name") or proj_name.replace(" ", "_")
             root_dir = Path(req_data.get("root_path") or DEFAULT_PROJECTS_DIR)
-            project_dir = root_dir / folder_name
+            project_dir = (root_dir / folder_name).resolve()
 
             ProjectStorage.initialize_project_directory(project_dir)
 
-            # Save initial project.json
             project_file = project_dir / "project.json"
             with open(project_file, "w", encoding="utf-8") as f:
                 json.dump(req_data, f, indent=2, ensure_ascii=False)
@@ -121,9 +153,8 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(resp).encode("utf-8"))
             return
 
-        elif parsed.path == "/api/projects/save":
-            # Save project state to disk
-            project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "My_Project"))
+        elif req_path == "/api/projects/save":
+            project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "My_Project")).resolve()
             project_dir.mkdir(parents=True, exist_ok=True)
             project_file = project_dir / "project.json"
 
@@ -136,9 +167,70 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "saved", "path": str(project_file)}).encode("utf-8"))
             return
 
-        elif parsed.path == "/api/projects/upload_asset":
-            # Save binary/base64 asset into project's assets/ folder
-            project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "Default"))
+        elif req_path == "/api/projects/toggle_lock":
+            raw_path = req_data.get("path", "")
+            p = Path(raw_path).resolve()
+            project_file = p if p.name == "project.json" else p / "project.json"
+
+            if project_file.exists():
+                with open(project_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                new_lock_state = not bool(data.get("is_locked", False))
+                data["is_locked"] = new_lock_state
+                with open(project_file, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "is_locked": new_lock_state}).encode("utf-8"))
+                return
+            else:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"File not found: {project_file}"}).encode("utf-8"))
+                return
+
+        elif req_path == "/api/projects/delete":
+            raw_path = req_data.get("path", "")
+            p = Path(raw_path).resolve()
+            project_dir = p.parent if p.name == "project.json" else p
+
+            if not project_dir.exists() or not project_dir.is_dir():
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": f"Directory not found: {project_dir}"}).encode("utf-8"))
+                return
+
+            project_file = project_dir / "project.json"
+            if project_file.exists():
+                with open(project_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if data.get("is_locked", False):
+                    self.send_response(403)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Project is locked and cannot be deleted."}).encode("utf-8"))
+                    return
+
+            try:
+                shutil.rmtree(project_dir)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "deleted", "path": str(project_dir)}).encode("utf-8"))
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                return
+
+        elif req_path == "/api/projects/upload_asset":
+            project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "Default")).resolve()
             assets_dir = project_dir / "assets"
             assets_dir.mkdir(parents=True, exist_ok=True)
 
