@@ -521,46 +521,79 @@ function onFrontMatterConfigChange() {
 }
 
 // ==========================================
-// Robust Initial Project Loader & Tab Memory
+// Robust Initial Project Loader & Empty Workspace Engine
 // ==========================================
-function loadInitialProject() {
-  try {
-    const cachedData = localStorage.getItem("kdp_active_project_data") || localStorage.getItem("kdp_autosave_current_project");
-    if (cachedData) {
-      const parsed = JSON.parse(cachedData);
-      if (parsed && parsed.name && parsed.pages && parsed.pages.length > 0) {
-        currentProject = parsed;
-      }
-    }
-  } catch (e) {
-    console.warn("Local cache read error:", e);
-  }
-
-  renumberPages();
+function clearActiveProject() {
+  localStorage.removeItem("kdp_active_project_path");
+  localStorage.removeItem("kdp_active_project_data");
+  localStorage.removeItem("kdp_autosave_current_project");
+  currentProject = {
+    name: "",
+    folder_name: "",
+    project_dir: "",
+    author: "",
+    is_locked: false,
+    is_empty: true,
+    settings: {
+      trim_width_pt: 612.0,
+      trim_height_pt: 792.0,
+      has_bleed: true,
+      bleed_pt: 9.0,
+      margins: { top_pt: 27.0, bottom_pt: 27.0, inside_pt: 36.0, outside_pt: 27.0 },
+      target_dpi: 300,
+    },
+    media: [],
+    pages: []
+  };
+  undoStack = [];
+  redoStack = [];
+  currentPageIndex = 0;
+  activeElementId = null;
+  updateUndoRedoButtons();
   syncActiveProjectUI();
-  loadPageIntoCanvas(currentPageIndex);
-  renderTimeline();
+}
 
-  const savedTab = localStorage.getItem("kdp_active_tab") || "canvas";
-  switchTab(savedTab);
+function loadInitialProject() {
+  fetchDefaultLocation();
 
-  const activePath = localStorage.getItem("kdp_active_project_path") || currentProject.project_dir;
-  if (activePath) {
-    fetch(`/api/projects/load?path=${encodeURIComponent(activePath)}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.project && data.project.pages && data.project.pages.length > 0) {
-          currentProject = data.project;
-          renumberPages();
-          syncActiveProjectUI();
-          loadPageIntoCanvas(currentPageIndex);
-          renderTimeline();
-          renderMediaLibrary();
-          if (savedTab === "preview") renderSpreadPreview();
-        }
-      })
-      .catch(() => {});
-  }
+  // Query real projects list from local disk
+  fetch("/api/projects")
+    .then(r => r.json())
+    .then(data => {
+      recentProjectsList = data.projects || [];
+      renderRecentProjects();
+
+      if (recentProjectsList.length === 0) {
+        // No projects on disk -> completely clear workspace & show dashboard
+        clearActiveProject();
+        switchTab("dashboard");
+        return;
+      }
+
+      // Check if last opened project still exists on disk
+      const savedPath = localStorage.getItem("kdp_active_project_path");
+      let matchedProj = null;
+      if (savedPath) {
+        const normSaved = savedPath.replace(/\\/g, "/").toLowerCase();
+        matchedProj = recentProjectsList.find(p => p.path.replace(/\\/g, "/").toLowerCase() === normSaved);
+      }
+
+      if (!matchedProj && recentProjectsList.length > 0) {
+        matchedProj = recentProjectsList[0];
+      }
+
+      if (matchedProj) {
+        openProjectByPath(matchedProj.path);
+      } else {
+        clearActiveProject();
+        switchTab("dashboard");
+      }
+    })
+    .catch(err => {
+      console.warn("Project directory query error:", err);
+      clearActiveProject();
+      switchTab("dashboard");
+    });
 }
 
 function markProjectDirty() {
@@ -1168,39 +1201,23 @@ function executeDeleteProject() {
     }
 
     showToast(`🗑 Permanently deleted "${targetName}" and all files!`, "success");
-    fetchRecentProjects();
 
-    if (currentProject.project_dir === targetPath) {
-      localStorage.removeItem("kdp_active_project_path");
-      localStorage.removeItem("kdp_active_project_data");
-      currentProject = {
-        name: "New Book Project",
-        folder_name: "New_Book_Project",
-        project_dir: `${defaultRootLocation}\\New_Book_Project`,
-        author: "Author",
-        is_locked: false,
-        settings: {
-          trim_width_pt: 612.0,
-          trim_height_pt: 792.0,
-          has_bleed: true,
-          bleed_pt: 9.0,
-          margins: { top_pt: 27.0, bottom_pt: 27.0, inside_pt: 36.0, outside_pt: 27.0 },
-          target_dpi: 300,
-        },
-        media: [],
-        pages: []
-      };
-      undoStack = [];
-      redoStack = [];
-      updateUndoRedoButtons();
-      syncActiveProjectUI();
+    const normTarget = (targetPath || "").replace(/\\/g, "/").toLowerCase();
+    const normCurrent = (currentProject.project_dir || "").replace(/\\/g, "/").toLowerCase();
+
+    if (normCurrent === normTarget || !currentProject.project_dir || currentProject.is_empty) {
+      clearActiveProject();
       switchTab("dashboard");
     }
+
+    fetchRecentProjects();
   })
   .catch(() => {
     closeModal("delete-project-modal");
     showToast(`Deleted project "${targetName}"!`, "info");
+    clearActiveProject();
     fetchRecentProjects();
+    switchTab("dashboard");
   });
 }
 
@@ -1498,10 +1515,24 @@ function fetchRecentProjects() {
   fetch("/api/projects")
     .then(r => r.json())
     .then(data => {
-      if (data.projects) {
-        recentProjectsList = data.projects;
-      }
+      recentProjectsList = data.projects || [];
       renderRecentProjects();
+
+      if (recentProjectsList.length === 0) {
+        clearActiveProject();
+      } else if (currentProject && currentProject.project_dir) {
+        const normCurrent = currentProject.project_dir.replace(/\\/g, "/").toLowerCase();
+        const exists = recentProjectsList.some(p => p.path.replace(/\\/g, "/").toLowerCase() === normCurrent);
+        if (!exists) {
+          openProjectByPath(recentProjectsList[0].path);
+        } else {
+          syncActiveProjectUI();
+        }
+      } else if (!currentProject || currentProject.is_empty) {
+        if (recentProjectsList.length > 0) {
+          openProjectByPath(recentProjectsList[0].path);
+        }
+      }
     })
     .catch(() => {
       renderRecentProjects();
@@ -1605,33 +1636,67 @@ function switchDrawerTab(tabKey) {
 
 // Sync UI with currentProject state
 function syncActiveProjectUI() {
+  const hasProject = Boolean(currentProject && currentProject.name && !currentProject.is_empty && currentProject.project_dir);
+
+  const navProjName = document.getElementById("nav-project-name");
+  if (navProjName) {
+    navProjName.innerText = hasProject 
+      ? `${currentProject.is_locked ? '🔒' : '🔓'} ${currentProject.name}`
+      : "No Active Project";
+  }
+
+  const activeDisplay = document.getElementById("active-proj-display");
+  const lockBadge = document.getElementById("active-proj-lock-badge");
+
+  if (!hasProject) {
+    if (lockBadge) lockBadge.style.display = "none";
+    if (activeDisplay) {
+      activeDisplay.innerHTML = `
+        <div style="text-align:center; padding: 28px 16px; color: var(--text-muted); width: 100%;">
+          <div style="font-size: 36px; margin-bottom: 8px;">📂</div>
+          <h4 style="color: var(--text-main); font-size: 15px; margin-bottom: 4px; font-weight: 700;">No Active Project</h4>
+          <p style="font-size: 12px; margin-bottom: 16px; color: var(--text-muted);">All projects have been deleted. Click below to create a new book project.</p>
+          <button class="btn btn-primary" onclick="openNewProjectModal()">✨ Create New Project</button>
+        </div>
+      `;
+    }
+    const statPages = document.getElementById("stat-page-count");
+    if (statPages) statPages.innerText = "0";
+    const statMedia = document.getElementById("stat-media-count");
+    if (statMedia) statMedia.innerText = "0";
+    return;
+  }
+
   const isLocked = Boolean(currentProject.is_locked);
   const lockIcon = isLocked ? "🔒" : "🔓";
   const lockText = isLocked ? "LOCKED" : "UNLOCKED";
   const lockBtnText = isLocked ? "🔓 Unlock Project" : "🔒 Lock Project";
 
-  const navProjName = document.getElementById("nav-project-name");
-  if (navProjName) {
-    navProjName.innerText = `${lockIcon} ${currentProject.name}`;
-  }
-
-  document.getElementById("active-proj-title").innerText = currentProject.name;
-  document.getElementById("active-proj-path").innerText = `📁 ${currentProject.project_dir}`;
-  document.getElementById("active-proj-meta").innerHTML = `
-    <span>Pages: ${currentProject.pages.length}</span> • 
-    <span>Author: ${currentProject.author || 'Creative Author'}</span> • 
-    <span>Trim: 8.5x11 in</span>
-  `;
-
-  const lockBadge = document.getElementById("active-proj-lock-badge");
   if (lockBadge) {
+    lockBadge.style.display = "inline-flex";
     lockBadge.className = `badge ${isLocked ? 'locked' : 'unlocked'}`;
     lockBadge.innerText = `${lockIcon} ${lockText}`;
   }
 
-  const lockBtn = document.getElementById("active-lock-toggle-btn");
-  if (lockBtn) {
-    lockBtn.innerText = lockBtnText;
+  if (activeDisplay) {
+    activeDisplay.innerHTML = `
+      <div class="proj-banner-icon">📖</div>
+      <div class="proj-banner-info">
+        <h4 id="active-proj-title">${currentProject.name}</h4>
+        <div class="proj-path-tag" id="active-proj-path">📁 ${currentProject.project_dir}</div>
+        <div class="proj-meta-row" id="active-proj-meta">
+          <span>Pages: ${(currentProject.pages || []).length}</span> • 
+          <span>Author: ${currentProject.author || 'Creative Author'}</span> • 
+          <span>Trim: 8.5x11 in</span>
+        </div>
+      </div>
+      <div class="proj-banner-actions">
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary" style="flex: 1;" onclick="switchTab('canvas')">Open Canvas Editor ➔</button>
+          <button class="btn btn-outline" id="active-lock-toggle-btn" onclick="toggleActiveProjectLock()">${lockBtnText}</button>
+        </div>
+      </div>
+    `;
   }
 
   const authorInput = document.getElementById("setting-author-name");
@@ -1647,8 +1712,10 @@ function syncActiveProjectUI() {
     isbnInput.value = currentProject.front_matter_config.isbn || "978-X-XXXXX-XXX-X";
   }
 
-  document.getElementById("stat-page-count").innerText = currentProject.pages.length;
-  document.getElementById("stat-media-count").innerText = currentProject.media ? currentProject.media.length : 0;
+  const statPages = document.getElementById("stat-page-count");
+  if (statPages) statPages.innerText = (currentProject.pages || []).length;
+  const statMedia = document.getElementById("stat-media-count");
+  if (statMedia) statMedia.innerText = currentProject.media ? currentProject.media.length : 0;
   
   const folderHint = document.getElementById("media-folder-hint");
   if (folderHint) folderHint.innerText = `${currentProject.folder_name}/assets`;
