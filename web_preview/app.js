@@ -75,10 +75,10 @@ let currentProject = {
       title: "Playful Lion",
       layout: "kdp_top_ref",
       elements: [
-        { id: "elem_ref_1", type: "ref_image", x: 35, y: 30, w: 155, h: 145, text: "Playful Lion Reference", image_src: null },
-        { id: "elem_title_1", type: "title", x: 210, y: 65, w: 265, h: 70, text: "LION", font_size: 38, color: "#ffffff", is_outline: true, font_family: "Plus Jakarta Sans" },
-        { id: "elem_main_1", type: "main_image", x: 35, y: 190, w: 440, h: 440, text: "Playful Lion Drawing", image_src: null },
-        { id: "elem_frame_1", type: "border", x: 25, y: 20, w: 460, h: 620 }
+        { id: "elem_ref_1", type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: "Playful Lion Reference", image_src: null },
+        { id: "elem_title_1", type: "title", x: 220, y: 70, w: 255, h: 75, text: "LION", font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+        { id: "elem_main_1", type: "main_image", x: 35, y: 200, w: 440, h: 430, text: "Playful Lion Drawing", image_src: null },
+        { id: "elem_frame_1", type: "border", x: 25, y: 15, w: 460, h: 630 }
       ]
     },
     {
@@ -94,10 +94,10 @@ let currentProject = {
       title: "Gentle Elephant",
       layout: "kdp_top_ref",
       elements: [
-        { id: "elem_ref_2", type: "ref_image", x: 35, y: 30, w: 155, h: 145, text: "Gentle Elephant Reference", image_src: null },
-        { id: "elem_title_2", type: "title", x: 210, y: 65, w: 265, h: 70, text: "ELEPHANT", font_size: 38, color: "#ffffff", is_outline: true, font_family: "Plus Jakarta Sans" },
-        { id: "elem_main_2", type: "main_image", x: 35, y: 190, w: 440, h: 440, text: "Gentle Elephant Drawing", image_src: null },
-        { id: "elem_frame_2", type: "border", x: 25, y: 20, w: 460, h: 620 }
+        { id: "elem_ref_2", type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: "Gentle Elephant Reference", image_src: null },
+        { id: "elem_title_2", type: "title", x: 220, y: 70, w: 255, h: 75, text: "ELEPHANT", font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+        { id: "elem_main_2", type: "main_image", x: 35, y: 200, w: 440, h: 430, text: "Gentle Elephant Drawing", image_src: null },
+        { id: "elem_frame_2", type: "border", x: 25, y: 15, w: 460, h: 630 }
       ]
     },
     {
@@ -1554,10 +1554,10 @@ function submitCreateProject() {
       title: `Page ${contentNum}`,
       layout: "kdp_top_ref",
       elements: [
-        { id: `elem_ref_${drawingPageNum}`, type: "ref_image", x: 35, y: 30, w: 155, h: 145, text: `Ref ${contentNum}`, image_src: null },
-        { id: `elem_title_${drawingPageNum}`, type: "title", x: 210, y: 65, w: 265, h: 70, text: `DRAWING ${contentNum}`, font_size: 38, color: "#ffffff", is_outline: true, font_family: "Plus Jakarta Sans" },
-        { id: `elem_main_${drawingPageNum}`, type: "main_image", x: 35, y: 190, w: 440, h: 440, text: `Drawing ${contentNum}`, image_src: null },
-        { id: `elem_frame_${drawingPageNum}`, type: "border", x: 25, y: 20, w: 460, h: 620 }
+        { id: `elem_ref_${drawingPageNum}`, type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: `Ref ${contentNum}`, image_src: null },
+        { id: `elem_title_${drawingPageNum}`, type: "title", x: 220, y: 70, w: 255, h: 75, text: `DRAWING ${contentNum}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+        { id: `elem_main_${drawingPageNum}`, type: "main_image", x: 35, y: 200, w: 440, h: 430, text: `Drawing ${contentNum}`, image_src: null },
+        { id: `elem_frame_${drawingPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
       ]
     });
 
@@ -1917,16 +1917,16 @@ function applyPageLayout(layoutKey) {
   if (layoutKey === "kdp_top_ref" || layoutKey === "top_ref") {
     page.page_type = "content";
     newElements = [
-      { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 30, w: 155, h: 145, text: "Reference Image", image_src: existingRefImg },
-      { id: `elem_title_${Date.now()}`, type: "title", x: 210, y: 65, w: 265, h: 70, text: existingTitle.toUpperCase(), font_size: 38, color: "#ffffff", is_outline: true, font_family: "Plus Jakarta Sans" },
-      { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 190, w: 440, h: 440, text: "Coloring Drawing", image_src: existingMainImg },
-      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 20, w: 460, h: 620 }
+      { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: "Reference Image", image_src: existingRefImg },
+      { id: `elem_title_${Date.now()}`, type: "title", x: 220, y: 70, w: 255, h: 75, text: existingTitle.toUpperCase(), font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+      { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 200, w: 440, h: 430, text: "Coloring Drawing", image_src: existingMainImg },
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
     ];
   } else if (layoutKey === "full_page") {
     page.page_type = "content";
     newElements = [
-      { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 35, w: 440, h: 580, text: "Full Page Drawing", image_src: existingMainImg || existingRefImg },
-      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 20, w: 460, h: 620 }
+      { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 25, w: 440, h: 605, text: "Full Page Drawing", image_src: existingMainImg || existingRefImg },
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
     ];
   } else if (layoutKey === "blank_page") {
     page.page_type = "blank_verso";
@@ -2034,18 +2034,20 @@ function loadPageIntoCanvas(index) {
       }
     } else if (elem.type === "title") {
       elDiv.classList.add("elem-title-box");
+      elDiv.innerText = elem.text || "Title";
+      elDiv.style.fontFamily = `'${elem.font_family || "Fredoka"}', 'Plus Jakarta Sans', sans-serif`;
+      elDiv.style.fontSize = `${elem.font_size || 38}px`;
+      elDiv.style.letterSpacing = `${elem.letter_spacing !== undefined ? elem.letter_spacing : 2}px`;
+      elDiv.style.textAlign = elem.alignment || "center";
+
       if (elem.is_outline !== false) {
         elDiv.classList.add("outline-style");
-      }
-      elDiv.innerText = elem.text || "Title";
-      elDiv.style.fontSize = `${elem.font_size || 28}px`;
-      if (!elem.is_outline) {
+        elDiv.style.color = elem.color || "#ffffff";
+        elDiv.style.webkitTextStroke = `2.5px ${elem.stroke_color || "#0f172a"}`;
+      } else {
+        elDiv.classList.remove("outline-style");
         elDiv.style.color = elem.color || "#111827";
-      }
-      if (elem.alignment === "center") {
-        elDiv.style.textAlign = "center";
-      } else if (elem.alignment === "left") {
-        elDiv.style.textAlign = "left";
+        elDiv.style.webkitTextStroke = "0px transparent";
       }
     } else if (elem.type === "tracing") {
       elDiv.classList.add("elem-tracing-box");
@@ -2211,7 +2213,7 @@ function applyElementStyles(elem) {
   elNode.style.height = `${elem.h}px`;
 }
 
-// Properties Inspector Data Binding
+// Properties Inspector Data Binding with Font Selector
 function updatePropertiesInspector() {
   const elem = getActiveElement();
   const titleBadge = document.getElementById("selected-type-badge");
@@ -2239,8 +2241,25 @@ function updatePropertiesInspector() {
     if (textGroup) textGroup.style.display = "block";
     if (imgGroup) imgGroup.style.display = "none";
     document.getElementById("prop-text-content").value = elem.text || "";
+    
+    const fontSelect = document.getElementById("prop-font-family");
+    if (fontSelect) fontSelect.value = elem.font_family || "Fredoka";
+    
+    const modeSelect = document.getElementById("prop-font-mode");
+    if (modeSelect) modeSelect.value = (elem.is_outline !== false) ? "outline" : "solid";
+    
     document.getElementById("prop-font-size").value = elem.font_size || 38;
-    document.getElementById("prop-color").value = elem.color || "#ffffff";
+    
+    const spacingSelect = document.getElementById("prop-letter-spacing");
+    if (spacingSelect) spacingSelect.value = String(elem.letter_spacing !== undefined ? elem.letter_spacing : 2);
+    
+    const alignSelect = document.getElementById("prop-text-align");
+    if (alignSelect) alignSelect.value = elem.alignment || "center";
+    
+    document.getElementById("prop-color").value = elem.color || (elem.is_outline ? "#ffffff" : "#111827");
+    
+    const strokeInput = document.getElementById("prop-stroke-color");
+    if (strokeInput) strokeInput.value = elem.stroke_color || "#0f172a";
   } else if (elem.type === "main_image" || elem.type === "ref_image") {
     if (textGroup) textGroup.style.display = "none";
     if (imgGroup) imgGroup.style.display = "block";
@@ -2265,15 +2284,42 @@ function onPropChange() {
 
   if (elem.type === "title") {
     elem.text = document.getElementById("prop-text-content").value;
+    
+    const fontSelect = document.getElementById("prop-font-family");
+    if (fontSelect) elem.font_family = fontSelect.value;
+    
+    const modeSelect = document.getElementById("prop-font-mode");
+    if (modeSelect) elem.is_outline = (modeSelect.value === "outline");
+    
     elem.font_size = parseInt(document.getElementById("prop-font-size").value || 38);
+    
+    const spacingSelect = document.getElementById("prop-letter-spacing");
+    if (spacingSelect) elem.letter_spacing = parseInt(spacingSelect.value || 2);
+    
+    const alignSelect = document.getElementById("prop-text-align");
+    if (alignSelect) elem.alignment = alignSelect.value;
+    
     elem.color = document.getElementById("prop-color").value;
+    
+    const strokeInput = document.getElementById("prop-stroke-color");
+    if (strokeInput) elem.stroke_color = strokeInput.value;
 
     const elNode = document.getElementById(elem.id);
     if (elNode) {
       elNode.innerText = elem.text;
+      elNode.style.fontFamily = `'${elem.font_family}', 'Plus Jakarta Sans', sans-serif`;
       elNode.style.fontSize = `${elem.font_size}px`;
-      if (!elem.is_outline) {
+      elNode.style.letterSpacing = `${elem.letter_spacing}px`;
+      elNode.style.textAlign = elem.alignment;
+      
+      if (elem.is_outline) {
+        elNode.classList.add("outline-style");
         elNode.style.color = elem.color;
+        elNode.style.webkitTextStroke = `2.5px ${elem.stroke_color}`;
+      } else {
+        elNode.classList.remove("outline-style");
+        elNode.style.color = elem.color;
+        elNode.style.webkitTextStroke = "0px transparent";
       }
     }
   }
@@ -2433,10 +2479,10 @@ function addNewPage() {
     title: `Page ${contentCount}`,
     layout: "kdp_top_ref",
     elements: [
-      { id: `elem_ref_${drawPageNum}`, type: "ref_image", x: 35, y: 30, w: 155, h: 145, text: `Ref ${contentCount}`, image_src: null },
-      { id: `elem_title_${drawPageNum}`, type: "title", x: 210, y: 65, w: 265, h: 70, text: `PAGE ${contentCount}`, font_size: 38, color: "#ffffff", is_outline: true, font_family: "Plus Jakarta Sans" },
-      { id: `elem_main_${drawPageNum}`, type: "main_image", x: 35, y: 190, w: 440, h: 440, text: `Drawing ${contentCount}`, image_src: null },
-      { id: `elem_frame_${drawPageNum}`, type: "border", x: 25, y: 20, w: 460, h: 620 }
+      { id: `elem_ref_${drawPageNum}`, type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: `Ref ${contentCount}`, image_src: null },
+      { id: `elem_title_${drawPageNum}`, type: "title", x: 220, y: 70, w: 255, h: 75, text: `PAGE ${contentCount}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+      { id: `elem_main_${drawPageNum}`, type: "main_image", x: 35, y: 200, w: 440, h: 430, text: `Drawing ${contentCount}`, image_src: null },
+      { id: `elem_frame_${drawPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
     ]
   });
 
@@ -2604,10 +2650,10 @@ function handleBatchImagesUpload(event) {
         title: cleanTitle,
         layout: "kdp_top_ref",
         elements: [
-          { id: `elem_ref_${Date.now()}_${idx}`, type: "ref_image", x: 35, y: 30, w: 155, h: 145, text: cleanTitle, image_src: dataUrl },
-          { id: `elem_title_${Date.now()}_${idx}`, type: "title", x: 210, y: 65, w: 265, h: 70, text: cleanTitle.toUpperCase(), font_size: 38, color: "#ffffff", is_outline: true, font_family: "Plus Jakarta Sans" },
-          { id: `elem_main_${Date.now()}_${idx}`, type: "main_image", x: 35, y: 190, w: 440, h: 440, text: cleanTitle, image_src: dataUrl },
-          { id: `elem_frame_${Date.now()}_${idx}`, type: "border", x: 25, y: 20, w: 460, h: 620 }
+          { id: `elem_ref_${Date.now()}_${idx}`, type: "ref_image", x: 35, y: 25, w: 175, h: 165, text: cleanTitle, image_src: dataUrl },
+          { id: `elem_title_${Date.now()}_${idx}`, type: "title", x: 220, y: 70, w: 255, h: 75, text: cleanTitle.toUpperCase(), font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
+          { id: `elem_main_${Date.now()}_${idx}`, type: "main_image", x: 35, y: 200, w: 440, h: 430, text: cleanTitle, image_src: dataUrl },
+          { id: `elem_frame_${Date.now()}_${idx}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
         ]
       });
 

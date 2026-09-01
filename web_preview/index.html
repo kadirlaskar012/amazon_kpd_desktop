@@ -6,7 +6,7 @@
   <title>KDP Book Production Studio - Project Workspace</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Fredoka:wght@600;700;900&family=Balsamiq+Sans:wght@700&family=Nunito:wght@800;900&family=Chewy&family=Short+Stack&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -454,39 +454,64 @@
 
               <!-- Text Specific Properties -->
               <div class="prop-group" id="prop-text-group" style="display: none;">
-                <div class="group-title">Typography & Text (F2 to Rename)</div>
+                <div class="group-title">Typography & Font Styler (F2)</div>
                 <div class="prop-field">
                   <label>Text Content</label>
                   <input type="text" id="prop-text-content" oninput="onPropChange()">
                 </div>
+                <div class="prop-field">
+                  <label>Font Family</label>
+                  <select id="prop-font-family" class="form-control" onchange="onPropChange()">
+                    <option value="Fredoka">🎈 Fredoka (Bubble Kids Font)</option>
+                    <option value="Balsamiq Sans">🎨 Balsamiq (Playful Cartoon)</option>
+                    <option value="Chewy">🍬 Chewy (Chunky Kids Font)</option>
+                    <option value="Short Stack">✏️ Short Stack (Handwritten)</option>
+                    <option value="Plus Jakarta Sans">⚡ Plus Jakarta (Modern Bold)</option>
+                    <option value="Nunito">🧸 Nunito (Chunky Rounded)</option>
+                    <option value="Impact">📢 Impact (Heavy Poster)</option>
+                    <option value="Georgia">📜 Georgia (Classic Storybook)</option>
+                  </select>
+                </div>
                 <div class="prop-grid-2">
                   <div class="prop-field">
-                    <label>Font Family</label>
-                    <select id="prop-font-family" onchange="onPropChange()">
-                      <option value="Plus Jakarta Sans">Plus Jakarta</option>
-                      <option value="Comic Sans MS">Comic Display</option>
-                      <option value="Arial">Arial</option>
-                      <option value="Impact">Impact Bold</option>
-                      <option value="Georgia">Georgia Serif</option>
+                    <label>Style Mode</label>
+                    <select id="prop-font-mode" class="form-control" onchange="onPropChange()">
+                      <option value="outline">🎨 Outline (Colorable)</option>
+                      <option value="solid">⬛ Solid Filled</option>
                     </select>
                   </div>
                   <div class="prop-field">
                     <label>Size (pt)</label>
-                    <input type="number" id="prop-font-size" value="28" min="8" max="144" oninput="onPropChange()">
+                    <input type="number" id="prop-font-size" value="38" min="10" max="144" oninput="onPropChange()">
                   </div>
                 </div>
                 <div class="prop-grid-2">
                   <div class="prop-field">
-                    <label>Color</label>
-                    <input type="color" id="prop-color" value="#111827" oninput="onPropChange()">
+                    <label>Letter Spacing</label>
+                    <select id="prop-letter-spacing" class="form-control" onchange="onPropChange()">
+                      <option value="0">Normal (0px)</option>
+                      <option value="2" selected>Medium (2px)</option>
+                      <option value="4">Wide (4px)</option>
+                      <option value="6">Extra Wide (6px)</option>
+                    </select>
                   </div>
                   <div class="prop-field">
                     <label>Alignment</label>
-                    <select id="prop-text-align" onchange="onPropChange()">
+                    <select id="prop-text-align" class="form-control" onchange="onPropChange()">
                       <option value="center">Center</option>
                       <option value="left">Left</option>
                       <option value="right">Right</option>
                     </select>
+                  </div>
+                </div>
+                <div class="prop-grid-2">
+                  <div class="prop-field">
+                    <label>Fill Color</label>
+                    <input type="color" id="prop-color" value="#ffffff" oninput="onPropChange()">
+                  </div>
+                  <div class="prop-field">
+                    <label>Stroke Color</label>
+                    <input type="color" id="prop-stroke-color" value="#0f172a" oninput="onPropChange()">
                   </div>
                 </div>
               </div>
