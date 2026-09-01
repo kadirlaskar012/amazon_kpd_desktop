@@ -1079,21 +1079,33 @@ function renderSpreadPreview() {
     }
 
     const titleEl = (page.elements || []).find(e => e.type === "title");
-    const mainEl = (page.elements || []).find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src);
     const refEl = (page.elements || []).find(e => e.type === "ref_image" && e.image_src);
+    const mainEl = (page.elements || []).find(e => e.type === "main_image" && e.image_src);
+    const dotEl = (page.elements || []).find(e => e.type === "dot_to_dot");
 
     const titleText = titleEl ? titleEl.text : (page.title || `PAGE ${page.page_number}`);
-    const imgContent = mainEl 
-      ? `<div class="spread-img-box"><img src="${mainEl.image_src}"></div>`
-      : `<div class="spread-img-placeholder"><span>🎨</span><span>Drawing Area</span></div>`;
+    
+    let imgContent = "";
+    if (dotEl || page.dot_to_dot) {
+      const dtData = dotEl ? dotEl.dot_data : page.dot_to_dot;
+      imgContent = `<div class="spread-img-box">${renderDotToDotSvgHtml(dtData, 280, 280, true)}</div>`;
+    } else if (mainEl && mainEl.image_src) {
+      // Coloring Book: Drawing is 100% Black & White Line Art
+      imgContent = `<div class="spread-img-box"><img src="${mainEl.image_src}" class="${isColoring ? 'spread-coloring-art' : ''}" style="width:100%;height:100%;object-fit:contain;" alt="Coloring Outline Art"></div>`;
+    } else if (refEl && refEl.image_src) {
+      // Fallback: If only 1 image attached, render as B&W coloring outline in main area
+      imgContent = `<div class="spread-img-box"><img src="${refEl.image_src}" class="${isColoring ? 'spread-coloring-art' : ''}" style="width:100%;height:100%;object-fit:contain;" alt="Coloring Outline Art"></div>`;
+    } else {
+      imgContent = `<div class="spread-img-placeholder"><span>🎨</span><span>Coloring Drawing Area</span></div>`;
+    }
 
     return `
       <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}">
         <div class="spread-page-header">Page ${page.page_number} • Drawing</div>
         <div class="spread-inner-content">
-          <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:6px;">
-            ${refEl ? `<div style="width:70px;height:55px;border:1px solid #e2e8f0;border-radius:4px;overflow:hidden;"><img src="${refEl.image_src}" style="width:100%;height:100%;object-fit:contain;"></div>` : ''}
-            <div class="spread-title-text" style="flex:1;text-align:center;">${titleText}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:8px;">
+            ${refEl ? `<div class="spread-ref-box" style="width:75px;height:60px;border:1.5px solid #cbd5e1;border-radius:6px;overflow:hidden;background:#ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.06);flex-shrink:0;"><img src="${refEl.image_src}" class="spread-ref-img" style="width:100%;height:100%;object-fit:contain;" alt="Color Reference"></div>` : ''}
+            <div class="spread-title-text" style="flex:1;text-align:center;font-family:'Fredoka',sans-serif;font-weight:900;font-size:24px;color:#ffffff;-webkit-text-stroke:2px #0f172a;letter-spacing:2px;">${titleText}</div>
           </div>
           ${imgContent}
         </div>

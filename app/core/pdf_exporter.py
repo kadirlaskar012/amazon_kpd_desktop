@@ -372,6 +372,13 @@ class KDPPdfExporter:
                                     bg.paste(img, mask=img.split()[3] if len(img.split()) == 4 else None)
                                     img = bg
 
+                                # In Coloring Books: Drawing Area is 100% Black & White Line Art, Ref Thumbnail is Color
+                                if elem_type == "main_image" and (getattr(doc, "book_type", "") == "coloring_book" or getattr(doc, "interior_type", "") == "black_white"):
+                                    from PIL import ImageEnhance
+                                    gray = img.convert("L")
+                                    enhancer = ImageEnhance.Contrast(gray)
+                                    img = enhancer.enhance(2.8).convert("RGB")
+
                                 img_buffer = io.BytesIO()
                                 img.save(img_buffer, format="JPEG", quality=95, dpi=(300, 300))
                                 img_buffer.seek(0)
