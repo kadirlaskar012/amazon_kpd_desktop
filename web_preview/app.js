@@ -1764,6 +1764,16 @@ function setupGlobalKeyboardShortcuts() {
     const activeTagName = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
     const isInputActive = activeTagName === "input" || activeTagName === "textarea" || activeTagName === "select";
 
+    // Free Transform Mode: Ctrl+T (or Cmd+T)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "t") {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isInputActive) {
+        toggleTransformMode();
+      }
+      return;
+    }
+
     // Undo: Ctrl+Z (or Cmd+Z)
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
       if (!isInputActive) {
@@ -1784,6 +1794,12 @@ function setupGlobalKeyboardShortcuts() {
     }
 
     if (e.key === "Enter") {
+      if (isTransformMode) {
+        e.preventDefault();
+        commitTransform();
+        return;
+      }
+
       const renameModal = document.getElementById("rename-modal");
       if (renameModal && renameModal.classList.contains("active")) {
         e.preventDefault();
@@ -1845,6 +1861,11 @@ function setupGlobalKeyboardShortcuts() {
     }
 
     if (e.key === "Escape") {
+      if (isTransformMode) {
+        e.preventDefault();
+        cancelTransform();
+        return;
+      }
       const openModal = document.querySelector(".modal-overlay.active");
       if (openModal) {
         openModal.classList.remove("active");
@@ -4608,6 +4629,10 @@ function loadPageIntoCanvas(index) {
       }
       elDiv.ondblclick = (e) => {
         e.stopPropagation();
+        if (isTransformMode && transformElementId === elem.id) {
+          commitTransform();
+          return;
+        }
         setActiveElement(elem.id);
         triggerMediaUpload();
       };
@@ -4626,6 +4651,10 @@ function loadPageIntoCanvas(index) {
       }
       elDiv.ondblclick = (e) => {
         e.stopPropagation();
+        if (isTransformMode && transformElementId === elem.id) {
+          commitTransform();
+          return;
+        }
         setActiveElement(elem.id);
         triggerMediaUpload();
       };
@@ -4677,10 +4706,22 @@ function loadPageIntoCanvas(index) {
       elDiv.classList.add("elem-border-box");
     }
 
+    if (elem.type === "ref_image" || elem.type === "main_image" || elem.type === "image") {
+      elDiv.classList.add("is-image-elem");
+    }
+
+    if (isTransformMode && elem.id === transformElementId) {
+      elDiv.classList.add("transform-mode");
+    }
+
     elDiv.insertAdjacentHTML("beforeend", `
       <div class="handle tl" data-handle="tl"></div>
+      <div class="handle tc" data-handle="tc"></div>
       <div class="handle tr" data-handle="tr"></div>
+      <div class="handle ml" data-handle="ml"></div>
+      <div class="handle mr" data-handle="mr"></div>
       <div class="handle bl" data-handle="bl"></div>
+      <div class="handle bc" data-handle="bc"></div>
       <div class="handle br" data-handle="br"></div>
     `);
 
@@ -4888,7 +4929,117 @@ function loadPageIntoCanvas(index) {
   }
 }
 
-// Drag & Resize Canvas Interactions with Undo History (Throttled with requestAnimationFrame)
+// ==========================================
+// Canvas Image Free Transform (Ctrl+T) Engine
+// ==========================================
+let isTransformMode = false;
+let transformElementId = null;
+let preTransformState = null;
+
+function isImageElement(elem) {
+  if (!elem) return false;
+  return elem.type === "ref_image" || elem.type === "main_image" || elem.type === "image";
+}
+
+function enterTransformMode(elemId = null) {
+  if (isCanvasLayoutLocked) {
+    showToast("🔒 Canvas layout is locked. Click Unlock to transform elements.", "warning");
+    return;
+  }
+  const targetId = elemId || activeElementId;
+  if (!targetId) {
+    showToast("⚠️ Select an image on the canvas first to transform", "info");
+    return;
+  }
+
+  const elem = getActiveElement();
+  if (!elem) return;
+
+  // Make sure target is active
+  setActiveElement(targetId);
+
+  isTransformMode = true;
+  transformElementId = targetId;
+  preTransformState = { x: elem.x, y: elem.y, w: elem.w, h: elem.h };
+
+  const elNode = document.getElementById(targetId);
+  if (elNode) {
+    elNode.classList.add("transform-mode");
+  }
+
+  updateTransformUI();
+  showToast("📐 Free Transform: Hold Shift for Uniform Scale | Drag to Move | Enter=Apply | Esc=Cancel", "info");
+}
+
+function commitTransform() {
+  if (!isTransformMode || !transformElementId) return;
+
+  const elem = getActiveElement();
+  if (elem && preTransformState) {
+    if (elem.x !== preTransformState.x || elem.y !== preTransformState.y || elem.w !== preTransformState.w || elem.h !== preTransformState.h) {
+      recordHistoryState("Transform Image");
+      markProjectDirty();
+      showToast("✓ Image transform applied", "success");
+    }
+  }
+
+  exitTransformModeClean();
+}
+
+function cancelTransform() {
+  if (!isTransformMode || !transformElementId) return;
+
+  const elem = getActiveElement();
+  if (elem && preTransformState) {
+    elem.x = preTransformState.x;
+    elem.y = preTransformState.y;
+    elem.w = preTransformState.w;
+    elem.h = preTransformState.h;
+    applyElementStyles(elem);
+    updatePropertiesInspector();
+    showToast("✕ Transform cancelled (reverted)", "info");
+  }
+
+  exitTransformModeClean();
+}
+
+function exitTransformModeClean() {
+  if (transformElementId) {
+    const elNode = document.getElementById(transformElementId);
+    if (elNode) elNode.classList.remove("transform-mode");
+  }
+  isTransformMode = false;
+  transformElementId = null;
+  preTransformState = null;
+  updateTransformUI();
+}
+
+function toggleTransformMode(force = null) {
+  const targetState = force !== null ? force : !isTransformMode;
+  if (targetState) {
+    enterTransformMode();
+  } else {
+    commitTransform();
+  }
+}
+
+function updateTransformUI() {
+  const floatingBadge = document.getElementById("canvas-transform-badge");
+  const inactiveControls = document.getElementById("transform-controls-inactive");
+  const activeControls = document.getElementById("transform-controls-active");
+
+  if (floatingBadge) {
+    floatingBadge.style.display = isTransformMode ? "inline-flex" : "none";
+  }
+  if (inactiveControls) {
+    inactiveControls.style.display = isTransformMode ? "none" : "block";
+  }
+  if (activeControls) {
+    activeControls.style.display = isTransformMode ? "block" : "none";
+  }
+}
+
+// Drag & Resize Canvas Interactions with Free Transform Engine (Ctrl+T)
 function setupCanvasInteractions() {
   let isDragging = false;
   let isResizing = false;
@@ -4898,6 +5049,7 @@ function setupCanvasInteractions() {
   let hasMoved = false;
   let mouseMoveRaf = null;
   let lastClientX = 0, lastClientY = 0;
+  let lastShiftKey = false;
 
   const stage = document.getElementById("canvas-stage");
   if (!stage) return;
@@ -4954,7 +5106,6 @@ function setupCanvasInteractions() {
 
     if (isDragging) {
       if (!hasMoved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
-        recordHistoryState("Move Element");
         hasMoved = true;
       }
       elem.x = Math.max(0, Math.min(510 - elem.w, Math.round(elemStart.x + dx)));
@@ -4963,26 +5114,85 @@ function setupCanvasInteractions() {
       updateInspectorCoordsFast(elem);
     } else if (isResizing) {
       if (!hasMoved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
-        recordHistoryState("Resize Element");
         hasMoved = true;
       }
-      if (activeHandle === "br") {
-        elem.w = Math.max(30, Math.round(elemStart.w + dx));
-        elem.h = Math.max(30, Math.round(elemStart.h + dy));
-      } else if (activeHandle === "bl") {
-        elem.w = Math.max(30, Math.round(elemStart.w - dx));
-        elem.x = Math.round(elemStart.x + dx);
-        elem.h = Math.max(30, Math.round(elemStart.h + dy));
-      } else if (activeHandle === "tr") {
-        elem.w = Math.max(30, Math.round(elemStart.w + dx));
-        elem.h = Math.max(30, Math.round(elemStart.h - dy));
-        elem.y = Math.round(elemStart.y + dy);
-      } else if (activeHandle === "tl") {
-        elem.w = Math.max(30, Math.round(elemStart.w - dx));
-        elem.h = Math.max(30, Math.round(elemStart.h - dy));
-        elem.x = Math.round(elemStart.x + dx);
-        elem.y = Math.round(elemStart.y + dy);
+      const isUniform = lastShiftKey;
+      const aspect = (elemStart.w > 0 && elemStart.h > 0) ? (elemStart.w / elemStart.h) : 1.0;
+
+      if (isUniform) {
+        // Uniform / Proportional scaling (Shift pressed)
+        if (activeHandle === "br") {
+          const scale = Math.max(0.08, Math.max((elemStart.w + dx) / elemStart.w, (elemStart.h + dy) / elemStart.h));
+          elem.w = Math.max(30, Math.round(elemStart.w * scale));
+          elem.h = Math.max(30, Math.round(elem.w / aspect));
+        } else if (activeHandle === "bl") {
+          const scale = Math.max(0.08, Math.max((elemStart.w - dx) / elemStart.w, (elemStart.h + dy) / elemStart.h));
+          const newW = Math.max(30, Math.round(elemStart.w * scale));
+          const newH = Math.max(30, Math.round(newW / aspect));
+          elem.x = elemStart.x + (elemStart.w - newW);
+          elem.w = newW;
+          elem.h = newH;
+        } else if (activeHandle === "tr") {
+          const scale = Math.max(0.08, Math.max((elemStart.w + dx) / elemStart.w, (elemStart.h - dy) / elemStart.h));
+          const newW = Math.max(30, Math.round(elemStart.w * scale));
+          const newH = Math.max(30, Math.round(newW / aspect));
+          elem.y = elemStart.y + (elemStart.h - newH);
+          elem.w = newW;
+          elem.h = newH;
+        } else if (activeHandle === "tl") {
+          const scale = Math.max(0.08, Math.max((elemStart.w - dx) / elemStart.w, (elemStart.h - dy) / elemStart.h));
+          const newW = Math.max(30, Math.round(elemStart.w * scale));
+          const newH = Math.max(30, Math.round(newW / aspect));
+          elem.x = elemStart.x + (elemStart.w - newW);
+          elem.y = elemStart.y + (elemStart.h - newH);
+          elem.w = newW;
+          elem.h = newH;
+        } else if (activeHandle === "tc" || activeHandle === "bc") {
+          const newH = Math.max(30, activeHandle === "bc" ? Math.round(elemStart.h + dy) : Math.round(elemStart.h - dy));
+          const newW = Math.max(30, Math.round(newH * aspect));
+          if (activeHandle === "tc") elem.y = elemStart.y + (elemStart.h - newH);
+          elem.x = elemStart.x + Math.round((elemStart.w - newW) / 2);
+          elem.w = newW;
+          elem.h = newH;
+        } else if (activeHandle === "ml" || activeHandle === "mr") {
+          const newW = Math.max(30, activeHandle === "mr" ? Math.round(elemStart.w + dx) : Math.round(elemStart.w - dx));
+          const newH = Math.max(30, Math.round(newW / aspect));
+          if (activeHandle === "ml") elem.x = elemStart.x + (elemStart.w - newW);
+          elem.y = elemStart.y + Math.round((elemStart.h - newH) / 2);
+          elem.w = newW;
+          elem.h = newH;
+        }
+      } else {
+        // Free / Normal non-uniform scaling (without Shift)
+        if (activeHandle === "br") {
+          elem.w = Math.max(30, Math.round(elemStart.w + dx));
+          elem.h = Math.max(30, Math.round(elemStart.h + dy));
+        } else if (activeHandle === "bl") {
+          elem.w = Math.max(30, Math.round(elemStart.w - dx));
+          elem.x = Math.round(elemStart.x + dx);
+          elem.h = Math.max(30, Math.round(elemStart.h + dy));
+        } else if (activeHandle === "tr") {
+          elem.w = Math.max(30, Math.round(elemStart.w + dx));
+          elem.h = Math.max(30, Math.round(elemStart.h - dy));
+          elem.y = Math.round(elemStart.y + dy);
+        } else if (activeHandle === "tl") {
+          elem.w = Math.max(30, Math.round(elemStart.w - dx));
+          elem.h = Math.max(30, Math.round(elemStart.h - dy));
+          elem.x = Math.round(elemStart.x + dx);
+          elem.y = Math.round(elemStart.y + dy);
+        } else if (activeHandle === "tc") {
+          elem.h = Math.max(30, Math.round(elemStart.h - dy));
+          elem.y = Math.round(elemStart.y + dy);
+        } else if (activeHandle === "bc") {
+          elem.h = Math.max(30, Math.round(elemStart.h + dy));
+        } else if (activeHandle === "ml") {
+          elem.w = Math.max(30, Math.round(elemStart.w - dx));
+          elem.x = Math.round(elemStart.x + dx);
+        } else if (activeHandle === "mr") {
+          elem.w = Math.max(30, Math.round(elemStart.w + dx));
+        }
       }
+
       applyElementStyles(elem);
       updateInspectorCoordsFast(elem);
     }
@@ -4996,11 +5206,20 @@ function setupCanvasInteractions() {
         showToast("🔒 Canvas layout is locked. Click Unlock to resize elements.", "warning");
         return;
       }
+      const elem = getActiveElement();
+      const isImg = elem && isImageElement(elem);
+
+      // If element is an image, scaling handles ONLY work in Ctrl+T Transform Mode!
+      if (isImg && (!isTransformMode || elem.id !== transformElementId)) {
+        showToast("💡 Press Ctrl+T or click 'Free Transform' to scale this image", "info");
+        return;
+      }
+
       isResizing = true;
       activeHandle = e.target.getAttribute("data-handle");
       startX = e.clientX;
       startY = e.clientY;
-      const elem = getActiveElement();
+      lastShiftKey = Boolean(e.shiftKey);
       if (elem) elemStart = { ...elem };
       hasMoved = false;
       cachedPageRect = null;
@@ -5010,20 +5229,45 @@ function setupCanvasInteractions() {
 
     const elemNode = e.target.closest(".canvas-element");
     if (elemNode) {
-      setActiveElement(elemNode.id);
+      const clickedId = elemNode.id;
+      setActiveElement(clickedId);
+      const elem = getActiveElement();
+      const isImg = elem && isImageElement(elem);
+
       if (isCanvasLayoutLocked) {
-        // Selection allowed to inspect properties, but dragging is prevented while locked
         return;
       }
-      isDragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      const elem = getActiveElement();
-      if (elem) elemStart = { ...elem };
-      hasMoved = false;
-      cachedPageRect = null;
-      e.preventDefault();
+
+      // If this is an image, it can ONLY be moved if in Ctrl+T Transform Mode!
+      if (isImg) {
+        if (isTransformMode && clickedId === transformElementId) {
+          isDragging = true;
+          startX = e.clientX;
+          startY = e.clientY;
+          lastShiftKey = Boolean(e.shiftKey);
+          if (elem) elemStart = { ...elem };
+          hasMoved = false;
+          cachedPageRect = null;
+          e.preventDefault();
+        } else {
+          // Normal mode: only selected, moving disabled to prevent accidental shift
+          isDragging = false;
+        }
+      } else {
+        // Non-image elements (titles, custom boxes) can be dragged normally
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        lastShiftKey = Boolean(e.shiftKey);
+        if (elem) elemStart = { ...elem };
+        hasMoved = false;
+        cachedPageRect = null;
+        e.preventDefault();
+      }
     } else {
+      if (isTransformMode) {
+        commitTransform();
+      }
       setActiveElement(null);
     }
   });
@@ -5031,6 +5275,7 @@ function setupCanvasInteractions() {
   window.addEventListener("mousemove", (e) => {
     lastClientX = e.clientX;
     lastClientY = e.clientY;
+    lastShiftKey = Boolean(e.shiftKey);
     if (!mouseMoveRaf) {
       mouseMoveRaf = requestAnimationFrame(processCanvasMouseMove);
     }
@@ -5039,7 +5284,10 @@ function setupCanvasInteractions() {
   window.addEventListener("mouseup", () => {
     if (isDragging || isResizing) {
       if (hasMoved) {
-        markProjectDirty();
+        if (!isTransformMode) {
+          recordHistoryState(isDragging ? "Move Element" : "Resize Element");
+          markProjectDirty();
+        }
         updatePropertiesInspector();
       }
     }
@@ -5089,11 +5337,18 @@ function setupCanvasInteractions() {
 }
 
 function setActiveElement(elemId) {
+  if (isTransformMode && transformElementId && elemId !== transformElementId) {
+    commitTransform();
+  }
   activeElementId = elemId;
   document.querySelectorAll(".canvas-element").forEach(el => {
     el.classList.toggle("selected", el.id === elemId);
+    if (el.id !== transformElementId) {
+      el.classList.remove("transform-mode");
+    }
   });
   updatePropertiesInspector();
+  updateTransformUI();
 }
 
 function getActiveElement() {
@@ -5206,6 +5461,7 @@ function updatePropertiesInspector() {
 
   // Update Media Title Suggester box
   populateQuickMediaPicker();
+  updateTransformUI();
 }
 
 // ==========================================

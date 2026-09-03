@@ -1848,6 +1848,7 @@ kbd {
   overflow: hidden;
   background-color: #ffffff;
   will-change: left, top, width, height;
+  user-select: none;
 }
 
 .canvas-element.selected {
@@ -1855,20 +1856,131 @@ kbd {
   outline-offset: 1px;
 }
 
-/* Resize Handles */
-.canvas-element.selected .handle {
-  width: 8px;
-  height: 8px;
-  background-color: #ffffff;
-  border: 1.5px solid var(--primary);
-  position: absolute;
-  z-index: 20;
+/* Default: hide resize handles on images until Ctrl+T transform mode is active */
+.canvas-element .handle {
+  display: none;
 }
 
-.handle.tl { top: -4px; left: -4px; cursor: nwse-resize; }
-.handle.tr { top: -4px; right: -4px; cursor: nesw-resize; }
-.handle.bl { bottom: -4px; left: -4px; cursor: nesw-resize; }
-.handle.br { bottom: -4px; right: -4px; cursor: nwse-resize; }
+/* Free Transform Mode (Ctrl+T) for images and canvas elements */
+.canvas-element.transform-mode {
+  outline: 2px solid #2563eb !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15), 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  cursor: move !important;
+  z-index: 50 !important;
+}
+
+.canvas-element.transform-mode .handle {
+  display: block !important;
+  width: 10px;
+  height: 10px;
+  background-color: #ffffff;
+  border: 2px solid #2563eb;
+  border-radius: 2px;
+  position: absolute;
+  z-index: 60;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.12s ease, background-color 0.12s ease;
+}
+
+.canvas-element.transform-mode .handle:hover {
+  background-color: #2563eb;
+  transform: scale(1.25);
+}
+
+/* 8 Resize & Transform Handles */
+.handle.tl { top: -5px; left: -5px; cursor: nwse-resize; }
+.handle.tc { top: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+.handle.tr { top: -5px; right: -5px; cursor: nesw-resize; }
+.handle.ml { top: calc(50% - 5px); left: -5px; cursor: ew-resize; }
+.handle.mr { top: calc(50% - 5px); right: -5px; cursor: ew-resize; }
+.handle.bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.handle.bc { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+.handle.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
+
+/* Floating On-Canvas Transform Toolbar Badge */
+.canvas-transform-badge {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 6px 14px;
+  border-radius: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  animation: fadeInDown 0.2s ease-out;
+}
+
+.transform-badge-icon {
+  font-size: 14px;
+}
+
+.transform-badge-divider {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.transform-badge-hint {
+  color: #94a3b8;
+  font-size: 11.5px;
+}
+
+.transform-badge-hint strong {
+  color: #38bdf8;
+}
+
+.transform-mini-btn {
+  border: none;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.transform-mini-btn.apply {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.transform-mini-btn.apply:hover {
+  background: #059669;
+}
+
+.transform-mini-btn.cancel {
+  background: rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+}
+
+.transform-mini-btn.cancel:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* Properties Panel Transform Hint Box */
+.transform-hint-box {
+  background: var(--bg-surface, #f8fafc);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.transform-hint-box strong {
+  color: var(--primary, #4f46e5);
+}
 
 .elem-ref-box {
   background-color: #ffffff;
