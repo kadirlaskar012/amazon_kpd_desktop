@@ -557,7 +557,7 @@ function loadInitialProject() {
   fetchDefaultLocation();
 
   // Restore the last active tab from localStorage
-  const lastTab = localStorage.getItem("kdp_active_tab") || "dashboard";
+  const lastTab = sessionStorage.getItem("kdp_active_tab") || "dashboard";
 
   // Query real projects list from local disk
   fetch("/api/projects")
@@ -1663,7 +1663,7 @@ function setupNavigation() {
 }
 
 function switchTab(tabId) {
-  localStorage.setItem("kdp_active_tab", tabId);
+  sessionStorage.setItem("kdp_active_tab", tabId);
 
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
@@ -2353,7 +2353,7 @@ function openProjectByPath(path, restoreTab) {
       syncActiveProjectUI();
 
       // Restore last active tab or default to canvas
-      const targetTab = restoreTab || localStorage.getItem("kdp_active_tab") || "canvas";
+      const targetTab = restoreTab || sessionStorage.getItem("kdp_active_tab") || "canvas";
       loadPageIntoCanvas(currentPageIndex);
       switchTab(targetTab);
 
