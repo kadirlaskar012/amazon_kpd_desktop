@@ -158,6 +158,20 @@ function getStoredTheme() {
   }
 }
 
+function updateThemeDashboardUI(theme) {
+  const lightBtn = document.getElementById("dash-theme-light-btn");
+  const darkBtn = document.getElementById("dash-theme-dark-btn");
+  if (lightBtn && darkBtn) {
+    if (theme === "dark") {
+      lightBtn.classList.remove("active");
+      darkBtn.classList.add("active");
+    } else {
+      lightBtn.classList.add("active");
+      darkBtn.classList.remove("active");
+    }
+  }
+}
+
 function applyTheme(theme) {
   const root = document.documentElement;
   root.setAttribute("data-theme", theme);
@@ -180,6 +194,34 @@ function applyTheme(theme) {
       btn.classList.add("is-dark");
     }
   }
+
+  updateThemeDashboardUI(theme);
+}
+
+function selectAndApplyTheme(mode) {
+  applyTheme(mode);
+}
+
+function saveThemePreference() {
+  const currentTheme = document.documentElement.getAttribute("data-theme") || "light";
+  try {
+    localStorage.setItem("kdp_studio_theme", currentTheme);
+  } catch (e) {}
+
+  // Persist to server disk settings file
+  fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ theme: currentTheme })
+  }).catch(() => {});
+
+  const badge = document.getElementById("dash-theme-saved-badge");
+  if (badge) {
+    badge.classList.add("visible");
+    setTimeout(() => { badge.classList.remove("visible"); }, 3000);
+  }
+
+  showToast(`💾 Theme saved as ${currentTheme === 'dark' ? 'Dark Mode' : 'Light Mode'} (Permanent Preference)`, "success");
 }
 
 function toggleTheme() {
@@ -188,13 +230,37 @@ function toggleTheme() {
   try {
     localStorage.setItem("kdp_studio_theme", newTheme);
   } catch (e) {}
+
+  // Auto-sync with server settings
+  fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ theme: newTheme })
+  }).catch(() => {});
+
   applyTheme(newTheme);
   showToast(newTheme === "light" ? "☀️ Switched to Light Mode Studio" : "🌙 Switched to Dark Mode Studio", "info");
 }
 
 function initTheme() {
-  const theme = getStoredTheme();
-  applyTheme(theme);
+  const localTheme = getStoredTheme();
+  applyTheme(localTheme);
+
+  // Sync with persistent backend setting
+  fetch("/api/settings")
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.settings && data.settings.theme) {
+        const serverTheme = data.settings.theme;
+        if (serverTheme !== localTheme) {
+          try {
+            localStorage.setItem("kdp_studio_theme", serverTheme);
+          } catch (e) {}
+          applyTheme(serverTheme);
+        }
+      }
+    })
+    .catch(() => {});
 }
 
 // Immediately apply theme before DOM renders to prevent any theme flash
@@ -699,6 +765,7 @@ function loadInitialProject() {
     .then(data => {
       recentProjectsList = data.projects || [];
       renderRecentProjects();
+      updateHeroStats(data.stats);
 
       if (recentProjectsList.length === 0) {
         clearActiveProject();
@@ -1295,6 +1362,7 @@ function executePdfExport(openInBrowser = true) {
     closeModal("export-pdf-modal");
     if (data.status === "success" && data.download_url) {
       showToast(`🎉 PDF Generated: ${data.filename}!`, "success");
+      fetchRecentProjects();
       if (openInBrowser) {
         window.open(data.download_url, "_blank");
       } else {
@@ -1971,12 +2039,102 @@ function fetchDefaultLocation() {
     .catch(() => {});
 }
 
+function formatLastExportTime(timestamp) {
+  if (!timestamp) return "None Yet";
+  const date = new Date(typeof timestamp === "number" ? timestamp * 1000 : timestamp);
+  if (isNaN(date.getTime())) return "None Yet";
+
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+
+  if (isToday) {
+    return `Today ${timeStr}`;
+  } else if (isYesterday) {
+    return `Yesterday ${timeStr}`;
+  } else {
+    const month = date.toLocaleDateString([], { month: 'short' });
+    const day = date.getDate();
+    return `${month} ${day}, ${timeStr}`;
+  }
+}
+
+function updateHeroStats(statsObj) {
+  const totalProjectsEl = document.getElementById("stat-total-projects");
+  const pdfsExportedEl = document.getElementById("stat-pdfs-exported");
+  const booksCompletedEl = document.getElementById("stat-books-completed");
+  const pagesCreatedEl = document.getElementById("stat-pages-created");
+  const projectsProgressEl = document.getElementById("stat-projects-progress");
+  const lastExportEl = document.getElementById("stat-last-export");
+
+  if (!totalProjectsEl) return;
+
+  if (statsObj) {
+    totalProjectsEl.innerText = statsObj.total_projects ?? 0;
+    if (pdfsExportedEl) pdfsExportedEl.innerText = statsObj.total_pdfs ?? 0;
+    if (booksCompletedEl) booksCompletedEl.innerText = statsObj.books_completed ?? 0;
+    if (pagesCreatedEl) pagesCreatedEl.innerText = statsObj.total_pages ?? 0;
+    if (projectsProgressEl) projectsProgressEl.innerText = statsObj.projects_in_progress ?? 0;
+    if (lastExportEl) {
+      lastExportEl.innerText = formatLastExportTime(statsObj.last_export_mtime);
+      lastExportEl.title = statsObj.last_export_mtime ? new Date(statsObj.last_export_mtime * 1000).toLocaleString() : "No exports yet";
+    }
+    return;
+  }
+
+  // Fallback calculation using recentProjectsList & currentProject
+  let totalProjects = (recentProjectsList || []).length;
+  let totalPages = 0;
+  let totalPdfs = 0;
+  let completedBooks = 0;
+  let latestMtime = null;
+
+  (recentProjectsList || []).forEach(p => {
+    totalPages += (p.page_count || 0);
+    const expCount = p.exports_count || 0;
+    totalPdfs += expCount;
+    if (p.is_completed || expCount > 0) completedBooks++;
+    if (p.latest_export_mtime && (!latestMtime || p.latest_export_mtime > latestMtime)) {
+      latestMtime = p.latest_export_mtime;
+    }
+  });
+
+  if (currentProject && currentProject.project_dir) {
+    const curPagesCount = (currentProject.pages || []).length;
+    const existingIndex = (recentProjectsList || []).findIndex(p => p.path === currentProject.project_dir);
+    if (existingIndex !== -1) {
+      totalPages = totalPages - (recentProjectsList[existingIndex].page_count || 0) + curPagesCount;
+    } else if (totalProjects === 0) {
+      totalProjects = 1;
+      totalPages = curPagesCount;
+    }
+  }
+
+  const inProgress = Math.max(0, totalProjects - completedBooks);
+
+  totalProjectsEl.innerText = totalProjects;
+  if (pdfsExportedEl) pdfsExportedEl.innerText = totalPdfs;
+  if (booksCompletedEl) booksCompletedEl.innerText = completedBooks;
+  if (pagesCreatedEl) pagesCreatedEl.innerText = totalPages;
+  if (projectsProgressEl) projectsProgressEl.innerText = inProgress;
+  if (lastExportEl) {
+    lastExportEl.innerText = formatLastExportTime(latestMtime);
+    lastExportEl.title = latestMtime ? new Date(latestMtime * 1000).toLocaleString() : "No exports yet";
+  }
+}
+
 function fetchRecentProjects() {
   fetch("/api/projects")
     .then(r => r.json())
     .then(data => {
       recentProjectsList = data.projects || [];
       renderRecentProjects();
+      updateHeroStats(data.stats);
 
       if (recentProjectsList.length === 0) {
         clearActiveProject();
@@ -1986,6 +2144,7 @@ function fetchRecentProjects() {
     })
     .catch(() => {
       renderRecentProjects();
+      updateHeroStats();
     });
 }
 
@@ -2037,6 +2196,40 @@ function renderRecentProjects() {
 }
 
 // Navigation Tabs & Context-Aware Header
+function updateNavigationTabsVisibility(tabId) {
+  const currentTab = tabId || document.documentElement.getAttribute("data-active-tab") || "dashboard";
+  const hasActiveProject = Boolean(currentProject && currentProject.name && currentProject.project_dir && !currentProject.is_empty);
+
+  const dashBtn = document.getElementById("nav-tab-dashboard") || document.querySelector('.nav-btn[data-tab="dashboard"]');
+  const settingsBtn = document.getElementById("nav-tab-settings") || document.querySelector('.nav-btn[data-tab="settings"]');
+  const canvasBtn = document.getElementById("nav-tab-canvas") || document.querySelector('.nav-btn[data-tab="canvas"]');
+  const preflightBtn = document.getElementById("nav-tab-preflight") || document.querySelector('.nav-btn[data-tab="preflight"]');
+  const previewBtn = document.getElementById("nav-tab-preview") || document.querySelector('.nav-btn[data-tab="preview"]');
+
+  if (currentTab === "dashboard") {
+    // When on Dashboard:
+    // Settings, Quality Check, Spread Preview are hidden
+    if (settingsBtn) settingsBtn.style.display = "none";
+    if (preflightBtn) preflightBtn.style.display = "none";
+    if (previewBtn) previewBtn.style.display = "none";
+
+    // If working on a project: show Dashboard AND Canvas Editor (exactly the 2 options requested)
+    // If no project loaded: hide Canvas Editor too
+    if (canvasBtn) {
+      canvasBtn.style.display = hasActiveProject ? "flex" : "none";
+    }
+    if (dashBtn) dashBtn.style.display = "flex";
+  } else {
+    // When inside Canvas Editor or other editor tabs:
+    // Show ALL options: Dashboard, Book Settings, Canvas Editor, Quality Check, Spread Preview
+    if (dashBtn) dashBtn.style.display = "flex";
+    if (settingsBtn) settingsBtn.style.display = "flex";
+    if (canvasBtn) canvasBtn.style.display = "flex";
+    if (preflightBtn) preflightBtn.style.display = "flex";
+    if (previewBtn) previewBtn.style.display = "flex";
+  }
+}
+
 function setupNavigation() {
   document.querySelectorAll(".nav-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -2044,6 +2237,7 @@ function setupNavigation() {
       switchTab(tab);
     });
   });
+  updateNavigationTabsVisibility();
 }
 
 function switchTab(tabId) {
@@ -2063,6 +2257,9 @@ function switchTab(tabId) {
   if (headerCanvasActions) {
     headerCanvasActions.style.display = (tabId === "canvas") ? "flex" : "none";
   }
+
+  // Update tabs visibility dynamically (Dashboard shows Dashboard + Canvas Editor; inside editor shows all tabs)
+  updateNavigationTabsVisibility(tabId);
 
   if (tabId === "canvas") {
     loadPageIntoCanvas(currentPageIndex);
@@ -2118,6 +2315,7 @@ function syncActiveProjectUI() {
     if (statPages) statPages.innerText = "0";
     const statMedia = document.getElementById("stat-media-count");
     if (statMedia) statMedia.innerText = "0";
+    updateNavigationTabsVisibility();
     return;
   }
 
@@ -2178,6 +2376,7 @@ function syncActiveProjectUI() {
   renderMediaLibrary();
   renderCustomLayouts();
   updateUndoRedoButtons();
+  updateNavigationTabsVisibility();
 }
 
 // ==========================================
@@ -4384,7 +4583,8 @@ function loadPageIntoCanvas(index) {
   }
 
   const fragment = document.createDocumentFragment();
-  page.elements.forEach(elem => {
+  const pageElements = page.elements || (page.layers ? page.layers.flatMap(l => l.elements || []) : []) || [];
+  pageElements.forEach(elem => {
     const elDiv = document.createElement("div");
     elDiv.id = elem.id;
     elDiv.className = `canvas-element ${elem.id === activeElementId ? 'selected' : ''}`;
@@ -6811,6 +7011,7 @@ function executeCoverPdfExport(openInBrowser = true) {
     closeModal("cover-generator-modal");
     if (data.status === "success" && data.download_url) {
       showToast(`🎉 Cover PDF Generated: ${data.filename}!`, "success");
+      fetchRecentProjects();
       if (openInBrowser) {
         window.open(data.download_url, "_blank");
       } else {

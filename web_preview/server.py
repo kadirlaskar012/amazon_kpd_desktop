@@ -89,31 +89,89 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(resp).encode("utf-8"))
             return
 
-        elif req_path == "/api/projects":
-            # List all valid project directories in DEFAULT_PROJECTS_DIR
+        elif req_path in ("/api/projects", "/api/stats"):
             projects = []
+            checked_paths = set()
+
+            def inspect_project_folder(p_dir):
+                p_file = p_dir / "project.json"
+                data = {}
+                if p_file.exists():
+                    try:
+                        with open(p_file, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                    except Exception:
+                        data = {}
+                elif (p_dir / "exports").exists() and list((p_dir / "exports").glob("*.pdf")):
+                    data = {"name": p_dir.name.replace("_", " "), "pages": []}
+                else:
+                    return None
+
+                exports_dir = p_dir / "exports"
+                pdf_files = [f for f in exports_dir.glob("*.pdf")] if exports_dir.exists() else []
+                exports_count = len(pdf_files)
+                latest_export_mtime = max([f.stat().st_mtime for f in pdf_files]) if pdf_files else None
+                is_completed = bool(exports_count > 0 or data.get("is_completed", False))
+
+                return {
+                    "name": data.get("name", p_dir.name),
+                    "folder_name": p_dir.name,
+                    "path": str(p_dir),
+                    "is_locked": bool(data.get("is_locked", False)),
+                    "is_completed": is_completed,
+                    "page_count": len(data.get("pages", [])),
+                    "media_count": len(data.get("media", [])),
+                    "exports_count": exports_count,
+                    "latest_export_mtime": latest_export_mtime,
+                    "created_at": data.get("created_at", ""),
+                    "updated_at": data.get("updated_at", "")
+                }
+
+            # 1. Check DEFAULT_PROJECTS_DIR
             if DEFAULT_PROJECTS_DIR.exists():
                 for item in DEFAULT_PROJECTS_DIR.iterdir():
-                    if item.is_dir() and (item / "project.json").exists():
-                        try:
-                            with open(item / "project.json", "r", encoding="utf-8") as f:
-                                data = json.load(f)
-                            projects.append({
-                                "name": data.get("name", item.name),
-                                "folder_name": item.name,
-                                "path": str(item),
-                                "is_locked": bool(data.get("is_locked", False)),
-                                "page_count": len(data.get("pages", [])),
-                                "media_count": len(data.get("media", [])),
-                                "created_at": data.get("created_at", ""),
-                                "updated_at": data.get("updated_at", "")
-                            })
-                        except Exception:
-                            pass
+                    if item.is_dir():
+                        res_p = str(item.resolve())
+                        if res_p not in checked_paths:
+                            p_info = inspect_project_folder(item)
+                            if p_info:
+                                projects.append(p_info)
+                                checked_paths.add(res_p)
+
+            # 2. Also check workspace sample_project if exists and not already loaded
+            sample_dir = (web_dir.parent / "sample_project").resolve()
+            if sample_dir.exists() and str(sample_dir) not in checked_paths:
+                p_info = inspect_project_folder(sample_dir)
+                if p_info:
+                    projects.append(p_info)
+                    checked_paths.add(str(sample_dir))
+
+            # Compute real statistics across all projects
+            total_projects = len(projects)
+            total_pdfs = sum(p.get("exports_count", 0) for p in projects)
+            books_completed = sum(1 for p in projects if p.get("is_completed", False))
+            total_pages = sum(p.get("page_count", 0) for p in projects)
+            projects_in_progress = max(0, total_projects - books_completed)
+
+            all_export_mtimes = [p["latest_export_mtime"] for p in projects if p.get("latest_export_mtime")]
+            last_export_mtime = max(all_export_mtimes) if all_export_mtimes else None
+
+            stats = {
+                "total_projects": total_projects,
+                "total_pdfs": total_pdfs,
+                "books_completed": books_completed,
+                "total_pages": total_pages,
+                "projects_in_progress": projects_in_progress,
+                "last_export_mtime": last_export_mtime
+            }
+
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"projects": projects}).encode("utf-8"))
+            self.wfile.write(json.dumps({
+                "projects": projects,
+                "stats": stats
+            }).encode("utf-8"))
             return
 
         elif req_path == "/api/projects/load":
@@ -168,6 +226,21 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             }).encode("utf-8"))
             return
 
+        elif req_path == "/api/settings":
+            settings = {"theme": "light"}
+            settings_file = DEFAULT_PROJECTS_DIR / "user_settings.json"
+            if settings_file.exists():
+                try:
+                    with open(settings_file, "r", encoding="utf-8") as f:
+                        settings.update(json.load(f))
+                except Exception:
+                    pass
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "settings": settings}).encode("utf-8"))
+            return
+
         return super().do_GET()
 
     def do_POST(self):
@@ -180,6 +253,31 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             req_data = json.loads(post_body.decode("utf-8")) if post_body else {}
         except Exception:
             req_data = {}
+
+        if req_path == "/api/settings":
+            settings_file = DEFAULT_PROJECTS_DIR / "user_settings.json"
+            settings = {}
+            if settings_file.exists():
+                try:
+                    with open(settings_file, "r", encoding="utf-8") as f:
+                        settings = json.load(f)
+                except Exception:
+                    settings = {}
+            settings.update(req_data)
+            try:
+                DEFAULT_PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
+                with open(settings_file, "w", encoding="utf-8") as f:
+                    json.dump(settings, f, indent=2)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "settings": settings}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "error": str(e)}).encode("utf-8"))
+            return
 
         if req_path == "/api/projects/check_exists":
             proj_name = req_data.get("name", "").strip()

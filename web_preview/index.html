@@ -38,61 +38,62 @@
         </div>
       </div>
 
-      <nav class="workflow-ribbon">
-        <button class="nav-btn active" data-tab="dashboard">
+      <nav class="workflow-ribbon" id="top-workflow-ribbon">
+        <button class="nav-btn active" data-tab="dashboard" id="nav-tab-dashboard">
           <span class="step-num">1</span> Dashboard
         </button>
-        <button class="nav-btn" data-tab="settings">
+        <button class="nav-btn" data-tab="settings" id="nav-tab-settings">
           <span class="step-num">2</span> Book Settings
         </button>
-        <button class="nav-btn" data-tab="canvas">
+        <button class="nav-btn" data-tab="canvas" id="nav-tab-canvas">
           <span class="step-num">3</span> Canvas Editor
         </button>
-        <button class="nav-btn" data-tab="preflight">
+        <button class="nav-btn" data-tab="preflight" id="nav-tab-preflight">
           <span class="step-num">4</span> Quality Check
         </button>
-        <button class="nav-btn" data-tab="preview">
+        <button class="nav-btn" data-tab="preview" id="nav-tab-preview">
           <span class="step-num">5</span> Spread Preview
         </button>
       </nav>
 
-      <div class="top-actions" id="header-canvas-actions">
-        <!-- Theme Toggle Switcher (Default: Light Mode) -->
+      <div class="top-nav-right">
+        <!-- Theme Toggle Switcher (Always Accessible Everywhere) -->
         <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()"
           title="Switch Light / Dark Theme">
           <span id="theme-toggle-icon" class="theme-icon">🌙</span>
           <span id="theme-toggle-text" class="theme-label">Dark</span>
         </button>
 
-        <!-- Undo / Redo Actions -->
-        <div class="undo-redo-btn-group">
-          <button class="btn btn-outline btn-sm" id="btn-undo-header" onclick="performUndo()" title="Undo (Ctrl+Z)"
-            disabled>↶ Undo</button>
-          <button class="btn btn-outline btn-sm" id="btn-redo-header" onclick="performRedo()"
-            title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷ Redo</button>
+        <div class="top-actions" id="header-canvas-actions">
+          <!-- Undo / Redo Actions -->
+          <div class="undo-redo-btn-group">
+            <button class="btn btn-outline btn-sm" id="btn-undo-header" onclick="performUndo()" title="Undo (Ctrl+Z)"
+              disabled>↶ Undo</button>
+            <button class="btn btn-outline btn-sm" id="btn-redo-header" onclick="performRedo()"
+              title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷ Redo</button>
+          </div>
+
+          <!-- Live Auto-Save Indicator -->
+          <div class="autosave-status-pill" id="autosave-indicator" title="Automatic disk persistence is active">
+            <span class="pulse-dot"></span>
+            <span id="autosave-text">Auto-saved</span>
+          </div>
+
+          <div class="project-pill" id="current-project-pill" onclick="switchTab('dashboard')"
+            title="Click to Switch Project on Dashboard">
+            <span class="status-dot"></span>
+            <span id="nav-project-name">My Jungle Coloring Book</span>
+          </div>
+
+          <button class="btn btn-outline btn-sm" onclick="openShortcutsModal()" title="Keyboard Shortcuts Reference">⌨️
+            Keys</button>
+          <button class="btn btn-primary btn-sm" id="btn-save-project" onclick="saveProject(true)">💾 Save
+            (Ctrl+S)</button>
+          <button class="btn btn-warning btn-sm" id="btn-cover-gen" onclick="openCoverModal()"
+            title="Generate Amazon KDP Full Wrap Cover PDF">🎨 Cover PDF</button>
+          <button class="btn btn-success btn-sm" id="btn-export-pdf" onclick="exportProjectPdf()"
+            title="Generate & Download 300 DPI Amazon KDP PDF">📄 Export PDF</button>
         </div>
-
-        <!-- Live Auto-Save Indicator -->
-        <div class="autosave-status-pill" id="autosave-indicator" title="Automatic disk persistence is active">
-          <span class="pulse-dot"></span>
-          <span id="autosave-text">Auto-saved</span>
-        </div>
-
-        <div class="project-pill" id="current-project-pill" onclick="switchTab('dashboard')"
-          title="Click to Switch Project on Dashboard">
-          <span class="status-dot"></span>
-          <span id="nav-project-name">My Jungle Coloring Book</span>
-        </div>
-
-
-        <button class="btn btn-outline btn-sm" onclick="openShortcutsModal()" title="Keyboard Shortcuts Reference">⌨️
-          Keys</button>
-        <button class="btn btn-primary btn-sm" id="btn-save-project" onclick="saveProject(true)">💾 Save
-          (Ctrl+S)</button>
-        <button class="btn btn-warning btn-sm" id="btn-cover-gen" onclick="openCoverModal()"
-          title="Generate Amazon KDP Full Wrap Cover PDF">🎨 Cover PDF</button>
-        <button class="btn btn-success btn-sm" id="btn-export-pdf" onclick="exportProjectPdf()"
-          title="Generate & Download 300 DPI Amazon KDP PDF">📄 Export PDF</button>
       </div>
     </header>
 
@@ -112,21 +113,52 @@
                 Project</button>
               <button class="btn btn-lg btn-outline" id="dash-open-btn" onclick="openExistingFolderModal()">📂 Open
                 Existing Project</button>
+            </div>
 
+            <!-- Dashboard Theme Settings Panel -->
+            <div class="dash-theme-card" id="dash-theme-setting-card">
+              <div class="dash-theme-info">
+                <span class="dash-theme-icon">🎨</span>
+                <span class="dash-theme-title">Theme Mode:</span>
+              </div>
+              <div class="dash-theme-toggle-group">
+                <button type="button" class="dash-theme-btn active" id="dash-theme-light-btn" onclick="selectAndApplyTheme('light')">
+                  ☀️ Light
+                </button>
+                <button type="button" class="dash-theme-btn" id="dash-theme-dark-btn" onclick="selectAndApplyTheme('dark')">
+                  🌙 Dark
+                </button>
+              </div>
+              <button type="button" class="btn btn-sm btn-primary dash-theme-save-btn" id="dash-theme-save-btn" onclick="saveThemePreference()" title="Save current theme as permanent preference">
+                💾 Save Theme
+              </button>
+              <span class="dash-theme-saved-badge" id="dash-theme-saved-badge">✓ Saved</span>
             </div>
           </div>
-          <div class="hero-stats">
-            <div class="stat-card">
-              <div class="stat-num" id="stat-page-count">0</div>
-              <div class="stat-lbl">Active Pages</div>
+          <div class="hero-stats-grid" id="dashboard-hero-stats">
+            <div class="stat-card compact" title="Total active book projects">
+              <div class="stat-num" id="stat-total-projects">0</div>
+              <div class="stat-lbl">📚 Total Projects</div>
             </div>
-            <div class="stat-card">
-              <div class="stat-num" id="stat-media-count">0</div>
-              <div class="stat-lbl">Project Media</div>
+            <div class="stat-card compact" title="Total 300 DPI PDFs exported across all projects">
+              <div class="stat-num" id="stat-pdfs-exported">0</div>
+              <div class="stat-lbl">📄 PDFs Exported</div>
             </div>
-            <div class="stat-card">
-              <div class="stat-num" id="stat-trim-lbl">8.5 × 11 in</div>
-              <div class="stat-lbl">Trim Size</div>
+            <div class="stat-card compact" title="Books with print-ready exports completed">
+              <div class="stat-num" id="stat-books-completed">0</div>
+              <div class="stat-lbl">✅ Books Completed</div>
+            </div>
+            <div class="stat-card compact" title="Total interior pages created across all books">
+              <div class="stat-num" id="stat-pages-created">0</div>
+              <div class="stat-lbl">📑 Total Pages Created</div>
+            </div>
+            <div class="stat-card compact" title="Projects currently in progress">
+              <div class="stat-num" id="stat-projects-progress">0</div>
+              <div class="stat-lbl">🔄 Projects In Progress</div>
+            </div>
+            <div class="stat-card compact" title="Timestamp of the most recent PDF export">
+              <div class="stat-num stat-date" id="stat-last-export">None Yet</div>
+              <div class="stat-lbl">🕐 Last Export</div>
             </div>
           </div>
         </div>
