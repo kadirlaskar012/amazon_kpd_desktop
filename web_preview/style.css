@@ -1818,39 +1818,160 @@ kbd {
   pointer-events: none;
 }
 
-/* Viewport Status Footer */
+/* Floating Canvas Layout Lock Button / Status Badge */
+.canvas-lock-pill {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: var(--font-main);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.canvas-lock-pill.locked {
+  color: #b45309;
+  background-color: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+[data-theme="dark"] .canvas-lock-pill.locked {
+  color: #fbbf24;
+  background-color: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.canvas-lock-pill.locked:hover {
+  background-color: rgba(245, 158, 11, 0.18);
+  border-color: #d97706;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.canvas-lock-pill.unlocked {
+  color: #15803d;
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.4);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);
+}
+
+[data-theme="dark"] .canvas-lock-pill.unlocked {
+  color: #4ade80;
+  background-color: rgba(34, 197, 94, 0.18);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
+.canvas-lock-pill.unlocked:hover {
+  background-color: rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3);
+}
+
+/* Mini-toolbar lock button state */
+#tool-canvas-lock.locked {
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.1);
+}
+[data-theme="dark"] #tool-canvas-lock.locked {
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.18);
+}
+#tool-canvas-lock.unlocked {
+  color: #15803d;
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.12);
+}
+[data-theme="dark"] #tool-canvas-lock.unlocked {
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.2);
+}
+
+/* Canvas Layout Locked Behavior */
+.layout-locked .handle {
+  display: none !important;
+}
+
+.layout-locked .canvas-element {
+  cursor: default !important;
+}
+
+/* Viewport Status Footer (Always visible; coordinates appear only inside the white canvas page) */
 .viewport-status {
   position: absolute;
-  bottom: 12px;
+  bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: var(--bg-surface);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
+  background-color: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(203, 213, 225, 0.9);
   border-radius: 20px;
-  padding: 5px 20px;
+  padding: 6px 20px;
   display: flex;
   align-items: center;
   gap: 16px;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 700;
+  color: #0f172a;
   font-family: var(--font-mono);
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.12);
   z-index: 50;
   pointer-events: none;
   white-space: nowrap;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 [data-theme="dark"] .viewport-status {
-  background-color: rgba(23, 24, 34, 0.9);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  background-color: rgba(15, 23, 42, 0.92);
+  border-color: rgba(51, 65, 85, 0.8);
+  color: #f8fafc;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
 }
 
 .viewport-status span {
   display: inline-flex;
   align-items: center;
-  color: var(--text-secondary);
+  color: #475569;
+}
+
+[data-theme="dark"] .viewport-status span {
+  color: #94a3b8;
+}
+
+.viewport-status span#coord-readout {
+  color: #0f172a;
+  font-weight: 700;
+  display: none; /* Only visible when mouse is on white canvas page */
+  padding-right: 6px;
+  border-right: 1px solid rgba(203, 213, 225, 0.8);
+}
+
+[data-theme="dark"] .viewport-status span#coord-readout {
+  color: #f8fafc;
+  border-right-color: rgba(255, 255, 255, 0.15);
+}
+
+.viewport-status span#layout-readout {
+  color: #334155;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .viewport-status span#layout-readout {
+  color: #cbd5e1;
 }
 
 .viewport-status span#page-num-readout,
@@ -2335,6 +2456,38 @@ kbd {
 .check-badge.warning {
   background-color: var(--warning);
   color: #000000;
+}
+
+#preflight-overall-badge {
+  font-size: 13px;
+  padding: 6px 14px;
+  font-weight: 800;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#preflight-overall-badge.pass {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: #15803d !important;
+  border: 1px solid rgba(34, 197, 94, 0.4) !important;
+}
+[data-theme="dark"] #preflight-overall-badge.pass {
+  background: rgba(34, 197, 94, 0.22) !important;
+  color: #4ade80 !important;
+  border: 1px solid rgba(34, 197, 94, 0.45) !important;
+}
+
+#preflight-overall-badge.warning {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #b45309 !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+[data-theme="dark"] #preflight-overall-badge.warning {
+  background: rgba(245, 158, 11, 0.25) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.5) !important;
 }
 
 /* ===================================================

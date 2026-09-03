@@ -597,6 +597,10 @@
 
           <!-- Left Mini Toolbar (Shortcuts) -->
           <div class="canvas-toolbar">
+            <!-- Canvas Layout Lock Control (Locked by default) -->
+            <button class="tool-btn locked" id="tool-canvas-lock" title="Canvas Layout Locked (Click to Unlock Editing)"
+              onclick="toggleCanvasLayoutLock()">🔒</button>
+            <div class="tool-sep"></div>
             <button class="tool-btn" id="tool-undo" title="Undo (Ctrl+Z)" onclick="performUndo()" disabled>↶</button>
             <button class="tool-btn" id="tool-redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" onclick="performRedo()"
               disabled>↷</button>
@@ -616,7 +620,14 @@
 
           <!-- Canvas Viewport -->
           <div class="canvas-viewport" id="canvas-viewport">
-            <div class="canvas-stage" id="canvas-stage">
+            <!-- Floating Canvas Layout Lock Indicator -->
+            <button class="canvas-lock-pill locked" id="canvas-lock-pill" onclick="toggleCanvasLayoutLock()"
+              title="Click to Toggle Canvas Layout Editing (Locked by default)">
+              <span id="canvas-lock-icon">🔒</span>
+              <span id="canvas-lock-text">Layout Locked</span>
+            </button>
+
+            <div class="canvas-stage layout-locked" id="canvas-stage">
               <!-- Physical Paper Page -->
               <div class="paper-page" id="paper-page">
 
@@ -644,7 +655,7 @@
 
             <!-- Viewport Bottom Status Info -->
             <div class="viewport-status">
-              <span id="coord-readout">X: 0.00 in | Y: 0.00 in</span>
+              <span id="coord-readout" style="display: none;">X: 0.00 in | Y: 0.00 in</span>
               <span id="zoom-readout">Zoom: 100%</span>
               <span id="page-num-readout">Page 1 of 4</span>
               <span id="layout-readout">Layout: Top Ref + Big Drawing</span>
@@ -828,8 +839,7 @@
               <p>Automated diagnostic engine verifying Amazon KDP print rules, 24-page minimums, bleed margins, and
                 spine math.</p>
             </div>
-            <div id="preflight-overall-badge" class="badge"
-              style="font-size: 13px; padding: 6px 14px; font-weight: 800; background: rgba(34, 197, 94, 0.2); color: var(--secondary);">
+            <div id="preflight-overall-badge" class="badge pass">
               ✓ KDP COMPLIANT
             </div>
           </div>

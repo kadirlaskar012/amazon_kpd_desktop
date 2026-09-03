@@ -95,6 +95,45 @@ let currentZoom = 1.0;
 let cachedPageRect = null;
 let showGuides = true;
 let snapToGuides = true;
+let isCanvasLayoutLocked = true; // Canvas Layout Lock Control (Locked by default)
+
+function toggleCanvasLayoutLock() {
+  isCanvasLayoutLocked = !isCanvasLayoutLocked;
+  updateCanvasLayoutLockUI();
+  if (isCanvasLayoutLocked) {
+    showToast("🔒 Canvas layout locked. Accidental movement prevented.", "info");
+  } else {
+    showToast("🔓 Canvas layout unlocked. You can now drag and resize elements in real time.", "success");
+  }
+}
+
+function updateCanvasLayoutLockUI() {
+  const stage = document.getElementById("canvas-stage");
+  if (stage) {
+    stage.classList.toggle("layout-locked", isCanvasLayoutLocked);
+  }
+
+  const toolBtn = document.getElementById("tool-canvas-lock");
+  if (toolBtn) {
+    toolBtn.innerText = isCanvasLayoutLocked ? "🔒" : "🔓";
+    toolBtn.title = isCanvasLayoutLocked ? "Canvas Layout Locked (Click to Unlock)" : "Canvas Layout Unlocked (Click to Lock)";
+    toolBtn.classList.toggle("locked", isCanvasLayoutLocked);
+    toolBtn.classList.toggle("unlocked", !isCanvasLayoutLocked);
+  }
+
+  const pillBtn = document.getElementById("canvas-lock-pill");
+  const icon = document.getElementById("canvas-lock-icon");
+  const text = document.getElementById("canvas-lock-text");
+  if (pillBtn && icon && text) {
+    icon.innerText = isCanvasLayoutLocked ? "🔒" : "🔓";
+    text.innerText = isCanvasLayoutLocked ? "Layout Locked" : "Layout Unlocked";
+    pillBtn.classList.toggle("locked", isCanvasLayoutLocked);
+    pillBtn.classList.toggle("unlocked", !isCanvasLayoutLocked);
+    pillBtn.title = isCanvasLayoutLocked ? "Click to Unlock Canvas Layout Editing" : "Click to Lock Canvas Layout";
+  }
+
+  updatePropertiesInspector();
+}
 
 // Undo / Redo History Engine
 let undoStack = [];
@@ -169,6 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadInitialProject();
   setupCanvasInteractions();
   updateUndoRedoButtons();
+  updateCanvasLayoutLockUI();
 
   // Background Auto-Save Cron (Every 10 seconds)
   setInterval(() => {
@@ -4054,7 +4094,11 @@ function updateLayoutCardsActiveState(layoutKey) {
     card.classList.toggle("active", card.getAttribute("data-layout") === layoutKey);
   });
   const readout = document.getElementById("layout-readout");
-  if (readout) readout.innerText = `Layout: ${getLayoutName(layoutKey)}`;
+  if (readout) {
+    const trimW = ((currentProject.settings?.trim_width_pt || 612.0) / 72.0).toFixed(1).replace(".0", "");
+    const trimH = ((currentProject.settings?.trim_height_pt || 792.0) / 72.0).toFixed(1).replace(".0", "");
+    readout.innerText = `Layout: ${getLayoutName(layoutKey)} (${trimW} × ${trimH} in)`;
+  }
 }
 
 function getLayoutName(key) {
@@ -4288,6 +4332,7 @@ function loadPageIntoCanvas(index) {
   if (!page) return;
 
   updateLayoutCardsActiveState(page.layout || "kdp_top_ref");
+  updateCanvasLayoutLockUI();
 
   // If this is a Blank Back Page (Verso)
   if (page.page_type === "blank_verso") {
@@ -4643,14 +4688,29 @@ function setupCanvasInteractions() {
   function processCanvasMouseMove() {
     mouseMoveRaf = null;
 
-    // Fast coordinate readout with cached page bounding box
+    // Coordinate readout - strictly when mouse is inside the white canvas page
     const pageNode = document.getElementById("paper-page");
-    if (pageNode) {
-      if (!cachedPageRect) cachedPageRect = pageNode.getBoundingClientRect();
-      const curX = ((lastClientX - cachedPageRect.left) / 60.0).toFixed(2);
-      const curY = ((lastClientY - cachedPageRect.top) / 60.0).toFixed(2);
-      const readout = document.getElementById("coord-readout");
-      if (readout) readout.innerText = `X: ${curX} in | Y: ${curY} in`;
+    const readout = document.getElementById("coord-readout");
+    if (pageNode && readout) {
+      const rect = pageNode.getBoundingClientRect();
+      const isInside = (
+        rect.width > 0 &&
+        lastClientX >= rect.left &&
+        lastClientX <= rect.right &&
+        lastClientY >= rect.top &&
+        lastClientY <= rect.bottom
+      );
+      if (isInside) {
+        const pixelX = (lastClientX - rect.left) / currentZoom;
+        const pixelY = (lastClientY - rect.top) / currentZoom;
+        const curX = Math.max(0, pixelX / 60.0).toFixed(2);
+        const curY = Math.max(0, pixelY / 60.0).toFixed(2);
+        readout.style.display = "inline-flex";
+        readout.innerText = `X: ${curX} in | Y: ${curY} in`;
+      } else {
+        readout.style.display = "none";
+        readout.innerText = "";
+      }
     }
 
     const elem = getActiveElement();
@@ -4699,6 +4759,10 @@ function setupCanvasInteractions() {
     if (currentProject.is_locked) return;
 
     if (e.target.classList.contains("handle")) {
+      if (isCanvasLayoutLocked) {
+        showToast("🔒 Canvas layout is locked. Click Unlock to resize elements.", "warning");
+        return;
+      }
       isResizing = true;
       activeHandle = e.target.getAttribute("data-handle");
       startX = e.clientX;
@@ -4714,6 +4778,10 @@ function setupCanvasInteractions() {
     const elemNode = e.target.closest(".canvas-element");
     if (elemNode) {
       setActiveElement(elemNode.id);
+      if (isCanvasLayoutLocked) {
+        // Selection allowed to inspect properties, but dragging is prevented while locked
+        return;
+      }
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -4749,6 +4817,40 @@ function setupCanvasInteractions() {
     if (mouseMoveRaf) {
       cancelAnimationFrame(mouseMoveRaf);
       mouseMoveRaf = null;
+    }
+  });
+
+  const viewportEl = document.getElementById("canvas-viewport") || document.getElementById("viewport-container");
+  if (viewportEl) {
+    viewportEl.addEventListener("mouseenter", () => {
+      viewportEl.classList.add("mouse-inside");
+    });
+    viewportEl.addEventListener("mouseleave", () => {
+      viewportEl.classList.remove("mouse-inside");
+      const readout = document.getElementById("coord-readout");
+      if (readout) {
+        readout.style.display = "none";
+        readout.innerText = "";
+      }
+    });
+  }
+
+  const paperEl = document.getElementById("paper-page");
+  if (paperEl) {
+    paperEl.addEventListener("mouseleave", () => {
+      const readout = document.getElementById("coord-readout");
+      if (readout) {
+        readout.style.display = "none";
+        readout.innerText = "";
+      }
+    });
+  }
+
+  window.addEventListener("mouseleave", () => {
+    const readout = document.getElementById("coord-readout");
+    if (readout) {
+      readout.style.display = "none";
+      readout.innerText = "";
     }
   });
 }
@@ -4797,10 +4899,26 @@ function updatePropertiesInspector() {
   }
 
   if (titleBadge) titleBadge.innerText = elem.type.toUpperCase().replace(/_/g, " ");
-  document.getElementById("prop-x").value = (elem.x / 60.0).toFixed(2);
-  document.getElementById("prop-y").value = (elem.y / 60.0).toFixed(2);
-  document.getElementById("prop-w").value = (elem.w / 60.0).toFixed(2);
-  document.getElementById("prop-h").value = (elem.h / 60.0).toFixed(2);
+  const px = document.getElementById("prop-x");
+  const py = document.getElementById("prop-y");
+  const pw = document.getElementById("prop-w");
+  const ph = document.getElementById("prop-h");
+  if (px) {
+    px.value = (elem.x / 60.0).toFixed(2);
+    px.disabled = isCanvasLayoutLocked;
+  }
+  if (py) {
+    py.value = (elem.y / 60.0).toFixed(2);
+    py.disabled = isCanvasLayoutLocked;
+  }
+  if (pw) {
+    pw.value = (elem.w / 60.0).toFixed(2);
+    pw.disabled = isCanvasLayoutLocked;
+  }
+  if (ph) {
+    ph.value = (elem.h / 60.0).toFixed(2);
+    ph.disabled = isCanvasLayoutLocked;
+  }
 
   if (elem.type === "title") {
     if (textGroup) textGroup.style.display = "block";
@@ -5134,6 +5252,12 @@ function onPropChange() {
 
   const elem = getActiveElement();
   if (!elem) return;
+
+  if (isCanvasLayoutLocked) {
+    showToast("🔒 Canvas layout is locked. Click Unlock to edit dimensions/position.", "warning");
+    updatePropertiesInspector();
+    return;
+  }
 
   recordHistoryState("Edit Properties");
 
@@ -6413,8 +6537,8 @@ function updatePreflightDashboard() {
 
   if (overallBadge) {
     overallBadge.className = `badge ${isOverallPass ? 'pass' : 'warning'}`;
-    overallBadge.style.background = isOverallPass ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)";
-    overallBadge.style.color = isOverallPass ? "var(--secondary)" : "var(--warning)";
+    overallBadge.style.background = "";
+    overallBadge.style.color = "";
     overallBadge.innerText = isOverallPass ? "✓ 100% KDP COMPLIANT" : "⚠️ KDP ADVISORY (ACTION NEEDED)";
   }
 
