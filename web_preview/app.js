@@ -2878,13 +2878,6 @@ async function finalizeInteractiveUpload() {
 
   showToast(`✨ Added ${stagedUploadItems.length} optimized image(s) to Project Media!`, "success");
 
-  if (lastMediaItem) {
-    const activeElem = getActiveElement();
-    if (activeElem && (activeElem.type === "ref_image" || activeElem.type === "main_image")) {
-      applyMediaToSlot(lastMediaItem.id, activeElem.type === "ref_image" ? "ref" : "drawing");
-    }
-  }
-
   stagedUploadItems = [];
 }
 
