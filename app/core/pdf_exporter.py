@@ -7,6 +7,7 @@ and Single-Sided Coloring Pages with alternating Blank Back Pages for bleed prot
 
 import io
 import base64
+import textwrap
 from pathlib import Path
 from PIL import Image
 from reportlab.pdfgen import canvas
@@ -89,15 +90,97 @@ class KDPPdfExporter:
         inc_contents = fm_opts.get("include_contents", True) if (include_front_matter and b_type == "coloring_book") else False
         inc_belongs = fm_opts.get("include_belongs", True) if (include_front_matter and b_type == "coloring_book") else False
         inc_color_test = fm_opts.get("include_color_test", True) if (include_front_matter and b_type == "coloring_book") else False
+        inc_custom_page = fm_opts.get("include_custom_page", False) if include_front_matter else False
+        custom_page_pos = fm_opts.get("custom_page_pos", "back")
 
         custom_author = fm_opts.get("author") or author_name
         custom_publisher = fm_opts.get("publisher") or author_name
+        custom_book_title = fm_opts.get("book_title") or book_title
+        custom_edition = fm_opts.get("edition_text") or "First Edition  •  Amazon KDP Publication"
+        custom_copyright = fm_opts.get("copyright_text") or f"Copyright © 2026 by {custom_author}"
+        custom_isbn = fm_opts.get("isbn") or "ISBN-13: 978-X-XXXXX-XXX-X"
+        custom_extra_note = fm_opts.get("disclaimer_extra_note") or ""
+
         custom_toc_heading = fm_opts.get("toc_heading") or "TABLE OF CONTENTS"
+        custom_toc_subtitle = fm_opts.get("toc_subtitle") or "Complete list of coloring illustrations in this book"
+        custom_toc_footer = fm_opts.get("toc_footer") or ""
+
         custom_belongs_title = fm_opts.get("belongs_title") or "THIS COLORING BOOK"
+        custom_belongs_header = fm_opts.get("belongs_header") or "BELONGS TO:"
         custom_subtext = fm_opts.get("subtext") or "Color with joy, love and your wild imagination!"
+        custom_belongs_gift = fm_opts.get("belongs_gift_note") or ""
+
+        custom_color_title = fm_opts.get("color_test_title") or "COLOR TEST PALETTE"
+        custom_color_subtext = fm_opts.get("color_test_subtext") or "Test your pencils, markers, and crayons here before coloring!"
+        custom_color_note = fm_opts.get("color_test_note") or ""
+
+        def render_custom_text_page():
+            """Renders a fully custom, elegant text page (e.g. Introduction or Back-matter Thank You page)."""
+            c.setFillColor(colors.white)
+            c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+
+            # Elegant decorative double inner border
+            c.setStrokeColor(colors.HexColor("#0f172a"))
+            c.setLineWidth(1.5)
+            c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
+            c.setStrokeColor(colors.HexColor("#cbd5e1"))
+            c.setLineWidth(0.75)
+            c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
+
+            c_title = fm_opts.get("custom_page_title") or "A NOTE FROM THE AUTHOR"
+            c_subtitle = fm_opts.get("custom_page_subtitle") or "Thank you for supporting our work!"
+            c_body = fm_opts.get("custom_page_body") or (
+                "Thank you so much for choosing our coloring book!\n\n"
+                "We poured our hearts into creating each illustration, designed to spark creativity, "
+                "relaxation, and endless joy. Whether you are coloring with colored pencils, markers, "
+                "or crayons, remember that in art, there are no mistakes—only unique masterpieces!\n\n"
+                "If you enjoyed this book, please consider leaving a review on Amazon. "
+                "Your kind feedback helps independent creators like us continue to make beautiful books!"
+            )
+            c_signoff = fm_opts.get("custom_page_signoff") or f"Happy Coloring!  •  {custom_author}"
+
+            c.setFont("Helvetica-Bold", 20)
+            c.setFillColor(colors.HexColor("#0f172a"))
+            c.drawCentredString(page_w / 2.0, page_h - 95 - bleed_pt, c_title.upper())
+
+            if c_subtitle:
+                c.setFont("Helvetica", 10.5)
+                c.setFillColor(colors.HexColor("#475569"))
+                c.drawCentredString(page_w / 2.0, page_h - 120 - bleed_pt, c_subtitle)
+
+            c.setStrokeColor(colors.HexColor("#e2e8f0"))
+            c.setLineWidth(1.0)
+            c.line(page_w / 2.0 - 60, page_h - 140 - bleed_pt, page_w / 2.0 + 60, page_h - 140 - bleed_pt)
+
+            cur_y = page_h - 180 - bleed_pt
+            c.setFont("Helvetica", 10)
+            c.setFillColor(colors.HexColor("#334155"))
+
+            paras = c_body.split("\n")
+            for p in paras:
+                p = p.strip()
+                if not p:
+                    cur_y -= 14
+                    continue
+                w_lines = textwrap.wrap(p, width=66)
+                for line in w_lines:
+                    if cur_y < 120 + bleed_pt:
+                        break
+                    c.drawCentredString(page_w / 2.0, cur_y, line)
+                    cur_y -= 18
+                cur_y -= 8
+
+            if c_signoff:
+                c.setFont("Helvetica-Bold", 10.5)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, max(65 + bleed_pt, min(cur_y - 20, 100 + bleed_pt)), c_signoff)
+
+            c.showPage()
+            if single_sided:
+                render_blank_page()
 
         # Calculate actual starting page number for content pages
-        fm_count = sum([1 for flag in [inc_disclaimer, inc_contents, inc_belongs, inc_color_test] if flag])
+        fm_count = sum([1 for flag in [inc_disclaimer, inc_contents, inc_belongs, inc_color_test, (inc_custom_page and custom_page_pos == "front")] if flag])
         start_content_page_num = fm_count + 1
 
         # --- PAGE 1: DISCLAIMER & COPYRIGHT ---
@@ -116,12 +199,12 @@ class KDPPdfExporter:
             # Book Title
             c.setFont("Helvetica-Bold", 20)
             c.setFillColor(colors.HexColor("#0f172a"))
-            c.drawCentredString(page_w / 2.0, page_h - 100 - bleed_pt, book_title)
+            c.drawCentredString(page_w / 2.0, page_h - 100 - bleed_pt, custom_book_title)
 
-            # Subtitle
+            # Subtitle / Edition
             c.setFont("Helvetica", 10.5)
             c.setFillColor(colors.HexColor("#475569"))
-            c.drawCentredString(page_w / 2.0, page_h - 125 - bleed_pt, "First Edition  •  Amazon KDP Publication")
+            c.drawCentredString(page_w / 2.0, page_h - 125 - bleed_pt, custom_edition)
 
             # Small decorative divider line
             c.setStrokeColor(colors.HexColor("#e2e8f0"))
@@ -131,32 +214,53 @@ class KDPPdfExporter:
             # Copyright
             c.setFont("Helvetica-Bold", 11)
             c.setFillColor(colors.HexColor("#1e293b"))
-            c.drawCentredString(page_w / 2.0, page_h - 220 - bleed_pt, f"Copyright © 2026 by {custom_author}")
+            c.drawCentredString(page_w / 2.0, page_h - 200 - bleed_pt, custom_copyright)
 
             c.setFont("Helvetica", 10)
             c.setFillColor(colors.HexColor("#334155"))
-            c.drawCentredString(page_w / 2.0, page_h - 240 - bleed_pt, "All Rights Reserved.")
+            c.drawCentredString(page_w / 2.0, page_h - 220 - bleed_pt, "All Rights Reserved.")
 
-            # Legal Disclaimer lines
-            disclaimer_lines = [
-                "No part of this publication may be reproduced, distributed, or transmitted in any form",
-                "or by any means, including photocopying, recording, or other electronic or mechanical methods,",
-                "without the prior written permission of the publisher, except in the case of brief quotations",
-                "embodied in critical reviews and certain other noncommercial uses permitted by copyright law."
-            ]
+            # Legal Disclaimer lines (multi-line word-wrapped or custom)
+            raw_disclaimer = fm_opts.get("disclaimer_text")
+            if raw_disclaimer:
+                disclaimer_paras = raw_disclaimer.strip().split("\n")
+                disclaimer_lines = []
+                for p in disclaimer_paras:
+                    p = p.strip()
+                    if p:
+                        disclaimer_lines.extend(textwrap.wrap(p, width=72))
+                    else:
+                        disclaimer_lines.append("")
+            else:
+                disclaimer_lines = [
+                    "No part of this publication may be reproduced, distributed, or transmitted in any form",
+                    "or by any means, including photocopying, recording, or other electronic or mechanical methods,",
+                    "without the prior written permission of the publisher, except in the case of brief quotations",
+                    "embodied in critical reviews and certain other noncommercial uses permitted by copyright law."
+                ]
+
             c.setFont("Helvetica", 8.5)
             c.setFillColor(colors.HexColor("#64748b"))
-            for i, line in enumerate(disclaimer_lines):
-                c.drawCentredString(page_w / 2.0, page_h - 300 - (i * 16) - bleed_pt, line)
+            disc_y = page_h - 265 - bleed_pt
+            for line in disclaimer_lines[:10]:
+                if line:
+                    c.drawCentredString(page_w / 2.0, disc_y, line)
+                disc_y -= 15
 
             # Publisher Info
             c.setFont("Helvetica-Bold", 9.5)
             c.setFillColor(colors.HexColor("#334155"))
-            c.drawCentredString(page_w / 2.0, page_h - 450 - bleed_pt, f"Published by: {custom_publisher}")
+            c.drawCentredString(page_w / 2.0, page_h - 430 - bleed_pt, f"Published by: {custom_publisher}")
             
             c.setFont("Helvetica", 9)
             c.setFillColor(colors.HexColor("#475569"))
-            c.drawCentredString(page_w / 2.0, page_h - 470 - bleed_pt, "ISBN-13: 978-X-XXXXX-XXX-X")
+            c.drawCentredString(page_w / 2.0, page_h - 450 - bleed_pt, custom_isbn)
+
+            # Extra note or dedication if provided
+            if custom_extra_note:
+                c.setFont("Helvetica-Oblique", 9)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, page_h - 490 - bleed_pt, custom_extra_note)
 
             c.setFont("Helvetica-Oblique", 8.5)
             c.setFillColor(colors.HexColor("#94a3b8"))
@@ -183,7 +287,7 @@ class KDPPdfExporter:
 
             c.setFont("Helvetica", 10)
             c.setFillColor(colors.HexColor("#64748b"))
-            c.drawCentredString(page_w / 2.0, page_h - 115 - bleed_pt, "Complete list of coloring illustrations in this book")
+            c.drawCentredString(page_w / 2.0, page_h - 115 - bleed_pt, custom_toc_subtitle)
 
             c.setStrokeColor(colors.HexColor("#e2e8f0"))
             c.setLineWidth(1.0)
@@ -237,6 +341,11 @@ class KDPPdfExporter:
                     if num_dots > 0:
                         c.drawString(dot_start, item_y, " . " * num_dots)
 
+            if custom_toc_footer:
+                c.setFont("Helvetica-Oblique", 9)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, 50 + bleed_pt, custom_toc_footer)
+
             c.showPage()
 
         # --- PAGE 3: THIS BOOK BELONGS TO ---
@@ -261,7 +370,7 @@ class KDPPdfExporter:
             c.setFillColor(colors.white)
             c.setLineWidth(1.6)
             c._code.append("2 Tr\n")
-            c.drawCentredString(page_w / 2.0, page_h - 190 - bleed_pt, "BELONGS TO:")
+            c.drawCentredString(page_w / 2.0, page_h - 190 - bleed_pt, custom_belongs_header)
             c._code.append("0 Tr\n")
 
             # Clean writing line
@@ -272,7 +381,17 @@ class KDPPdfExporter:
 
             c.setFont("Helvetica-Oblique", 11)
             c.setFillColor(colors.HexColor("#64748b"))
-            c.drawCentredString(page_w / 2.0, page_h - 420 - bleed_pt, custom_subtext)
+            c.drawCentredString(page_w / 2.0, page_h - 380 - bleed_pt, custom_subtext)
+
+            # Extra gift dedication line if provided
+            if custom_belongs_gift:
+                c.setFont("Helvetica-Bold", 10)
+                c.setFillColor(colors.HexColor("#475569"))
+                c.drawCentredString(page_w / 2.0, page_h - 430 - bleed_pt, custom_belongs_gift)
+                c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                c.setLineWidth(1.0)
+                c.line(120 + bleed_pt, page_h - 455 - bleed_pt, page_w - 120 - bleed_pt, page_h - 455 - bleed_pt)
+
             c.showPage()
 
         # --- PAGE 4: COLOR TEST PALETTE ---
@@ -289,11 +408,11 @@ class KDPPdfExporter:
 
             c.setFont("Helvetica-Bold", 22)
             c.setFillColor(colors.HexColor("#0f172a"))
-            c.drawCentredString(page_w / 2.0, page_h - 85 - bleed_pt, "COLOR TEST PALETTE")
+            c.drawCentredString(page_w / 2.0, page_h - 85 - bleed_pt, custom_color_title)
 
             c.setFont("Helvetica", 10)
             c.setFillColor(colors.HexColor("#64748b"))
-            c.drawCentredString(page_w / 2.0, page_h - 110 - bleed_pt, "Test your pencils, markers, and crayons here before coloring!")
+            c.drawCentredString(page_w / 2.0, page_h - 110 - bleed_pt, custom_color_subtext)
 
             c.setStrokeColor(colors.HexColor("#e2e8f0"))
             c.setLineWidth(1.0)
@@ -327,7 +446,16 @@ class KDPPdfExporter:
                     c.drawString(bx + 8, by + swatch_h - 12, f"Color {box_idx}")
                     box_idx += 1
 
+            if custom_color_note:
+                c.setFont("Helvetica-Oblique", 9)
+                c.setFillColor(colors.HexColor("#64748b"))
+                c.drawCentredString(page_w / 2.0, 48 + bleed_pt, custom_color_note)
+
             c.showPage()
+
+        # --- OPTIONAL FRONT MATTER CUSTOM PAGE ---
+        if inc_custom_page and custom_page_pos == "front":
+            render_custom_text_page()
 
         # =========================================================================
         # 2. CONTENT DRAWING PAGES (Pages 5+) + BLANK VERSO PAGES
@@ -1062,6 +1190,12 @@ class KDPPdfExporter:
                 c.showPage()
                 if single_sided:
                     render_blank_page()
+
+        # =========================================================================
+        # 5. BACK MATTER CUSTOM PAGE (e.g. Author Note, Thank You, Review Request)
+        # =========================================================================
+        if inc_custom_page and custom_page_pos == "back":
+            render_custom_text_page()
 
         c.save()
         return output_path

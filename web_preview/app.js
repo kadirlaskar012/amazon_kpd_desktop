@@ -690,8 +690,114 @@ function exportProjectPdf() {
 
 function toggleFrontMatterEditor() {
   const ed = document.getElementById("export-fm-text-editor");
+  const btn = document.getElementById("btn-toggle-fm-editor");
   if (!ed) return;
-  ed.style.display = (ed.style.display === "none" || !ed.style.display) ? "block" : "none";
+  const isHidden = (ed.style.display === "none" || !ed.style.display);
+  ed.style.display = isHidden ? "block" : "none";
+  if (btn) {
+    btn.innerHTML = isHidden ? "✕ Close Page Editor" : "✏️ Edit Page Content & Custom Texts";
+    if (isHidden) {
+      btn.classList.add("btn-primary");
+    } else {
+      btn.classList.remove("btn-primary");
+    }
+  }
+}
+
+function switchFrontMatterTab(tabId) {
+  document.querySelectorAll(".fm-tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".fm-tab-pane").forEach(p => p.classList.remove("active"));
+  const btn = document.getElementById(`btn-fmtab-${tabId}`);
+  const pane = document.getElementById(`fmtab-${tabId}`);
+  if (btn) btn.classList.add("active");
+  if (pane) pane.classList.add("active");
+}
+
+function resetFrontMatterTextsToDefault() {
+  const author = currentProject.author || "Creative Kids Studio";
+  const name = currentProject.name || "COLORING BOOK";
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  };
+
+  setVal("exp-fm-text-title", name);
+  setVal("exp-fm-text-author", author);
+  setVal("exp-fm-text-publisher", "KDP Creative Publishing");
+  setVal("exp-fm-text-edition", "First Edition  •  Amazon KDP Publication");
+  setVal("exp-fm-text-copyright", `Copyright © 2026 by ${author}. All Rights Reserved.`);
+  setVal("exp-fm-text-isbn", "ISBN-13: 978-X-XXXXX-XXX-X");
+  setVal("exp-fm-text-disclaimer", "No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.");
+  setVal("exp-fm-text-extra-note", "");
+
+  setVal("exp-fm-text-toc-heading", "TABLE OF CONTENTS");
+  setVal("exp-fm-text-toc-subtext", "Complete list of coloring illustrations in this book");
+  setVal("exp-fm-text-toc-footer", "");
+
+  setVal("exp-fm-text-belongs-title", "THIS COLORING BOOK");
+  setVal("exp-fm-text-belongs-header", "BELONGS TO:");
+  setVal("exp-fm-text-subtext", "Color with joy, love and your wild imagination!");
+  setVal("exp-fm-text-belongs-gift", "");
+
+  setVal("exp-fm-text-color-title", "COLOR TEST PALETTE");
+  setVal("exp-fm-text-color-subtext", "Test your pencils, markers, and crayons here before coloring!");
+  setVal("exp-fm-text-color-note", "");
+
+  setVal("exp-fm-custom-title", "A NOTE FROM THE AUTHOR");
+  setVal("exp-fm-custom-subtitle", "Thank you for supporting our work!");
+  setVal("exp-fm-custom-body", "Thank you so much for choosing our coloring book!\n\nWe poured our hearts into creating each illustration, designed to spark creativity, relaxation, and endless joy. Whether you are coloring with colored pencils, markers, or crayons, remember that in art, there are no mistakes—only unique masterpieces!\n\nIf you enjoyed this book, please consider leaving a review on Amazon. Your kind feedback helps independent creators like us continue to make beautiful books!");
+  setVal("exp-fm-custom-signoff", `Happy Coloring!  •  ${author}`);
+
+  updateExportModalPreview();
+  showToast("🔄 Reset all page texts to standard defaults!", "info");
+}
+
+function saveFrontMatterTexts() {
+  const cfg = getFrontMatterFormData();
+  currentProject.front_matter_config = cfg;
+  saveProject(false);
+  showToast("💾 Page custom texts saved to project!", "success");
+}
+
+function getFrontMatterFormData() {
+  const getVal = (id, fallback = "") => document.getElementById(id)?.value ?? fallback;
+  const author = getVal("exp-fm-text-author", currentProject.author || "Creative Kids Studio");
+  return {
+    include_disclaimer: document.getElementById("exp-fm-disclaimer")?.checked ?? true,
+    include_contents: document.getElementById("exp-fm-contents")?.checked ?? false,
+    include_belongs: document.getElementById("exp-fm-belongs")?.checked ?? false,
+    include_color_test: document.getElementById("exp-fm-color-test")?.checked ?? false,
+    include_custom_page: document.getElementById("exp-fm-custom")?.checked ?? false,
+    custom_page_pos: getVal("exp-fm-custom-pos", "back"),
+
+    book_title: getVal("exp-fm-text-title", currentProject.name || "COLORING BOOK"),
+    author: author,
+    publisher: getVal("exp-fm-text-publisher", "KDP Creative Publishing"),
+    edition_text: getVal("exp-fm-text-edition", "First Edition  •  Amazon KDP Publication"),
+    copyright_text: getVal("exp-fm-text-copyright", `Copyright © 2026 by ${author}. All Rights Reserved.`),
+    isbn: getVal("exp-fm-text-isbn", "ISBN-13: 978-X-XXXXX-XXX-X"),
+    disclaimer_text: getVal("exp-fm-text-disclaimer", ""),
+    disclaimer_extra_note: getVal("exp-fm-text-extra-note", ""),
+
+    toc_heading: getVal("exp-fm-text-toc-heading", "TABLE OF CONTENTS"),
+    toc_subtitle: getVal("exp-fm-text-toc-subtext", "Complete list of coloring illustrations in this book"),
+    toc_footer: getVal("exp-fm-text-toc-footer", ""),
+
+    belongs_title: getVal("exp-fm-text-belongs-title", "THIS COLORING BOOK"),
+    belongs_header: getVal("exp-fm-text-belongs-header", "BELONGS TO:"),
+    subtext: getVal("exp-fm-text-subtext", "Color with joy, love and your wild imagination!"),
+    belongs_gift_note: getVal("exp-fm-text-belongs-gift", ""),
+
+    color_test_title: getVal("exp-fm-text-color-title", "COLOR TEST PALETTE"),
+    color_test_subtext: getVal("exp-fm-text-color-subtext", "Test your pencils, markers, and crayons here before coloring!"),
+    color_test_note: getVal("exp-fm-text-color-note", ""),
+
+    custom_page_title: getVal("exp-fm-custom-title", "A NOTE FROM THE AUTHOR"),
+    custom_page_subtitle: getVal("exp-fm-custom-subtitle", "Thank you for supporting our work!"),
+    custom_page_body: getVal("exp-fm-custom-body", ""),
+    custom_page_signoff: getVal("exp-fm-custom-signoff", `Happy Coloring!  •  ${author}`)
+  };
 }
 
 function openExportPdfModal() {
@@ -738,12 +844,53 @@ function openExportPdfModal() {
     if (document.getElementById("exp-fm-color-test")) document.getElementById("exp-fm-color-test").checked = true;
   }
 
-  // Pre-fill text customization inputs
-  const authorIn = document.getElementById("exp-fm-text-author");
-  if (authorIn) authorIn.value = currentProject.author || "Creative Kids Studio";
+  // Populate text inputs from currentProject.front_matter_config (or sensible defaults)
+  const cfg = currentProject.front_matter_config || {};
+  const author = cfg.author || currentProject.author || "Creative Kids Studio";
+  const name = cfg.book_title || currentProject.name || "COLORING BOOK";
 
-  const pubIn = document.getElementById("exp-fm-text-publisher");
-  if (pubIn) pubIn.value = currentProject.front_matter_config?.publisher_name || "KDP Creative Publishing";
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  };
+
+  setVal("exp-fm-text-title", name);
+  setVal("exp-fm-text-author", author);
+  setVal("exp-fm-text-publisher", cfg.publisher || "KDP Creative Publishing");
+  setVal("exp-fm-text-edition", cfg.edition_text || "First Edition  •  Amazon KDP Publication");
+  setVal("exp-fm-text-copyright", cfg.copyright_text || `Copyright © 2026 by ${author}. All Rights Reserved.`);
+  setVal("exp-fm-text-isbn", cfg.isbn || "ISBN-13: 978-X-XXXXX-XXX-X");
+  setVal("exp-fm-text-disclaimer", cfg.disclaimer_text || "No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.");
+  setVal("exp-fm-text-extra-note", cfg.disclaimer_extra_note || "");
+
+  setVal("exp-fm-text-toc-heading", cfg.toc_heading || "TABLE OF CONTENTS");
+  setVal("exp-fm-text-toc-subtext", cfg.toc_subtitle || "Complete list of coloring illustrations in this book");
+  setVal("exp-fm-text-toc-footer", cfg.toc_footer || "");
+
+  setVal("exp-fm-text-belongs-title", cfg.belongs_title || "THIS COLORING BOOK");
+  setVal("exp-fm-text-belongs-header", cfg.belongs_header || "BELONGS TO:");
+  setVal("exp-fm-text-subtext", cfg.subtext || "Color with joy, love and your wild imagination!");
+  setVal("exp-fm-text-belongs-gift", cfg.belongs_gift_note || "");
+
+  setVal("exp-fm-text-color-title", cfg.color_test_title || "COLOR TEST PALETTE");
+  setVal("exp-fm-text-color-subtext", cfg.color_test_subtext || "Test your pencils, markers, and crayons here before coloring!");
+  setVal("exp-fm-text-color-note", cfg.color_test_note || "");
+
+  setVal("exp-fm-custom-title", cfg.custom_page_title || "A NOTE FROM THE AUTHOR");
+  setVal("exp-fm-custom-subtitle", cfg.custom_page_subtitle || "Thank you for supporting our work!");
+  setVal("exp-fm-custom-body", cfg.custom_page_body || "Thank you so much for choosing our coloring book!\n\nWe poured our hearts into creating each illustration, designed to spark creativity, relaxation, and endless joy. Whether you are coloring with colored pencils, markers, or crayons, remember that in art, there are no mistakes—only unique masterpieces!\n\nIf you enjoyed this book, please consider leaving a review on Amazon. Your kind feedback helps independent creators like us continue to make beautiful books!");
+  setVal("exp-fm-custom-signoff", cfg.custom_page_signoff || `Happy Coloring!  •  ${author}`);
+
+  if (document.getElementById("exp-fm-custom-pos")) {
+    document.getElementById("exp-fm-custom-pos").value = cfg.custom_page_pos || "back";
+  }
+
+  if (document.getElementById("exp-fm-custom")) {
+    document.getElementById("exp-fm-custom").checked = cfg.include_custom_page || false;
+  }
+
+  // Set active tab to disclaimer initially
+  switchFrontMatterTab("disclaimer");
 
   updateExportModalPreview();
   modal.classList.add("active");
@@ -764,22 +911,39 @@ function updateExportModalPreview() {
   const incContents = document.getElementById("exp-fm-contents") ? document.getElementById("exp-fm-contents").checked : false;
   const incBelongs = document.getElementById("exp-fm-belongs") ? document.getElementById("exp-fm-belongs").checked : false;
   const incColorTest = document.getElementById("exp-fm-color-test") ? document.getElementById("exp-fm-color-test").checked : false;
+  const incCustom = document.getElementById("exp-fm-custom") ? document.getElementById("exp-fm-custom").checked : false;
+  const customPos = document.getElementById("exp-fm-custom-pos") ? document.getElementById("exp-fm-custom-pos").value : "back";
+
+  const customPageTitle = document.getElementById("exp-fm-custom-title")?.value || "Author Note / Thank You";
 
   const contentPages = (currentProject.pages || []).filter(p => p.page_type !== "blank_verso" && !p.page_type?.startsWith("front_matter_"));
 
   // Build compiled full KDP book pages dynamically based on ticked checkboxes
   let exportPages = [];
   if (incDisclaimer) {
+    const discTitle = document.getElementById("exp-fm-text-title")?.value || "Disclaimer & Copyright";
     exportPages.push({ page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", badge: `Page ${exportPages.length + 1} • Disclaimer` });
   }
   if (incContents) {
-    exportPages.push({ page_type: "front_matter_contents", title: "Table of Contents", badge: `Page ${exportPages.length + 1} • Contents` });
+    const tocTitle = document.getElementById("exp-fm-text-toc-heading")?.value || "Table of Contents";
+    exportPages.push({ page_type: "front_matter_contents", title: tocTitle, badge: `Page ${exportPages.length + 1} • Contents` });
   }
   if (incBelongs) {
-    exportPages.push({ page_type: "front_matter_belongs_to", title: "Belongs To Page", badge: `Page ${exportPages.length + 1} • Belongs To` });
+    const bTitle = document.getElementById("exp-fm-text-belongs-title")?.value || "This Book Belongs To";
+    exportPages.push({ page_type: "front_matter_belongs_to", title: bTitle, badge: `Page ${exportPages.length + 1} • Belongs To` });
   }
   if (incColorTest) {
-    exportPages.push({ page_type: "front_matter_color_test", title: "Color Test Palette", badge: `Page ${exportPages.length + 1} • Color Test` });
+    const colTitle = document.getElementById("exp-fm-text-color-title")?.value || "Color Test Palette";
+    exportPages.push({ page_type: "front_matter_color_test", title: colTitle, badge: `Page ${exportPages.length + 1} • Color Test` });
+  }
+
+  // If custom page placed in Front Matter
+  if (incCustom && customPos === "front") {
+    exportPages.push({
+      page_type: "custom_text_page",
+      title: customPageTitle,
+      badge: `Page ${exportPages.length + 1} • Custom Note`
+    });
   }
 
   const fmCount = exportPages.length;
@@ -838,6 +1002,26 @@ function updateExportModalPreview() {
     }
   }
 
+  // If custom page placed in Back Matter
+  if (incCustom && customPos === "back") {
+    const backPageNum = exportPages.length + 1;
+    exportPages.push({
+      page_type: "custom_text_page",
+      title: customPageTitle,
+      doc_page_number: backPageNum,
+      badge: `Page ${backPageNum} • Thank You Note`
+    });
+
+    if (singleSided) {
+      exportPages.push({
+        page_type: "blank_verso",
+        title: "Blank Back Page",
+        doc_page_number: backPageNum + 1,
+        badge: `Page ${backPageNum + 1} • Blank Back`
+      });
+    }
+  }
+
   let html = "";
   exportPages.forEach((p, idx) => {
     const docPageNum = idx + 1;
@@ -846,6 +1030,7 @@ function updateExportModalPreview() {
     const isContents = p.page_type === "front_matter_contents";
     const isBelongsTo = p.page_type === "front_matter_belongs_to";
     const isColorTest = p.page_type === "front_matter_color_test";
+    const isCustom = p.page_type === "custom_text_page";
 
     if (isBlank) {
       html += `
@@ -872,6 +1057,8 @@ function updateExportModalPreview() {
         thumbImg = `<span style="font-size:24px;">🏷️</span>`;
       } else if (isColorTest) {
         thumbImg = `<span style="font-size:24px;">🧪</span>`;
+      } else if (isCustom) {
+        thumbImg = `<span style="font-size:24px;">💌</span>`;
       } else if (p.page_type === "solution_divider") {
         thumbImg = `<span style="font-size:24px;">🏆</span>`;
       } else if (p.page_type === "sudoku_solutions" || p.puzzles) {
@@ -905,22 +1092,13 @@ function executePdfExport(openInBrowser = true) {
   const singleSided = document.getElementById("exp-opt-single-sided") ? document.getElementById("exp-opt-single-sided").checked : true;
   const blankNote = document.getElementById("exp-opt-blank-note") ? document.getElementById("exp-opt-blank-note").checked : false;
 
-  const fmOptions = {
-    include_disclaimer: document.getElementById("exp-fm-disclaimer")?.checked ?? true,
-    include_contents: document.getElementById("exp-fm-contents")?.checked ?? false,
-    include_belongs: document.getElementById("exp-fm-belongs")?.checked ?? false,
-    include_color_test: document.getElementById("exp-fm-color-test")?.checked ?? false,
-    author: document.getElementById("exp-fm-text-author")?.value || currentProject.author || "Creative Kids Studio",
-    publisher: document.getElementById("exp-fm-text-publisher")?.value || "KDP Creative Publishing",
-    toc_heading: document.getElementById("exp-fm-text-toc-heading")?.value || "TABLE OF CONTENTS",
-    belongs_title: document.getElementById("exp-fm-text-belongs-title")?.value || "THIS COLORING BOOK",
-    subtext: document.getElementById("exp-fm-text-subtext")?.value || "Color with joy, love and your wild imagination!"
-  };
+  const fmOptions = getFrontMatterFormData();
+
+  // Save current project state and front matter options
+  currentProject.front_matter_config = fmOptions;
+  saveProject(false);
 
   showToast("⚙️ Generating 300 DPI Amazon KDP PDF...", "info");
-
-  // Save current project state first
-  saveProject(false);
 
   const payload = {
     ...currentProject,
