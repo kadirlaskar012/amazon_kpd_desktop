@@ -100,7 +100,7 @@ function Animate-ProcessStep($stepName, $actionBlock = $null) {
     $result = $null
     if ($actionBlock) {
         try {
-            $result = & $actionBlock
+            $result = . $actionBlock
         } catch {
             $failBar = ("$fill" * 8) + ("$empty" * 12)
             Write-Host "`r  $cross $paddedName [$failBar]  FAILED" -ForegroundColor Red
@@ -127,49 +127,49 @@ Animate-ProcessStep "1. Initializing KDP Studio" {
 }
 
 # STEP 2: Checking Python Environment
-$pyCmd = $null
-$pyVersion = "Python 3.10+"
+$script:pyCmd = $null
+$script:pyVersion = "Python 3.10+"
 Animate-ProcessStep "2. Checking Python Environment" {
     $venvPy = Join-Path $scriptDir ".venv\Scripts\python.exe"
     if (Test-Path $venvPy) {
-        $pyCmd = $venvPy
+        $script:pyCmd = $venvPy
     } else {
         $sysPy = (Get-Command python -ErrorAction SilentlyContinue)
         if ($sysPy) {
-            $pyCmd = "python"
+            $script:pyCmd = "python"
         } else {
             $pyLauncher = (Get-Command py -ErrorAction SilentlyContinue)
             if ($pyLauncher) {
-                $pyCmd = "py"
+                $script:pyCmd = "py"
             }
         }
     }
 
-    if (-not $pyCmd) {
+    if (-not $script:pyCmd) {
         throw "Python was not found! Please install Python 3.10+ or check .venv directory."
     }
 
     try {
-        $verOut = & $pyCmd --version 2>&1
-        if ($verOut) { $pyVersion = $verOut.ToString().Trim() }
+        $verOut = & $script:pyCmd --version 2>&1
+        if ($verOut) { $script:pyVersion = $verOut.ToString().Trim() }
     } catch {}
 }
 
 # STEP 3: Starting Backend Engine
-$serverProcess = $null
+$script:serverProcess = $null
 Animate-ProcessStep "3. Starting Backend Engine" {
     $serverRunning = Test-PortOpen 8080
     if (-not $serverRunning) {
         $serverPy = Join-Path $scriptDir "web_preview\server.py"
-        $serverProcess = Start-Process -FilePath $pyCmd -ArgumentList "`"$serverPy`"" -PassThru -WindowStyle Hidden
+        $script:serverProcess = Start-Process -FilePath $script:pyCmd -ArgumentList "`"$serverPy`"" -WorkingDirectory $scriptDir -PassThru -WindowStyle Hidden
     }
 }
 
 # STEP 4: Checking Local Server
 Animate-ProcessStep "4. Checking Local Server" {
     $retries = 0
-    while (-not (Test-PortOpen 8080) -and $retries -lt 25) {
-        Start-Sleep -Milliseconds 100
+    while (-not (Test-PortOpen 8080) -and $retries -lt 35) {
+        Start-Sleep -Milliseconds 150
         $retries++
     }
     if (-not (Test-PortOpen 8080)) {
@@ -186,20 +186,20 @@ Animate-ProcessStep "5. Verifying Project Workspace" {
 }
 
 # STEP 6: Checking Browser Availability
-$availableBrowsers = @()
+$script:availableBrowsers = @()
 Animate-ProcessStep "6. Checking Browser Availability" {
-    $availableBrowsers += "Default System Browser"
+    $script:availableBrowsers += "Default System Browser"
     if (Get-Command chrome -ErrorAction SilentlyContinue -or (Test-Path "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe") -or (Test-Path "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe") -or (Test-Path "${env:LocalAppData}\Google\Chrome\Application\chrome.exe")) {
-        $availableBrowsers += "Google Chrome"
+        $script:availableBrowsers += "Google Chrome"
     }
     if (Get-Command msedge -ErrorAction SilentlyContinue -or (Test-Path "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe") -or (Test-Path "${env:ProgramFiles}\Microsoft\Edge\Application\msedge.exe")) {
-        $availableBrowsers += "Microsoft Edge"
+        $script:availableBrowsers += "Microsoft Edge"
     }
     if (Get-Command brave -ErrorAction SilentlyContinue -or (Test-Path "${env:ProgramFiles}\BraveSoftware\Brave-Browser\Application\brave.exe")) {
-        $availableBrowsers += "Brave Browser"
+        $script:availableBrowsers += "Brave Browser"
     }
     if (Get-Command firefox -ErrorAction SilentlyContinue -or (Test-Path "${env:ProgramFiles}\Mozilla Firefox\firefox.exe")) {
-        $availableBrowsers += "Mozilla Firefox"
+        $script:availableBrowsers += "Mozilla Firefox"
     }
 }
 

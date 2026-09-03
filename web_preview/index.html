@@ -14,14 +14,14 @@
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
   <script>
-    (function() {
+    (function () {
       try {
         var theme = localStorage.getItem("kdp_studio_theme") || "light";
         document.documentElement.setAttribute("data-theme", theme);
         var urlParams = new URLSearchParams(window.location.search);
         var tab = urlParams.get("tab") || sessionStorage.getItem("kdp_active_tab") || localStorage.getItem("kdp_active_tab") || "dashboard";
         document.documentElement.setAttribute("data-active-tab", tab);
-      } catch (e) {}
+      } catch (e) { }
     })();
   </script>
 </head>
@@ -122,14 +122,17 @@
                 <span class="dash-theme-title">Theme Mode:</span>
               </div>
               <div class="dash-theme-toggle-group">
-                <button type="button" class="dash-theme-btn active" id="dash-theme-light-btn" onclick="selectAndApplyTheme('light')">
+                <button type="button" class="dash-theme-btn active" id="dash-theme-light-btn"
+                  onclick="selectAndApplyTheme('light')">
                   ☀️ Light
                 </button>
-                <button type="button" class="dash-theme-btn" id="dash-theme-dark-btn" onclick="selectAndApplyTheme('dark')">
+                <button type="button" class="dash-theme-btn" id="dash-theme-dark-btn"
+                  onclick="selectAndApplyTheme('dark')">
                   🌙 Dark
                 </button>
               </div>
-              <button type="button" class="btn btn-sm btn-primary dash-theme-save-btn" id="dash-theme-save-btn" onclick="saveThemePreference()" title="Save current theme as permanent preference">
+              <button type="button" class="btn btn-sm btn-primary dash-theme-save-btn" id="dash-theme-save-btn"
+                onclick="saveThemePreference()" title="Save current theme as permanent preference">
                 💾 Save Theme
               </button>
               <span class="dash-theme-saved-badge" id="dash-theme-saved-badge">✓ Saved</span>
