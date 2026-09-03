@@ -1764,16 +1764,6 @@ function setupGlobalKeyboardShortcuts() {
     const activeTagName = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
     const isInputActive = activeTagName === "input" || activeTagName === "textarea" || activeTagName === "select";
 
-    // Free Transform Mode: Ctrl+T (or Cmd+T)
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "t") {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!isInputActive) {
-        toggleTransformMode();
-      }
-      return;
-    }
-
     // Undo: Ctrl+Z (or Cmd+Z)
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
       if (!isInputActive) {
@@ -1890,6 +1880,7 @@ function setupGlobalKeyboardShortcuts() {
     if (isInputActive) return;
 
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+      if (isCanvasLayoutLocked) return;
       const elem = getActiveElement();
       if (elem) {
         e.preventDefault();
@@ -5024,12 +5015,12 @@ function toggleTransformMode(force = null) {
 }
 
 function updateTransformUI() {
-  const floatingBadge = document.getElementById("canvas-transform-badge");
   const inactiveControls = document.getElementById("transform-controls-inactive");
   const activeControls = document.getElementById("transform-controls-active");
+  const toolBtn = document.getElementById("tool-transform");
 
-  if (floatingBadge) {
-    floatingBadge.style.display = isTransformMode ? "inline-flex" : "none";
+  if (toolBtn) {
+    toolBtn.classList.toggle("active", isTransformMode);
   }
   if (inactiveControls) {
     inactiveControls.style.display = isTransformMode ? "none" : "block";
@@ -5099,7 +5090,11 @@ function setupCanvasInteractions() {
     }
 
     const elem = getActiveElement();
-    if (!elem || currentProject.is_locked) return;
+    if (!elem || currentProject.is_locked || isCanvasLayoutLocked) {
+      isDragging = false;
+      isResizing = false;
+      return;
+    }
 
     const dx = (lastClientX - startX) / currentZoom;
     const dy = (lastClientY - startY) / currentZoom;
@@ -5235,6 +5230,8 @@ function setupCanvasInteractions() {
       const isImg = elem && isImageElement(elem);
 
       if (isCanvasLayoutLocked) {
+        isDragging = false;
+        isResizing = false;
         return;
       }
 

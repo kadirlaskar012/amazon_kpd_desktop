@@ -643,6 +643,7 @@
             <button class="tool-btn active" title="Select Tool (V)" id="tool-select">↖</button>
             <button class="tool-btn" title="Add Text (T)" onclick="addNewTextElement()">🔤</button>
             <button class="tool-btn" title="Add Border Frame (B)" onclick="addNewBorderElement()">⬜</button>
+            <button class="tool-btn" id="tool-transform" title="Free Transform: Scale & Move Image (📐)" onclick="toggleTransformMode()">📐</button>
             <div class="tool-sep"></div>
             <button class="tool-btn" title="Fit to View (Ctrl+0)" onclick="fitCanvasView()">⛶</button>
             <button class="tool-btn" title="Zoom In (Ctrl++)" onclick="changeZoom(0.1)">+</button>
@@ -661,18 +662,6 @@
               <span id="canvas-lock-icon">🔒</span>
               <span id="canvas-lock-text">Layout Locked</span>
             </button>
-
-            <!-- Floating Free Transform Mode Badge / Toolbar -->
-            <div class="canvas-transform-badge" id="canvas-transform-badge" style="display: none;">
-              <span class="transform-badge-icon">📐</span>
-              <span class="transform-badge-text"><strong>Transform Mode</strong></span>
-              <span class="transform-badge-divider">|</span>
-              <span class="transform-badge-hint"><strong>Shift + Drag Handle</strong> = Uniform Scale</span>
-              <span class="transform-badge-divider">|</span>
-              <span class="transform-badge-hint"><strong>Drag Box</strong> = Move</span>
-              <button class="transform-mini-btn apply" onclick="commitTransform()" title="Apply and Save (Enter)">✓ Done</button>
-              <button class="transform-mini-btn cancel" onclick="cancelTransform()" title="Cancel and Revert (Esc)">✕ Cancel</button>
-            </div>
 
             <div class="canvas-stage layout-locked" id="canvas-stage">
               <!-- Physical Paper Page -->
@@ -752,11 +741,11 @@
                 <!-- Free Transform Mode Controls -->
                 <div class="group-title" style="margin-top: 14px;">📐 Transform & Scaling</div>
                 <div id="transform-controls-inactive">
-                  <button class="btn btn-sm btn-warning full-width" id="btn-free-transform" onclick="enterTransformMode()" title="Free Transform: Scale and adjust image position (Ctrl+T)">
-                    📐 Free Transform (Ctrl+T)
+                  <button class="btn btn-sm btn-warning full-width" id="btn-free-transform" onclick="enterTransformMode()" title="Free Transform: Scale and adjust image position">
+                    📐 Free Transform Tool
                   </button>
                   <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px; line-height: 1.4;">
-                    💡 Select image & press <strong>Ctrl+T</strong> to scale or move.
+                    💡 Click <strong>📐 in left toolbar</strong> or button above to scale & move.
                   </div>
                 </div>
                 <div id="transform-controls-active" style="display: none;">
@@ -1268,7 +1257,7 @@
             <div class="sc-row"><kbd>F2</kbd> <span>Rename Page / Title Element</span></div>
             <div class="sc-row"><kbd>Ctrl</kbd> + <kbd>S</kbd> <span>Save Project to Disk</span></div>
             <div class="sc-row"><kbd>Ctrl</kbd> + <kbd>D</kbd> <span>Duplicate Selected Element</span></div>
-            <div class="sc-row"><kbd>Ctrl</kbd> + <kbd>T</kbd> <span>Free Transform Image (Scale & Move)</span></div>
+            <div class="sc-row"><kbd>📐</kbd> (Toolbar) <span>Free Transform Image (Scale & Move)</span></div>
             <div class="sc-row"><kbd>Shift</kbd> + <kbd>Drag</kbd> <span>Uniform / Proportional Scale</span></div>
             <div class="sc-row"><kbd>Enter</kbd> <span>Confirm Action / Commit Transform</span></div>
             <div class="sc-row"><kbd>Escape</kbd> <span>Deselect / Cancel Transform / Close Modal</span></div>

@@ -1898,70 +1898,11 @@ kbd {
 .handle.bc { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
 .handle.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
 
-/* Floating On-Canvas Transform Toolbar Badge */
-.canvas-transform-badge {
-  position: absolute;
-  top: 18px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  background: #0f172a;
-  color: #f8fafc;
-  padding: 6px 14px;
-  border-radius: 30px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
-  animation: fadeInDown 0.2s ease-out;
-}
-
-.transform-badge-icon {
-  font-size: 14px;
-}
-
-.transform-badge-divider {
-  color: rgba(255, 255, 255, 0.2);
-}
-
-.transform-badge-hint {
-  color: #94a3b8;
-  font-size: 11.5px;
-}
-
-.transform-badge-hint strong {
-  color: #38bdf8;
-}
-
-.transform-mini-btn {
-  border: none;
-  border-radius: 20px;
-  padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.transform-mini-btn.apply {
-  background: #10b981;
-  color: #ffffff;
-}
-
-.transform-mini-btn.apply:hover {
-  background: #059669;
-}
-
-.transform-mini-btn.cancel {
-  background: rgba(255, 255, 255, 0.15);
-  color: #e2e8f0;
-}
-
-.transform-mini-btn.cancel:hover {
-  background: #ef4444;
-  color: #ffffff;
+/* Transform Tool Active in Left Toolbar */
+#tool-transform.active {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.4) !important;
 }
 
 /* Properties Panel Transform Hint Box */
