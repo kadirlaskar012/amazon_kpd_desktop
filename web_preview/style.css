@@ -2535,6 +2535,16 @@ kbd {
   border-right: 1px solid #e2e8f0;
 }
 
+.spread-page.inside-cover {
+  background: #f1f5f9;
+  border-right: 1px solid #cbd5e1;
+}
+
+[data-theme="dark"] .spread-page.inside-cover {
+  background: #1e293b;
+  border-right-color: #334155;
+}
+
 .book-spine-crease {
   width: 12px;
   background: linear-gradient(to right, rgba(0,0,0,0.15), rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.15));

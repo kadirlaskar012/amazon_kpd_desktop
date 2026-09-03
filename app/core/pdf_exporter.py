@@ -185,6 +185,9 @@ class KDPPdfExporter:
 
         # Calculate actual starting page number for content pages
         fm_count = sum([1 for flag in [inc_disclaimer, inc_contents, inc_belongs, inc_color_test, (inc_custom_page and custom_page_pos == "front")] if flag])
+        needs_fm_pad = single_sided and (fm_count % 2 != 0)
+        if needs_fm_pad:
+            fm_count += 1
         start_content_page_num = fm_count + 1
 
         # --- PAGE 1: DISCLAIMER & COPYRIGHT ---
@@ -460,6 +463,11 @@ class KDPPdfExporter:
         # --- OPTIONAL FRONT MATTER CUSTOM PAGE ---
         if inc_custom_page and custom_page_pos == "front":
             render_custom_text_page()
+
+        # If single-sided and front-matter had an odd number of pages, insert a blank verso page
+        # so that Drawing 1 is guaranteed to start on an ODD page (RIGHT side) with Blank on LEFT
+        if needs_fm_pad:
+            render_blank_page()
 
         # =========================================================================
         # 2. CONTENT DRAWING PAGES (Pages 5+) + BLANK VERSO PAGES

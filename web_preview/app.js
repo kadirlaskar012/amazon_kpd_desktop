@@ -1111,6 +1111,17 @@ function renderExportModalPreview() {
     });
   }
 
+  // If singleSided and front matter count is odd, insert a blank verso page so Drawing 1 starts on ODD (Right)
+  if (singleSided && (exportPages.length % 2 !== 0)) {
+    const padNum = exportPages.length + 1;
+    exportPages.push({
+      page_type: "blank_verso",
+      title: "Blank Verso",
+      doc_page_number: padNum,
+      badge: `Page ${padNum} • Blank Back (Left)`
+    });
+  }
+
   const fmCount = exportPages.length;
 
   contentPages.forEach((p, idx) => {
@@ -1119,7 +1130,7 @@ function renderExportModalPreview() {
     exportPages.push({
       ...p,
       doc_page_number: drawPageNum,
-      badge: `Page ${drawPageNum} • ${labelType} ${idx + 1}`
+      badge: `Page ${drawPageNum} • ${labelType} ${idx + 1} (Right)`
     });
 
     if (singleSided) {
@@ -1127,7 +1138,7 @@ function renderExportModalPreview() {
         page_type: "blank_verso",
         title: "Blank Back Page",
         doc_page_number: drawPageNum + 1,
-        badge: `Page ${drawPageNum + 1} • Blank Back`
+        badge: `Page ${drawPageNum + 1} • Blank Back (Left)`
       });
     }
   });
@@ -1391,23 +1402,45 @@ function renderSpreadPreview() {
     return;
   }
 
-  const leftIdx = currentSpreadIndex * 2;
-  const rightIdx = leftIdx + 1;
+  let leftPage = null;
+  let rightPage = null;
 
-  const leftPage = compiledSpreadPages[leftIdx];
-  const rightPage = rightIdx < totalPages ? compiledSpreadPages[rightIdx] : null;
+  if (currentSpreadIndex === 0) {
+    // Spread 0: Initial open (Inside Cover on Left, Page 1 on Right)
+    leftPage = null;
+    rightPage = compiledSpreadPages[0] || null;
+  } else {
+    // Spread k: Page (2k) on Left, Page (2k + 1) on Right
+    const leftIdx = (currentSpreadIndex * 2) - 1;
+    const rightIdx = currentSpreadIndex * 2;
+    leftPage = leftIdx < totalPages ? compiledSpreadPages[leftIdx] : null;
+    rightPage = rightIdx < totalPages ? compiledSpreadPages[rightIdx] : null;
+  }
 
   if (indicator) {
-    indicator.innerText = rightPage 
-      ? `Spread: Pages ${leftPage.page_number} - ${rightPage.page_number} (of ${totalPages} Compiled Pages)`
-      : `Spread: Page ${leftPage.page_number} (Final Page)`;
+    if (currentSpreadIndex === 0) {
+      indicator.innerText = `Spread: Page 1 (Right / Recto • First Page of ${totalPages} Pages)`;
+    } else if (leftPage && rightPage) {
+      indicator.innerText = `Spread: Page ${leftPage.page_number} (Left) – Page ${rightPage.page_number} (Right) [of ${totalPages} Pages]`;
+    } else if (leftPage) {
+      indicator.innerText = `Spread: Page ${leftPage.page_number} (Final Page of ${totalPages} Pages)`;
+    }
   }
 
   const renderPageHtml = (page, isLeft) => {
     if (!page) {
+      if (isLeft && currentSpreadIndex === 0) {
+        return `
+          <div class="spread-page left-page inside-cover" style="background:#f1f5f9;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid #cbd5e1;">
+            <div style="font-size:32px;margin-bottom:8px;">📖</div>
+            <div style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Inside Front Cover</div>
+            <div style="color:#94a3b8;font-size:10px;font-style:italic;margin-top:4px;">(Turn page to open book)</div>
+          </div>
+        `;
+      }
       return `
         <div class="spread-page ${isLeft ? 'left-page' : 'right-page'}" style="background:#f8fafc;display:flex;align-items:center;justify-content:center;">
-          <div style="color:#94a3b8;font-size:12px;font-style:italic;">[ End of Book ]</div>
+          <div style="color:#94a3b8;font-size:12px;font-style:italic;">[ End of Book / Inside Back Cover ]</div>
         </div>
       `;
     }
@@ -1544,7 +1577,7 @@ function prevSpreadPage() {
 function nextSpreadPage() {
   const contentPages = (currentProject.pages || []).filter(p => p.page_type !== "blank_verso" && !p.page_type?.startsWith("front_matter_"));
   const totalCompiled = 4 + (contentPages.length * 2);
-  const maxSpread = Math.floor((totalCompiled - 1) / 2);
+  const maxSpread = Math.ceil(totalCompiled / 2);
   if (currentSpreadIndex < maxSpread) {
     currentSpreadIndex++;
     renderSpreadPreview();
