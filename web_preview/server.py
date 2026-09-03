@@ -56,6 +56,20 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         super().end_headers()
 
+    def guess_type(self, path):
+        """Force UTF-8 charset for all text files so emojis render correctly."""
+        mime = super().guess_type(path)
+        path_str = str(path).lower()
+        if path_str.endswith('.js'):
+            return 'application/javascript; charset=utf-8'
+        elif path_str.endswith('.css'):
+            return 'text/css; charset=utf-8'
+        elif path_str.endswith('.html'):
+            return 'text/html; charset=utf-8'
+        return mime
+
+
+
     def do_OPTIONS(self):
         self.send_response(200)
         self.end_headers()
