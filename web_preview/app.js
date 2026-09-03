@@ -2468,66 +2468,371 @@ function triggerMediaUpload() {
   }
 }
 
+// ==========================================================================
+// Interactive 2-Step Media Upload Studio Controller
+// ==========================================================================
+let stagedUploadItems = [];
+let isProcessingStep1 = false;
+let isProcessingStep2 = false;
+
 async function handleMediaLibraryUpload(event) {
-  if (currentProject.is_locked) return;
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot upload: Project is locked!", "warning");
+    return;
+  }
 
   const files = Array.from(event.target.files);
   if (!files.length) return;
 
-  if (!currentProject.media) {
-    currentProject.media = [];
-  }
+  stagedUploadItems = [];
+  isProcessingStep1 = false;
+  isProcessingStep2 = false;
 
-  recordHistoryState("Upload Media");
-  let lastMediaItem = null;
-
+  // Read files into staged memory immediately
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const origSizeKb = Math.round(file.size / 1024);
+    const sizeKb = Math.round(file.size / 1024);
 
-    let rawDataUrl = "";
+    let dataUrl = "";
     try {
-      rawDataUrl = await readAsDataURLAsync(file);
+      dataUrl = await readAsDataURLAsync(file);
     } catch (err) {
       console.error("Read file error:", err);
       continue;
     }
 
-    const mediaItem = {
+    stagedUploadItems.push({
       id: `med_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       name: cleanFileName(file.name),
       fileName: file.name,
-      dataUrl: rawDataUrl,
-      sizeKb: origSizeKb
-    };
-
-    currentProject.media.unshift(mediaItem);
-    lastMediaItem = mediaItem;
-    renderMediaLibrary();
+      originalDataUrl: dataUrl,
+      currentDataUrl: dataUrl,
+      originalSizeKb: sizeKb,
+      currentSizeKb: sizeKb,
+      step1Done: false,
+      step2Done: false,
+      status: "ready" // 'ready' | 'compressed' | 'cleaned'
+    });
   }
 
-  switchDrawerTab("media");
-  syncActiveProjectUI();
-  markProjectDirty();
+  openInteractiveUploadModal();
+}
 
-  showToast(`✨ ${files.length} image(s) added to Media Library!`, "success");
+function openInteractiveUploadModal() {
+  const modal = document.getElementById("image-processing-modal");
+  if (!modal) return;
 
-  // Save to disk in background silently without freezing UI
-  files.forEach(async (file) => {
-    let rawDataUrl = "";
-    try { rawDataUrl = await readAsDataURLAsync(file); } catch(e) { return; }
+  const totalCountEl = document.getElementById("upload-total-count");
+  const totalSizeEl = document.getElementById("upload-total-size");
+  if (totalCountEl) totalCountEl.innerText = stagedUploadItems.length;
+  if (totalSizeEl) {
+    const totalKb = stagedUploadItems.reduce((acc, it) => acc + it.originalSizeKb, 0);
+    totalSizeEl.innerText = totalKb > 1024 ? `${(totalKb / 1024).toFixed(1)} MB` : `${totalKb} KB`;
+  }
+
+  // Reset Step 1 UI
+  const btnStep1 = document.getElementById("btn-run-step1");
+  const step1Card = document.getElementById("step1-card");
+  const step1ProgWrap = document.getElementById("step1-progress-wrap");
+  const step1Fill = document.getElementById("step1-progress-fill");
+  const step1Status = document.getElementById("step1-progress-status");
+  const step1Saved = document.getElementById("step1-progress-saved");
+
+  if (step1Card) step1Card.className = "upload-step-card active-step";
+  if (btnStep1) {
+    btnStep1.disabled = false;
+    btnStep1.innerHTML = "⚡ Step 1: Compress & Auto-Focus";
+    btnStep1.className = "btn btn-primary step-action-btn";
+  }
+  if (step1ProgWrap) step1ProgWrap.style.display = "none";
+  if (step1Fill) step1Fill.style.width = "0%";
+  if (step1Status) step1Status.innerText = `0 / ${stagedUploadItems.length} Processed (0%)`;
+  if (step1Saved) step1Saved.innerText = "Saved 0 KB";
+
+  // Reset Step 2 UI (disabled initially until Step 1 completes)
+  const btnStep2 = document.getElementById("btn-run-step2");
+  const step2Card = document.getElementById("step2-card");
+  const step2ProgWrap = document.getElementById("step2-progress-wrap");
+  const step2Fill = document.getElementById("step2-progress-fill");
+  const step2Status = document.getElementById("step2-progress-status");
+  const step2Count = document.getElementById("step2-progress-count");
+
+  if (step2Card) step2Card.className = "upload-step-card disabled";
+  if (btnStep2) {
+    btnStep2.disabled = true;
+    btnStep2.innerHTML = "🪄 Step 2: Make Background White";
+    btnStep2.className = "btn btn-outline step-action-btn";
+  }
+  if (step2ProgWrap) step2ProgWrap.style.display = "none";
+  if (step2Fill) step2Fill.style.width = "0%";
+  if (step2Status) step2Status.innerText = "Waiting for Step 1...";
+  if (step2Count) step2Count.innerText = `0 / ${stagedUploadItems.length}`;
+
+  const footerStatus = document.getElementById("upload-footer-status");
+  if (footerStatus) footerStatus.innerText = "Click Step 1 to optimize & compress images";
+
+  renderUploadPreviewGrid();
+  modal.classList.add("active");
+}
+
+function closeInteractiveUploadModal() {
+  const modal = document.getElementById("image-processing-modal");
+  if (modal) modal.classList.remove("active");
+}
+
+function renderUploadPreviewGrid() {
+  const grid = document.getElementById("upload-preview-grid");
+  if (!grid) return;
+
+  grid.innerHTML = stagedUploadItems.map((item, idx) => {
+    let badgeClass = "status-ready";
+    let badgeText = "Ready";
+    if (item.status === "cleaned") {
+      badgeClass = "status-cleaned";
+      badgeText = "White BG ✅";
+    } else if (item.status === "compressed") {
+      badgeClass = "status-compressed";
+      badgeText = "Compressed ⚡";
+    }
+
+    const sizeDisplay = item.currentSizeKb > 1024 
+      ? `${(item.currentSizeKb / 1024).toFixed(1)} MB` 
+      : `${item.currentSizeKb} KB`;
+
+    return `
+      <div class="upload-preview-card" id="up-card-${idx}">
+        <div class="upload-card-thumb-box">
+          <img src="${item.currentDataUrl}" alt="${item.fileName}" id="up-img-${idx}">
+        </div>
+        <div class="upload-card-name" title="${item.fileName}">${item.fileName}</div>
+        <div style="display: flex; gap: 4px; align-items: center; justify-content: center;">
+          <span class="upload-card-badge ${badgeClass}" id="up-badge-${idx}">${badgeText}</span>
+          <span style="font-size: 9px; color: var(--text-muted);">${sizeDisplay}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function runUploadStep1() {
+  if (isProcessingStep1 || stagedUploadItems.length === 0) return;
+  isProcessingStep1 = true;
+
+  const btnStep1 = document.getElementById("btn-run-step1");
+  const step1Card = document.getElementById("step1-card");
+  const progWrap = document.getElementById("step1-progress-wrap");
+  const progFill = document.getElementById("step1-progress-fill");
+  const progStatus = document.getElementById("step1-progress-status");
+  const progSaved = document.getElementById("step1-progress-saved");
+
+  if (progWrap) progWrap.style.display = "block";
+  if (btnStep1) {
+    btnStep1.disabled = true;
+    btnStep1.innerHTML = `⏳ Compressing...`;
+  }
+
+  let totalKbSaved = 0;
+  const total = stagedUploadItems.length;
+
+  for (let i = 0; i < total; i++) {
+    const item = stagedUploadItems[i];
+    const pct = Math.round(((i + 1) / total) * 100);
+
+    if (progStatus) {
+      progStatus.innerText = `Compressing [${i + 1}/${total}]: ${item.fileName} (${pct}%)`;
+    }
+    if (progFill) progFill.style.width = `${pct}%`;
+
+    try {
+      const resp = await fetch("/api/projects/process_image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data_url: item.currentDataUrl,
+          clean_bg: false,
+          auto_crop: true,
+          compress: true
+        })
+      });
+      const data = await resp.json();
+      if (data.data_url) {
+        item.currentDataUrl = data.data_url;
+        const saved = Math.max(0, item.originalSizeKb - (data.size_kb || item.currentSizeKb));
+        totalKbSaved += saved;
+        item.currentSizeKb = data.size_kb || item.currentSizeKb;
+        item.step1Done = true;
+        item.status = "compressed";
+
+        const imgEl = document.getElementById(`up-img-${i}`);
+        const badgeEl = document.getElementById(`up-badge-${i}`);
+        if (imgEl) imgEl.src = data.data_url;
+        if (badgeEl) {
+          badgeEl.className = "upload-card-badge status-compressed";
+          badgeEl.innerText = "Compressed ⚡";
+        }
+      }
+    } catch (err) {
+      console.warn("Step 1 compression error on", item.fileName, err);
+    }
+
+    if (progSaved) {
+      const savedStr = totalKbSaved > 1024 ? `${(totalKbSaved / 1024).toFixed(1)} MB` : `${totalKbSaved} KB`;
+      progSaved.innerText = `Saved ~${savedStr}`;
+    }
+  }
+
+  isProcessingStep1 = false;
+  if (progStatus) {
+    progStatus.innerText = `✅ All ${total} images compressed & auto-focused!`;
+  }
+  if (btnStep1) {
+    btnStep1.disabled = true;
+    btnStep1.className = "btn btn-success step-action-btn";
+    btnStep1.innerHTML = "✅ Step 1: Completed";
+  }
+  if (step1Card) {
+    step1Card.className = "upload-step-card completed-step";
+  }
+
+  // Unlock Step 2
+  const step2Card = document.getElementById("step2-card");
+  const btnStep2 = document.getElementById("btn-run-step2");
+  if (step2Card) step2Card.className = "upload-step-card active-step";
+  if (btnStep2) {
+    btnStep2.disabled = false;
+    btnStep2.className = "btn btn-primary step-action-btn";
+  }
+
+  const footerStatus = document.getElementById("upload-footer-status");
+  if (footerStatus) footerStatus.innerText = "Step 1 Done! Now click Step 2 to purify background to white";
+
+  showToast(`⚡ Step 1 complete: Compressed ${total} image(s)! Now click Step 2.`, "success");
+}
+
+async function runUploadStep2() {
+  if (isProcessingStep2 || stagedUploadItems.length === 0) return;
+  isProcessingStep2 = true;
+
+  const btnStep2 = document.getElementById("btn-run-step2");
+  const step2Card = document.getElementById("step2-card");
+  const progWrap = document.getElementById("step2-progress-wrap");
+  const progFill = document.getElementById("step2-progress-fill");
+  const progStatus = document.getElementById("step2-progress-status");
+  const progCount = document.getElementById("step2-progress-count");
+
+  if (progWrap) progWrap.style.display = "block";
+  if (btnStep2) {
+    btnStep2.disabled = true;
+    btnStep2.innerHTML = `⏳ Purifying Background...`;
+  }
+
+  const total = stagedUploadItems.length;
+
+  for (let i = 0; i < total; i++) {
+    const item = stagedUploadItems[i];
+    const pct = Math.round(((i + 1) / total) * 100);
+
+    if (progStatus) {
+      progStatus.innerText = `Purifying [${i + 1}/${total}]: ${item.fileName} (${pct}%)`;
+    }
+    if (progFill) progFill.style.width = `${pct}%`;
+    if (progCount) progCount.innerText = `${i + 1} / ${total}`;
+
+    try {
+      const resp = await fetch("/api/projects/process_image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data_url: item.currentDataUrl,
+          clean_bg: true,
+          auto_crop: false,
+          compress: false
+        })
+      });
+      const data = await resp.json();
+      if (data.data_url) {
+        item.currentDataUrl = data.data_url;
+        item.currentSizeKb = data.size_kb || item.currentSizeKb;
+        item.step2Done = true;
+        item.status = "cleaned";
+
+        const imgEl = document.getElementById(`up-img-${i}`);
+        const badgeEl = document.getElementById(`up-badge-${i}`);
+        if (imgEl) imgEl.src = data.data_url;
+        if (badgeEl) {
+          badgeEl.className = "upload-card-badge status-cleaned";
+          badgeEl.innerText = "White BG ✅";
+        }
+      }
+    } catch (err) {
+      console.warn("Step 2 clean background error on", item.fileName, err);
+    }
+  }
+
+  isProcessingStep2 = false;
+  if (progStatus) {
+    progStatus.innerText = `✅ All ${total} image backgrounds purified to #FFFFFF!`;
+  }
+  if (btnStep2) {
+    btnStep2.disabled = true;
+    btnStep2.className = "btn btn-success step-action-btn";
+    btnStep2.innerHTML = "✅ Step 2: Completed";
+  }
+  if (step2Card) {
+    step2Card.className = "upload-step-card completed-step";
+  }
+
+  const footerStatus = document.getElementById("upload-footer-status");
+  if (footerStatus) footerStatus.innerText = "🎉 All steps completed! Click 'Add to Project Media'";
+
+  showToast(`🪄 Step 2 complete: White background purified! Click 'Add to Project Media'.`, "success");
+}
+
+async function finalizeInteractiveUpload() {
+  if (stagedUploadItems.length === 0) {
+    closeInteractiveUploadModal();
+    return;
+  }
+
+  if (!currentProject.media) {
+    currentProject.media = [];
+  }
+
+  recordHistoryState("Add Uploaded Media");
+  let lastMediaItem = null;
+
+  for (const item of stagedUploadItems) {
+    const mediaItem = {
+      id: item.id,
+      name: item.name,
+      fileName: item.fileName,
+      dataUrl: item.currentDataUrl,
+      sizeKb: item.currentSizeKb
+    };
+    currentProject.media.unshift(mediaItem);
+    lastMediaItem = mediaItem;
+
+    // Silently save final optimized PNG to disk in background
     fetch("/api/projects/upload_asset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         project_dir: currentProject.project_dir,
-        filename: file.name,
-        data_url: rawDataUrl,
+        filename: item.fileName,
+        data_url: item.currentDataUrl,
         clean_bg: false,
         auto_crop: false
       })
     }).catch(() => {});
-  });
+  }
+
+  closeInteractiveUploadModal();
+  renderMediaLibrary();
+  switchDrawerTab("media");
+  syncActiveProjectUI();
+  markProjectDirty();
+
+  showToast(`✨ Added ${stagedUploadItems.length} optimized image(s) to Project Media!`, "success");
 
   if (lastMediaItem) {
     const activeElem = getActiveElement();
@@ -2535,7 +2840,10 @@ async function handleMediaLibraryUpload(event) {
       applyMediaToSlot(lastMediaItem.id, activeElem.type === "ref_image" ? "ref" : "drawing");
     }
   }
+
+  stagedUploadItems = [];
 }
+
 // ==========================================
 // ⚡ Batch Import Images to Coloring Pages
 // ==========================================

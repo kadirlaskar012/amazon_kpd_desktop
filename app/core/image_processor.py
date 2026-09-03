@@ -56,9 +56,15 @@ class KDPImageProcessor:
         if compress:
             pil_img = cls.scale_to_kdp_dpi(pil_img, max_dim=max_dimension)
 
+        # Convert fully opaque images to RGB to save 20-30% PNG file size
+        if pil_img.mode == "RGBA":
+            extrema = pil_img.getextrema()
+            if len(extrema) == 4 and extrema[3] == (255, 255):
+                pil_img = pil_img.convert("RGB")
+
         # Save to optimized PNG buffer
         buffer = io.BytesIO()
-        pil_img.save(buffer, format="PNG", optimize=True, compress_level=9)
+        pil_img.save(buffer, format="PNG", optimize=True, compress_level=6)
         output_bytes = buffer.getvalue()
         size_kb = max(1, len(output_bytes) // 1024)
 
@@ -66,6 +72,7 @@ class KDPImageProcessor:
         data_url = f"data:image/png;base64,{encoded_str}"
 
         return data_url, pil_img.width, pil_img.height, size_kb
+
 
     @classmethod
     def clean_lineart_background(cls, pil_img: Image.Image, threshold: int = 220) -> Image.Image:

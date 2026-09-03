@@ -967,7 +967,8 @@
           <div class="shortcuts-grid">
             <div class="sc-row"><kbd>Ctrl</kbd> + <kbd>Z</kbd> <span>Undo Last Action</span></div>
             <div class="sc-row"><kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd>
-              <span>Redo Last Action</span></div>
+              <span>Redo Last Action</span>
+            </div>
             <div class="sc-row"><kbd>Delete</kbd> / <kbd>Backspace</kbd> <span>Delete Selected Element</span></div>
             <div class="sc-row"><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <span>Nudge Element (1 pt)</span>
             </div>
@@ -1322,68 +1323,93 @@
         </div>
       </div>
 
-      <!-- FULLSCREEN BLOCKING IMAGE OPTIMIZATION MODAL -->
-      <div class="modal-overlay blocking-processing-overlay" id="image-processing-modal">
-        <div class="modal-card processing-card">
-          <div class="proc-header">
-            <div class="proc-badge">⚡ KDP Image Optimizer & Cleaner</div>
-            <h3 id="proc-title">Processing & Optimizing Artwork</h3>
-            <p id="proc-subtitle">Please wait while your images are automatically cleaned, cropped and compressed...</p>
+      <!-- INTERACTIVE 2-STEP MEDIA UPLOAD & OPTIMIZATION STUDIO -->
+      <div class="modal-overlay" id="image-processing-modal">
+        <div class="modal-card upload-studio-card">
+          <div class="modal-header">
+            <div>
+              <div class="proc-badge">⚡ KDP Studio • Image Optimization Pipeline</div>
+              <h3 id="upload-studio-title">Media Upload & Optimization Studio</h3>
+              <p class="modal-subtitle" id="upload-studio-subtitle">
+                Review images, compress to 300 DPI, and purify backgrounds to pure #FFFFFF without losing color.
+              </p>
+            </div>
+            <button class="modal-close" onclick="closeInteractiveUploadModal()">✕</button>
           </div>
 
-          <!-- Circular / Radial SVG Progress Ring -->
-          <div class="radial-progress-container">
-            <svg class="radial-progress-svg" viewBox="0 0 120 120">
-              <circle class="radial-bg" cx="60" cy="60" r="50"></circle>
-              <circle class="radial-bar" id="radial-progress-bar" cx="60" cy="60" r="50"></circle>
-            </svg>
-            <div class="radial-content">
-              <span class="radial-pct" id="radial-pct-text">0%</span>
-              <span class="radial-sub" id="radial-count-text">0 / 0</span>
+          <!-- Staged Images Preview Grid -->
+          <div class="upload-studio-body">
+            <div class="upload-section-title">
+              <span>🖼️ Selected Images (<span id="upload-total-count">0</span> files • <span id="upload-total-size">0 KB</span>)</span>
+              <span class="upload-hint">Preview before & after optimization</span>
             </div>
-          </div>
+            <div class="upload-preview-grid" id="upload-preview-grid">
+              <!-- Dynamically populated thumbnail cards -->
+            </div>
 
-          <!-- Live Step & File Status -->
-          <div class="proc-status-box">
-            <div class="proc-file-indicator">
-              <span class="proc-file-icon">🖼️</span>
-              <span class="proc-file-name" id="proc-current-file">Preparing files...</span>
-            </div>
-            <div class="proc-step-pill" id="proc-current-step">
-              <span class="spinner-dot"></span> 🪄 [1/3] Removing Background & Purifying White (#FFFFFF)...
-            </div>
-          </div>
+            <!-- STEP 1 & STEP 2 CONTROL CARDS -->
+            <div class="upload-steps-container">
+              <!-- STEP 1: COMPRESS & AUTO-FOCUS -->
+              <div class="upload-step-card" id="step1-card">
+                <div class="step-card-header">
+                  <div class="step-badge-num">1</div>
+                  <div class="step-card-info">
+                    <h4>KDP 300 DPI Compression & Auto-Focus Crop</h4>
+                    <p>Detects artwork borders, crops empty margins, and optimizes file size for 300 DPI print.</p>
+                  </div>
+                  <button class="btn btn-primary step-action-btn" id="btn-run-step1" onclick="runUploadStep1()">
+                    ⚡ Step 1: Compress & Auto-Focus
+                  </button>
+                </div>
+                <div class="step-progress-wrapper" id="step1-progress-wrap" style="display: none;">
+                  <div class="step-progress-bar-bg">
+                    <div class="step-progress-bar-fill" id="step1-progress-fill" style="width: 0%;"></div>
+                  </div>
+                  <div class="step-progress-meta">
+                    <span id="step1-progress-status">Processing...</span>
+                    <span id="step1-progress-saved">Saved 0 KB</span>
+                  </div>
+                </div>
+              </div>
 
-          <!-- Metrics Summary Badges -->
-          <div class="proc-metrics-grid">
-            <div class="proc-metric-badge success">
-              <span class="metric-icon">✅</span>
-              <div>
-                <div class="metric-lbl">Completed</div>
-                <div class="metric-val" id="proc-metric-done">0</div>
+              <!-- STEP 2: MAKE BACKGROUND WHITE -->
+              <div class="upload-step-card disabled" id="step2-card">
+                <div class="step-card-header">
+                  <div class="step-badge-num">2</div>
+                  <div class="step-card-info">
+                    <h4>Make Background Pure White (#FFFFFF)</h4>
+                    <p>Converts off-white noise to pure #FFFFFF. <strong>100% color-safe:</strong> original colors are preserved!</p>
+                  </div>
+                  <button class="btn btn-outline step-action-btn" id="btn-run-step2" onclick="runUploadStep2()" disabled>
+                    🪄 Step 2: Make Background White
+                  </button>
+                </div>
+                <div class="step-progress-wrapper" id="step2-progress-wrap" style="display: none;">
+                  <div class="step-progress-bar-bg">
+                    <div class="step-progress-bar-fill" id="step2-progress-fill" style="width: 0%;"></div>
+                  </div>
+                  <div class="step-progress-meta">
+                    <span id="step2-progress-status">Purifying background...</span>
+                    <span id="step2-progress-count">0 / 0</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="proc-metric-badge warning">
-              <span class="metric-icon">⏳</span>
-              <div>
-                <div class="metric-lbl">Remaining</div>
-                <div class="metric-val" id="proc-metric-remaining">0</div>
-              </div>
-            </div>
-            <div class="proc-metric-badge info">
-              <span class="metric-icon">💾</span>
-              <div>
-                <div class="metric-lbl">Size Saved</div>
-                <div class="metric-val" id="proc-metric-saved">0 KB</div>
-              </div>
-            </div>
           </div>
 
-          <div class="proc-footer-note">
-            🔒 Screen interaction is locked during processing to ensure 100% data integrity.
+          <!-- Footer Actions -->
+          <div class="modal-footer upload-studio-footer">
+            <button class="btn btn-outline" onclick="closeInteractiveUploadModal()">Cancel</button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <span class="upload-footer-status" id="upload-footer-status">Complete steps or add directly</span>
+              <button class="btn btn-success" id="btn-finalize-upload" onclick="finalizeInteractiveUpload()">
+                📥 Add to Project Media
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
 
 
       <!-- Hidden File Inputs -->
