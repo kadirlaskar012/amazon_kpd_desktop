@@ -177,6 +177,13 @@ document.addEventListener("DOMContentLoaded", () => {
       saveProject(false);
     }
   }, 10000);
+  // Window resize responsive canvas auto-fitter
+  window.addEventListener("resize", () => {
+    const activePanel = document.querySelector(".tab-panel.active");
+    if (activePanel && activePanel.id === "panel-canvas") {
+      fitCanvasView();
+    }
+  });
 });
 
 // ==========================================
@@ -1923,6 +1930,8 @@ function switchTab(tabId) {
     loadPageIntoCanvas(currentPageIndex);
     renderTimeline();
     renderMediaLibrary();
+    // Auto-fit canvas to available viewport height and width
+    setTimeout(() => { fitCanvasView(); }, 60);
   } else if (tabId === "preview") {
     renderSpreadPreview();
   } else if (tabId === "preflight") {
@@ -6185,9 +6194,44 @@ function changeZoom(delta) {
 }
 
 function fitCanvasView() {
-  currentZoom = 1.0;
-  document.getElementById("canvas-stage").style.transform = `scale(1.0)`;
-  document.getElementById("zoom-readout").innerText = `Zoom: 100%`;
+  const viewport = document.getElementById("canvas-viewport");
+  const stage = document.getElementById("canvas-stage");
+  const paper = document.getElementById("paper-page");
+  if (!viewport || !stage || !paper) return;
+
+  const vpW = viewport.clientWidth;
+  const vpH = viewport.clientHeight;
+  if (vpW < 50 || vpH < 50) return;
+
+  // Actual paper dimensions (510 x 660 standard)
+  const paperW = paper.offsetWidth || 510;
+  const paperH = paper.offsetHeight || 660;
+
+  // Safe padding around canvas for bleed envelope, shadow, and status bar
+  const padW = 70;
+  const padH = 80;
+
+  const availW = Math.max(120, vpW - padW);
+  const availH = Math.max(120, vpH - padH);
+
+  const scaleW = availW / paperW;
+  const scaleH = availH / paperH;
+
+  // Calculate perfect auto-fit zoom scale so it fits 100% inside screen without overflow
+  let targetScale = Math.min(scaleW, scaleH);
+  // Cap between 0.35 and 1.15
+  targetScale = Math.max(0.35, Math.min(1.15, targetScale));
+  // Round to nearest 0.05 (5%)
+  targetScale = Math.round(targetScale * 20) / 20;
+
+  currentZoom = targetScale;
+  stage.style.transform = `scale(${currentZoom})`;
+  const readout = document.getElementById("zoom-readout");
+  if (readout) readout.innerText = `Zoom: ${Math.round(currentZoom * 100)}%`;
+
+  // Center scroll
+  viewport.scrollTop = 0;
+  viewport.scrollLeft = 0;
 }
 
 function saveSettings() {

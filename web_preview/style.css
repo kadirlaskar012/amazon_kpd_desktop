@@ -1486,16 +1486,19 @@ kbd {
   background-image: radial-gradient(var(--canvas-grid-dot) 1.2px, transparent 1.2px);
   background-size: 20px 20px;
   display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: auto;
   position: relative;
 }
 
 .canvas-stage {
-  padding: 40px;
+  margin: auto;
+  padding: 28px 40px 48px 40px;
   transform-origin: center center;
   transition: transform 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Physical White Paper Page */
@@ -1780,18 +1783,41 @@ kbd {
 .viewport-status {
   position: absolute;
   bottom: 12px;
-  left: 380px;
-  background-color: rgba(23, 24, 34, 0.85);
-  backdrop-filter: blur(8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--bg-surface);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 4px 16px;
+  padding: 5px 20px;
   display: flex;
+  align-items: center;
   gap: 16px;
   font-size: 11px;
-  color: var(--text-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
   font-family: var(--font-mono);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
   z-index: 50;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .viewport-status {
+  background-color: rgba(23, 24, 34, 0.9);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.viewport-status span {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.viewport-status span#page-num-readout,
+.viewport-status span#zoom-readout {
+  color: var(--primary);
+  font-weight: 700;
 }
 
 /* Right Properties Sidebar */
