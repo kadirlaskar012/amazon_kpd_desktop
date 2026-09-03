@@ -2580,6 +2580,14 @@ function closeInteractiveUploadModal() {
   if (modal) modal.classList.remove("active");
 }
 
+function formatSizeKb(kb) {
+  if (!kb || kb <= 0) return "0 KB";
+  if (kb >= 1024) {
+    return `${(kb / 1024).toFixed(1)} MB`;
+  }
+  return `${kb} KB`;
+}
+
 function renderUploadPreviewGrid() {
   const grid = document.getElementById("upload-preview-grid");
   if (!grid) return;
@@ -2595,9 +2603,17 @@ function renderUploadPreviewGrid() {
       badgeText = "Compressed ⚡";
     }
 
-    const sizeDisplay = item.currentSizeKb > 1024 
-      ? `${(item.currentSizeKb / 1024).toFixed(1)} MB` 
-      : `${item.currentSizeKb} KB`;
+    const origStr = formatSizeKb(item.originalSizeKb);
+    const currStr = formatSizeKb(item.currentSizeKb);
+    const isCompressed = item.step1Done || item.step2Done || item.currentSizeKb < item.originalSizeKb;
+    const pctSaved = isCompressed && item.originalSizeKb > 0
+      ? Math.max(0, Math.round(((item.originalSizeKb - item.currentSizeKb) / item.originalSizeKb) * 100))
+      : 0;
+
+    const sizeHtml = isCompressed && pctSaved > 0
+      ? `<span class="size-before-label">Before: <del>${origStr}</del></span>
+         <span class="size-after-label">After: ${currStr} <span class="size-saved-pill">-${pctSaved}%</span></span>`
+      : `<span class="size-before-label">Size: ${origStr}</span>`;
 
     return `
       <div class="upload-preview-card" id="up-card-${idx}">
@@ -2605,9 +2621,9 @@ function renderUploadPreviewGrid() {
           <img src="${item.currentDataUrl}" alt="${item.fileName}" id="up-img-${idx}">
         </div>
         <div class="upload-card-name" title="${item.fileName}">${item.fileName}</div>
-        <div style="display: flex; gap: 4px; align-items: center; justify-content: center;">
-          <span class="upload-card-badge ${badgeClass}" id="up-badge-${idx}">${badgeText}</span>
-          <span style="font-size: 9px; color: var(--text-muted);">${sizeDisplay}</span>
+        <span class="upload-card-badge ${badgeClass}" id="up-badge-${idx}">${badgeText}</span>
+        <div class="upload-size-compare" id="up-size-${idx}">
+          ${sizeHtml}
         </div>
       </div>
     `;
@@ -2663,12 +2679,26 @@ async function runUploadStep1() {
         item.step1Done = true;
         item.status = "compressed";
 
+        const origStr = formatSizeKb(item.originalSizeKb);
+        const currStr = formatSizeKb(item.currentSizeKb);
+        const pctSaved = item.originalSizeKb > 0 
+          ? Math.max(0, Math.round(((item.originalSizeKb - item.currentSizeKb) / item.originalSizeKb) * 100))
+          : 0;
+
         const imgEl = document.getElementById(`up-img-${i}`);
         const badgeEl = document.getElementById(`up-badge-${i}`);
+        const sizeEl = document.getElementById(`up-size-${i}`);
+
         if (imgEl) imgEl.src = data.data_url;
         if (badgeEl) {
           badgeEl.className = "upload-card-badge status-compressed";
           badgeEl.innerText = "Compressed ⚡";
+        }
+        if (sizeEl) {
+          sizeEl.innerHTML = `
+            <span class="size-before-label">Before: <del>${origStr}</del></span>
+            <span class="size-after-label">After: ${currStr} ${pctSaved > 0 ? `<span class="size-saved-pill">-${pctSaved}%</span>` : ''}</span>
+          `;
         }
       }
     } catch (err) {
@@ -2756,12 +2786,26 @@ async function runUploadStep2() {
         item.step2Done = true;
         item.status = "cleaned";
 
+        const origStr = formatSizeKb(item.originalSizeKb);
+        const currStr = formatSizeKb(item.currentSizeKb);
+        const pctSaved = item.originalSizeKb > 0 
+          ? Math.max(0, Math.round(((item.originalSizeKb - item.currentSizeKb) / item.originalSizeKb) * 100))
+          : 0;
+
         const imgEl = document.getElementById(`up-img-${i}`);
         const badgeEl = document.getElementById(`up-badge-${i}`);
+        const sizeEl = document.getElementById(`up-size-${i}`);
+
         if (imgEl) imgEl.src = data.data_url;
         if (badgeEl) {
           badgeEl.className = "upload-card-badge status-cleaned";
           badgeEl.innerText = "White BG ✅";
+        }
+        if (sizeEl) {
+          sizeEl.innerHTML = `
+            <span class="size-before-label">Before: <del>${origStr}</del></span>
+            <span class="size-after-label">After: ${currStr} ${pctSaved > 0 ? `<span class="size-saved-pill">-${pctSaved}%</span>` : ''}</span>
+          `;
         }
       }
     } catch (err) {

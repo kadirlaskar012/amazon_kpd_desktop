@@ -3464,7 +3464,53 @@ kbd {
   color: #4ade80;
 }
 
+.upload-size-compare {
+  margin-top: 5px;
+  font-size: 10px;
+  line-height: 1.35;
+  text-align: center;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 3px 4px;
+  border-radius: 4px;
+}
+
+.size-before-label {
+  color: var(--text-muted, #94a3b8);
+  font-size: 9.5px;
+}
+
+.size-before-label del {
+  color: #ef4444;
+  opacity: 0.8;
+}
+
+.size-after-label {
+  color: #4ade80;
+  font-weight: 700;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.size-saved-pill {
+  display: inline-block;
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-weight: 700;
+  font-size: 8.5px;
+}
+
 .upload-steps-container {
+
   display: flex;
   flex-direction: column;
   gap: 12px;
