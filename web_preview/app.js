@@ -107,10 +107,62 @@ let autoSaveTimer = null;
 let renameTargetType = "page";
 let projectToDelete = null;
 
-// Initial load is handled in loadInitialProject below
+// ==========================================
+// Multi-Theme Engine (Default: Light Mode Studio / Dark Mode Toggle)
+// ==========================================
+function getStoredTheme() {
+  try {
+    return localStorage.getItem("kdp_studio_theme") || "light";
+  } catch (e) {
+    return "light";
+  }
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  root.setAttribute("data-theme", theme);
+  const icon = document.getElementById("theme-toggle-icon");
+  const label = document.getElementById("theme-toggle-text");
+  const btn = document.getElementById("theme-toggle-btn");
+
+  if (theme === "light") {
+    if (icon) icon.innerText = "🌙";
+    if (label) label.innerText = "Dark";
+    if (btn) {
+      btn.title = "Switch to Dark Mode Studio";
+      btn.classList.remove("is-dark");
+    }
+  } else {
+    if (icon) icon.innerText = "☀️";
+    if (label) label.innerText = "Light";
+    if (btn) {
+      btn.title = "Switch to Light Mode Studio";
+      btn.classList.add("is-dark");
+    }
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") || "light";
+  const newTheme = current === "light" ? "dark" : "light";
+  try {
+    localStorage.setItem("kdp_studio_theme", newTheme);
+  } catch (e) {}
+  applyTheme(newTheme);
+  showToast(newTheme === "light" ? "☀️ Switched to Light Mode Studio" : "🌙 Switched to Dark Mode Studio", "info");
+}
+
+function initTheme() {
+  const theme = getStoredTheme();
+  applyTheme(theme);
+}
+
+// Immediately apply theme before DOM renders to prevent any theme flash
+initTheme();
 
 // UI Initialization
 document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
   setupNavigation();
   setupGlobalKeyboardShortcuts();
   fetchDefaultLocation();
@@ -541,8 +593,10 @@ function clearActiveProject() {
 function loadInitialProject() {
   fetchDefaultLocation();
 
-  // Restore the last active tab from sessionStorage (cleared on new browser open -> defaults to dashboard)
-  const lastTab = sessionStorage.getItem("kdp_active_tab") || "dashboard";
+  // Restore the last active tab from URL query params or sessionStorage
+  const urlParams = new URLSearchParams(window.location.search);
+  const queryTab = urlParams.get("tab");
+  const lastTab = queryTab || sessionStorage.getItem("kdp_active_tab") || "dashboard";
 
   // Query real projects list from local disk
   fetch("/api/projects")
@@ -1091,6 +1145,7 @@ function updateExportModalPreview() {
 function executePdfExport(openInBrowser = true) {
   const singleSided = document.getElementById("exp-opt-single-sided") ? document.getElementById("exp-opt-single-sided").checked : true;
   const blankNote = document.getElementById("exp-opt-blank-note") ? document.getElementById("exp-opt-blank-note").checked : false;
+  const includePageNumbers = document.getElementById("exp-opt-page-numbers") ? document.getElementById("exp-opt-page-numbers").checked : false;
 
   const fmOptions = getFrontMatterFormData();
 
@@ -1104,6 +1159,7 @@ function executePdfExport(openInBrowser = true) {
     ...currentProject,
     single_sided: singleSided,
     blank_page_note: blankNote,
+    include_page_numbers: includePageNumbers,
     front_matter_options: fmOptions
   };
 
@@ -1969,10 +2025,11 @@ function syncActiveProjectUI() {
   if (statMedia) statMedia.innerText = currentProject.media ? currentProject.media.length : 0;
   
   const folderHint = document.getElementById("media-folder-hint");
-  if (folderHint) folderHint.innerText = `${currentProject.folder_name}/assets`;
+  if (folderHint) folderHint.innerText = `${currentProject.folder_name}/media`;
 
   renderTimeline();
   renderMediaLibrary();
+  renderCustomLayouts();
   updateUndoRedoButtons();
 }
 
@@ -1996,10 +2053,35 @@ function closeModal(modalId) {
   if (modal) modal.classList.remove("active");
 }
 
+function onModalPageCountChange(val) {
+  const customWrap = document.getElementById("modal-custom-page-container");
+  if (customWrap) {
+    customWrap.style.display = (val === "custom") ? "block" : "none";
+    if (val === "custom") {
+      const inp = document.getElementById("modal-custom-page-input");
+      if (inp) inp.focus();
+    }
+  }
+}
+
+function onModalTrimPresetChange(val) {
+  const customTrimWrap = document.getElementById("modal-custom-trim-container");
+  if (customTrimWrap) {
+    customTrimWrap.style.display = (val === "custom") ? "block" : "none";
+    if (val === "custom") {
+      const inp = document.getElementById("modal-custom-trim-w");
+      if (inp) inp.focus();
+    }
+  }
+}
+
+let checkDupDebounceTimer = null;
 function updateModalPathPreview() {
   const nameInput = document.getElementById("modal-project-name");
   const rootInput = document.getElementById("modal-project-root");
   const previewDiv = document.getElementById("modal-full-path-preview");
+  const dupWarning = document.getElementById("modal-duplicate-warning");
+  const dupNameSpan = document.getElementById("modal-dup-name");
 
   const name = (nameInput ? nameInput.value.trim() : "") || "Untitled_Project";
   const root = (rootInput ? rootInput.value.trim() : "") || defaultRootLocation;
@@ -2009,6 +2091,25 @@ function updateModalPathPreview() {
   if (previewDiv) {
     previewDiv.innerText = `📁 ${fullPath}\\`;
   }
+
+  // Check duplicate project on disk
+  if (checkDupDebounceTimer) clearTimeout(checkDupDebounceTimer);
+  checkDupDebounceTimer = setTimeout(async () => {
+    try {
+      const res = await fetch("/api/projects/check_exists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ root_path: root, name: name, folder_name: folderName })
+      });
+      const data = await res.json();
+      if (data && data.exists) {
+        if (dupWarning) dupWarning.style.display = "block";
+        if (dupNameSpan) dupNameSpan.innerText = name;
+      } else {
+        if (dupWarning) dupWarning.style.display = "none";
+      }
+    } catch (e) {}
+  }, 250);
 }
 
 function browseProjectFolder() {
@@ -2095,7 +2196,36 @@ async function submitCreateProject() {
   const rootDir = (rootInput ? rootInput.value.trim() : "") || defaultRootLocation;
   const folderName = projName.replace(/[^a-zA-Z0-9_\-\s]/g, "").replace(/\s+/g, "_");
   const projectDir = `${rootDir.replace(/[\/\\]+$/, "")}\\${folderName}`;
-  const count = parseInt(countSelect ? countSelect.value : "10");
+
+  // Check duplicate project name on disk before proceeding
+  try {
+    const checkRes = await fetch("/api/projects/check_exists", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ root_path: rootDir, name: projName, folder_name: folderName })
+    });
+    const checkData = await checkRes.json();
+    if (checkData && checkData.exists) {
+      const dupWarning = document.getElementById("modal-duplicate-warning");
+      const dupNameSpan = document.getElementById("modal-dup-name");
+      if (dupWarning) dupWarning.style.display = "block";
+      if (dupNameSpan) dupNameSpan.innerText = projName;
+      showToast(`⚠️ A project named "${projName}" already exists! Please choose a unique name.`, "danger");
+      if (nameInput) nameInput.focus();
+      return;
+    }
+  } catch (e) {}
+
+  // Parse page count (including custom page count option)
+  let count = 10;
+  if (countSelect && countSelect.value === "custom") {
+    const customInp = document.getElementById("modal-custom-page-input");
+    count = parseInt(customInp ? customInp.value : "40") || 40;
+    if (count < 1) count = 1;
+    if (count > 600) count = 600;
+  } else {
+    count = parseInt(countSelect ? countSelect.value : "10");
+  }
 
   let pagesList = [];
 
@@ -2440,6 +2570,31 @@ async function submitCreateProject() {
     }
   }
 
+  // Parse KDP Trim Preset (including custom width x height in inches)
+  const trimSelect = document.getElementById("modal-trim-preset");
+  let trimW = 8.5;
+  let trimH = 11.0;
+  if (trimSelect && trimSelect.value === "custom") {
+    const customW = parseFloat(document.getElementById("modal-custom-trim-w")?.value) || 8.5;
+    const customH = parseFloat(document.getElementById("modal-custom-trim-h")?.value) || 11.0;
+    trimW = Math.max(4, Math.min(15, customW));
+    trimH = Math.max(4, Math.min(15, customH));
+  } else {
+    const trimMap = {
+      "8.5x11": [8.5, 11.0],
+      "8x10": [8.0, 10.0],
+      "8.5x8.5": [8.5, 8.5],
+      "6x9": [6.0, 9.0]
+    };
+    const tVal = trimSelect ? trimSelect.value : "8.5x11";
+    const mapped = trimMap[tVal] || [8.5, 11.0];
+    trimW = mapped[0];
+    trimH = mapped[1];
+  }
+
+  const trimWidthPt = trimW * 72.0;
+  const trimHeightPt = trimH * 72.0;
+
   const newProjPayload = {
     name: projName,
     book_type: bType,
@@ -2450,8 +2605,10 @@ async function submitCreateProject() {
     is_locked: false,
     created_at: new Date().toISOString(),
     settings: {
-      trim_width_pt: 612.0,
-      trim_height_pt: 792.0,
+      trim_width_pt: trimWidthPt,
+      trim_height_pt: trimHeightPt,
+      trim_width_in: trimW,
+      trim_height_in: trimH,
       has_bleed: hasBleed,
       bleed_pt: 9.0,
       margins: { top_pt: 27.0, bottom_pt: 27.0, inside_pt: 36.0, outside_pt: 27.0 },
@@ -2476,12 +2633,20 @@ async function submitCreateProject() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(newProjPayload)
   })
-  .then(r => r.json())
-  .then(() => {
+  .then(async r => {
+    const data = await r.json();
+    if (!r.ok || data.status === "error") {
+      const dupWarning = document.getElementById("modal-duplicate-warning");
+      const dupNameSpan = document.getElementById("modal-dup-name");
+      if (dupWarning) dupWarning.style.display = "block";
+      if (dupNameSpan) dupNameSpan.innerText = projName;
+      showToast(`⚠️ ${data.error || "Project creation failed!"}`, "danger");
+      return;
+    }
     finishProjectSetup(newProjPayload);
   })
-  .catch(() => {
-    finishProjectSetup(newProjPayload);
+  .catch((err) => {
+    showToast(`⚠️ Error creating project: ${err.message}`, "danger");
   });
 }
 
@@ -3719,6 +3884,62 @@ function applyPageLayout(layoutKey) {
       { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 25, w: 440, h: 605, text: "Full Page Drawing", image_src: existingMainImg || existingRefImg },
       { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
     ];
+  } else if (layoutKey === "kdp_center_ref") {
+    page.page_type = "content";
+    const projFont = currentProject.settings?.default_font_family || "Fredoka";
+    const projOutline = currentProject.settings?.default_font_mode !== "solid";
+    newElements = [
+      { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 175, y: 25, w: 160, h: 140, text: "Reference Image", image_src: existingRefImg },
+      { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 172, w: 440, h: 46, text: existingTitle.toUpperCase(), font_size: 34, color: "#ffffff", is_outline: projOutline, font_family: projFont, letter_spacing: 2 },
+      { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 225, w: 440, h: 405, text: "Coloring Drawing", image_src: existingMainImg },
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+    ];
+  } else if (layoutKey === "kdp_side_by_side") {
+    page.page_type = "content";
+    const projFont = currentProject.settings?.default_font_family || "Fredoka";
+    const projOutline = currentProject.settings?.default_font_mode !== "solid";
+    newElements = [
+      { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 25, w: 440, h: 40, text: existingTitle.toUpperCase(), font_size: 26, color: "#ffffff", is_outline: projOutline, font_family: projFont },
+      { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 75, w: 210, h: 545, text: "Color Guide", image_src: existingRefImg },
+      { id: `elem_main_${Date.now()}`, type: "main_image", x: 260, y: 75, w: 215, h: 545, text: "Draw & Color Here", image_src: existingMainImg },
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+    ];
+  } else if (layoutKey === "kdp_story_drawing") {
+    page.page_type = "content";
+    const projFont = currentProject.settings?.default_font_family || "Fredoka";
+    const projOutline = currentProject.settings?.default_font_mode !== "solid";
+    newElements = [
+      { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 25, w: 440, h: 380, text: "Illustration", image_src: existingMainImg },
+      { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 415, w: 440, h: 40, text: existingTitle.toUpperCase(), font_size: 28, color: "#ffffff", is_outline: projOutline, font_family: projFont },
+      { id: `elem_hw1_${Date.now()}`, type: "title", x: 45, y: 470, w: 420, h: 30, text: "____________________________________", font_size: 16, color: "#94a3b8", is_outline: false },
+      { id: `elem_hw2_${Date.now()}`, type: "title", x: 45, y: 530, w: 420, h: 30, text: "____________________________________", font_size: 16, color: "#94a3b8", is_outline: false },
+      { id: `elem_hw3_${Date.now()}`, type: "title", x: 45, y: 590, w: 420, h: 30, text: "____________________________________", font_size: 16, color: "#94a3b8", is_outline: false },
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+    ];
+  } else if (layoutKey === "kdp_4grid") {
+    page.page_type = "content";
+    newElements = [
+      { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 20, w: 440, h: 30, text: existingTitle.toUpperCase(), font_size: 20, color: "#0f172a", is_outline: false },
+      { id: `elem_box1_${Date.now()}`, type: "main_image", x: 35, y: 55, w: 210, h: 265, text: "Quadrant 1", image_src: null },
+      { id: `elem_box2_${Date.now()}`, type: "main_image", x: 260, y: 55, w: 215, h: 265, text: "Quadrant 2", image_src: null },
+      { id: `elem_box3_${Date.now()}`, type: "main_image", x: 35, y: 340, w: 210, h: 265, text: "Quadrant 3", image_src: null },
+      { id: `elem_box4_${Date.now()}`, type: "main_image", x: 260, y: 340, w: 215, h: 265, text: "Quadrant 4", image_src: null },
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+    ];
+  } else if (layoutKey.startsWith("custom_")) {
+    // Load elements from user-saved custom layout
+    const customList = getCustomLayouts();
+    const found = customList.find(c => c.id === layoutKey);
+    if (found && found.elements) {
+      page.page_type = "content";
+      newElements = JSON.parse(JSON.stringify(found.elements)).map((el, i) => {
+        el.id = `elem_custom_${Date.now()}_${i}`;
+        if (el.type === "title" && !el.text) el.text = existingTitle.toUpperCase();
+        if (el.type === "ref_image") el.image_src = existingRefImg;
+        if (el.type === "main_image") el.image_src = existingMainImg;
+        return el;
+      });
+    }
   } else if (layoutKey === "belongs_to") {
     page.page_type = "front_matter_belongs_to";
     page.title = "Belongs To Page";
@@ -3761,10 +3982,18 @@ function updateLayoutCardsActiveState(layoutKey) {
 }
 
 function getLayoutName(key) {
+  const customList = getCustomLayouts();
+  const customFound = customList.find(c => c.id === key);
+  if (customFound) return customFound.name;
+
   const map = {
-    kdp_top_ref: "Standard KDP (Top Ref + Outline Title + 75% Art)",
-    top_ref: "Standard KDP (Top Ref + Outline Title + 75% Art)",
-    full_page: "Full Page Drawing (100%)",
+    kdp_top_ref: "Standard KDP (Top-Left Ref • 75% Art)",
+    top_ref: "Standard KDP (Top-Left Ref • 75% Art)",
+    full_page: "Full Page Drawing (100% Art)",
+    kdp_center_ref: "Top-Center Ref • Centered Title • 70% Art",
+    kdp_side_by_side: "Side-by-Side Dual (50/50 Look & Draw)",
+    kdp_story_drawing: "Kids Story Art + Handwriting Lines",
+    kdp_4grid: "4-in-1 Challenge Grid",
     belongs_to: "This Book Belongs To Page",
     color_test: "Color Test Palette",
     blank_page: "Blank Back Page (Verso)",
@@ -3772,6 +4001,196 @@ function getLayoutName(key) {
     contents_standard: "Table of Contents"
   };
   return map[key] || key;
+}
+
+// ===================================================
+// Quick Layout Customizer & Custom Layout Engine
+// ===================================================
+function toggleLayoutCustomizer() {
+  const panel = document.getElementById("layout-customizer-panel");
+  if (panel) {
+    const isShown = panel.style.display !== "none";
+    panel.style.display = isShown ? "none" : "flex";
+  }
+}
+
+function applyCustomLayoutTweaks() {
+  const page = currentProject.pages[currentPageIndex];
+  if (!page || currentProject.is_locked) return;
+
+  const refVal = document.getElementById("lay-cust-ref")?.value || "medium";
+  const titleVal = document.getElementById("lay-cust-title")?.value || "outline";
+  const borderVal = document.getElementById("lay-cust-border")?.value || "box";
+  const heightVal = parseInt(document.getElementById("lay-cust-height")?.value || "75");
+
+  recordHistoryState("Customize Layout Elements");
+
+  // 1. Adjust or toggle reference image
+  let refEl = page.elements.find(e => e.type === "ref_image");
+  if (refVal === "none") {
+    if (refEl) page.elements = page.elements.filter(e => e.id !== refEl.id);
+  } else {
+    const sizeMap = { small: { w: 140, h: 130 }, medium: { w: 190, h: 180 }, large: { w: 240, h: 220 } };
+    const dims = sizeMap[refVal] || sizeMap.medium;
+    if (!refEl) {
+      refEl = { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 25, w: dims.w, h: dims.h, text: "Reference Image", image_src: null };
+      page.elements.unshift(refEl);
+    } else {
+      refEl.w = dims.w;
+      refEl.h = dims.h;
+    }
+  }
+
+  // 2. Adjust or toggle title
+  let titleEl = page.elements.find(e => e.type === "title");
+  if (titleVal === "none") {
+    if (titleEl) page.elements = page.elements.filter(e => e.id !== titleEl.id);
+  } else {
+    if (!titleEl) {
+      titleEl = { id: `elem_title_${Date.now()}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: (page.title || "TITLE").toUpperCase(), font_size: 38, font_family: "Fredoka", is_outline: true };
+      page.elements.push(titleEl);
+    }
+    if (titleVal === "outline") {
+      titleEl.is_outline = true;
+      titleEl.color = "#ffffff";
+      titleEl.font_family = "Fredoka";
+    } else if (titleVal === "solid") {
+      titleEl.is_outline = false;
+      titleEl.color = "#0f172a";
+      titleEl.font_family = "Nunito";
+    }
+  }
+
+  // 3. Adjust border
+  let borderEl = page.elements.find(e => e.type === "border");
+  if (borderVal === "none") {
+    if (borderEl) page.elements = page.elements.filter(e => e.id !== borderEl.id);
+  } else {
+    if (!borderEl) {
+      borderEl = { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 };
+      page.elements.push(borderEl);
+    }
+  }
+
+  // 4. Adjust main art height
+  let mainEl = page.elements.find(e => e.type === "main_image");
+  if (mainEl) {
+    if (heightVal === 100) {
+      mainEl.y = 25;
+      mainEl.h = 605;
+    } else if (heightVal === 85) {
+      mainEl.y = 150;
+      mainEl.h = 480;
+    } else if (heightVal === 65) {
+      mainEl.y = 220;
+      mainEl.h = 350;
+    } else {
+      mainEl.y = 220;
+      mainEl.h = 410;
+    }
+  }
+
+  loadPageIntoCanvas(currentPageIndex);
+  markProjectDirty();
+  showToast("Layout customized on active page!", "success");
+}
+
+function getCustomLayouts() {
+  if (currentProject.custom_layouts && Array.isArray(currentProject.custom_layouts)) {
+    return currentProject.custom_layouts;
+  }
+  try {
+    const raw = localStorage.getItem("kdp_custom_layouts");
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveCustomLayouts(list) {
+  currentProject.custom_layouts = list;
+  try {
+    localStorage.setItem("kdp_custom_layouts", JSON.stringify(list));
+  } catch (e) {}
+  markProjectDirty();
+  renderCustomLayouts();
+}
+
+function promptSaveCustomLayout() {
+  const page = currentProject.pages[currentPageIndex];
+  if (!page || !page.elements || page.elements.length === 0) {
+    showToast("⚠️ Active page has no elements to save as layout!", "warning");
+    return;
+  }
+
+  const defaultName = `Custom Layout ${getCustomLayouts().length + 1}`;
+  const layoutName = prompt("Enter a name for your custom layout template:", defaultName);
+  if (!layoutName || !layoutName.trim()) return;
+
+  const newId = `custom_${Date.now()}`;
+  const newLayout = {
+    id: newId,
+    name: layoutName.trim(),
+    elements: JSON.parse(JSON.stringify(page.elements)).map(el => {
+      // Don't bind permanent images, keep template clean
+      const cloned = { ...el };
+      if (cloned.type === "main_image" || cloned.type === "ref_image") {
+        cloned.image_src = null;
+      }
+      return cloned;
+    })
+  };
+
+  const currentList = getCustomLayouts();
+  currentList.push(newLayout);
+  saveCustomLayouts(currentList);
+  showToast(`🎉 Saved custom layout "${newLayout.name}"!`, "success");
+}
+
+function renderCustomLayouts() {
+  const container = document.getElementById("custom-layouts-section");
+  const grid = document.getElementById("custom-layouts-grid");
+  const countSpan = document.getElementById("custom-layouts-count");
+  if (!container || !grid) return;
+
+  const list = getCustomLayouts();
+  if (list.length === 0) {
+    container.style.display = "none";
+    return;
+  }
+
+  container.style.display = "block";
+  if (countSpan) countSpan.innerText = `${list.length} saved`;
+  grid.innerHTML = "";
+
+  list.forEach(layout => {
+    const card = document.createElement("div");
+    card.className = "layout-card";
+    card.setAttribute("data-layout", layout.id);
+    card.innerHTML = `
+      <div class="layout-mini-preview" style="display: flex; flex-direction: column; gap: 3px; padding: 4px; justify-content: center; align-items: center; background: #f1f5f9;">
+        <span style="font-size: 20px;">📐</span>
+        <span style="font-size: 8px; font-weight: 800; color: var(--primary);">${escapeHtml(layout.name.slice(0, 14))}</span>
+      </div>
+      <div class="layout-info" style="width: 100%;">
+        <div class="layout-title">${escapeHtml(layout.name)}</div>
+        <div class="custom-layout-tag">CUSTOM</div>
+        <div style="display: flex; gap: 4px; margin-top: 6px; justify-content: center;">
+          <button class="btn btn-xs btn-primary" onclick="applyPageLayout('${layout.id}')" style="padding: 2px 6px; font-size: 10px;">Apply</button>
+          <button class="btn btn-xs btn-outline" onclick="deleteCustomLayout('${layout.id}', event)" style="padding: 2px 6px; font-size: 10px; color: var(--danger); border-color: var(--danger);">🗑</button>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function deleteCustomLayout(layoutId, event) {
+  if (event) event.stopPropagation();
+  if (!confirm("Are you sure you want to delete this custom layout template?")) return;
+  const list = getCustomLayouts().filter(c => c.id !== layoutId);
+  saveCustomLayouts(list);
+  showToast("🗑 Custom layout deleted!", "info");
 }
 
 // ==========================================
@@ -5629,7 +6048,19 @@ function openRenameModalForIndex(idx, event) {
 function selectPage(index) {
   currentPageIndex = index;
   activeElementId = null;
-  renderTimeline();
+
+  const cards = document.querySelectorAll(".thumb-card");
+  if (cards && cards.length === (currentProject.pages || []).length) {
+    cards.forEach((card, idx) => {
+      card.classList.toggle("active", idx === index);
+    });
+    if (cards[index]) {
+      cards[index].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  } else {
+    renderTimeline();
+  }
+
   loadPageIntoCanvas(index);
   updatePropertiesInspector();
 }

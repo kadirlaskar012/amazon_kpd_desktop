@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
   <meta charset="UTF-8">
@@ -44,6 +44,12 @@
       </nav>
 
       <div class="top-actions" id="header-canvas-actions">
+        <!-- Theme Toggle Switcher (Default: Light Mode) -->
+        <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Switch Light / Dark Theme">
+          <span id="theme-toggle-icon" class="theme-icon">🌙</span>
+          <span id="theme-toggle-text" class="theme-label">Dark</span>
+        </button>
+
         <!-- Undo / Redo Actions -->
         <div class="undo-redo-btn-group">
           <button class="btn btn-outline btn-sm" id="btn-undo-header" onclick="performUndo()" title="Undo (Ctrl+Z)"
@@ -317,40 +323,171 @@
               <div class="drawer-section-title">Page Layout Templates</div>
               <p class="drawer-section-desc">Click any layout to apply to the current active page:</p>
 
+              <!-- Quick Layout Action Buttons -->
+              <div class="layout-actions-bar">
+                <button class="btn btn-xs btn-outline" type="button" onclick="toggleLayoutCustomizer()" style="flex: 1;" title="Customize current layout elements">
+                  ⚙️ Customize
+                </button>
+                <button class="btn btn-xs btn-primary" type="button" onclick="promptSaveCustomLayout()" style="flex: 1;" title="Save current canvas elements as a reusable template">
+                  💾 Save As Layout
+                </button>
+              </div>
+
+              <!-- Collapsible Quick Layout Customizer Panel -->
+              <div class="layout-customizer-box" id="layout-customizer-panel" style="display: none;">
+                <div style="font-size: 11.5px; font-weight: 700; color: var(--primary); display: flex; justify-content: space-between; align-items: center;">
+                  <span>⚙️ Quick Layout Customizer</span>
+                  <button type="button" class="close-btn" style="padding: 0; font-size: 14px;" onclick="toggleLayoutCustomizer()">✕</button>
+                </div>
+                <div class="layout-customizer-row">
+                  <label>Ref Image Size:</label>
+                  <select id="lay-cust-ref" class="form-control" onchange="applyCustomLayoutTweaks()">
+                    <option value="medium" selected>Medium (Standard)</option>
+                    <option value="small">Small (Compact)</option>
+                    <option value="large">Large (High Detail)</option>
+                    <option value="none">No Reference (Off)</option>
+                  </select>
+                </div>
+                <div class="layout-customizer-row">
+                  <label>Title Style:</label>
+                  <select id="lay-cust-title" class="form-control" onchange="applyCustomLayoutTweaks()">
+                    <option value="outline" selected>Big Outline (Fredoka)</option>
+                    <option value="solid">Solid Slate (Nunito)</option>
+                    <option value="none">No Title (Hidden)</option>
+                  </select>
+                </div>
+                <div class="layout-customizer-row">
+                  <label>Outer Frame:</label>
+                  <select id="lay-cust-border" class="form-control" onchange="applyCustomLayoutTweaks()">
+                    <option value="box" selected>Standard Border Box</option>
+                    <option value="none">No Outer Border</option>
+                  </select>
+                </div>
+                <div class="layout-customizer-row">
+                  <label>Art Area Height:</label>
+                  <select id="lay-cust-height" class="form-control" onchange="applyCustomLayoutTweaks()">
+                    <option value="75" selected>75% Standard Art</option>
+                    <option value="65">65% (With Story Lines)</option>
+                    <option value="85">85% Extra Large</option>
+                    <option value="100">100% Full Canvas</option>
+                  </select>
+                </div>
+              </div>
+
               <div class="layouts-grid" id="layouts-template-list">
                 <!-- Layout 1: Primary Standard KDP Coloring Layout (Top-Left Ref + Big Outline Title + 75% Drawing) -->
-                <div class="layout-card active" data-layout="kdp_top_ref" onclick="applyPageLayout('kdp_top_ref')">
-                  <div class="layout-mini-preview"
-                    style="display: flex; flex-direction: column; gap: 4px; padding: 4px;">
+                <div class="layout-card active" data-layout="kdp_top_ref" onclick="applyPageLayout('kdp_top_ref')" title="Standard KDP Coloring Page with Reference">
+                  <div class="layout-mini-preview" style="display: flex; flex-direction: column; gap: 4px; padding: 4px;">
                     <div style="display: flex; gap: 4px; height: 32px;">
-                      <div class="mini-box mini-ref" style="width: 35%; height: 100%;">🐶 Ref</div>
-                      <div class="mini-box mini-txt"
-                        style="width: 65%; height: 100%; font-size: 8px; font-weight: 900;">DOG</div>
+                      <div class="mini-box mini-ref" style="width: 38%; height: 100%; border-color: var(--primary); color: var(--primary);">🐶 Ref</div>
+                      <div class="mini-box mini-txt" style="width: 62%; height: 100%; font-size: 8px; font-weight: 900;">DOG</div>
                     </div>
-                    <div class="mini-box mini-main" style="flex: 1; height: 50px;">🎨 75% Big Drawing Area</div>
+                    <div class="mini-box mini-main" style="flex: 1; height: 50px;">🎨 75% Drawing</div>
                   </div>
                   <div class="layout-info">
-                    <div class="layout-title">Standard KDP Coloring</div>
-                    <div class="layout-sub">Top-Left Ref • Big Title • 75% Art</div>
+                    <div class="layout-title">Standard KDP</div>
+                    <div class="layout-sub">Top-Left Ref • 75% Art</div>
                   </div>
                 </div>
 
                 <!-- Layout 2: Full Page Big Drawing -->
-                <div class="layout-card" data-layout="full_page" onclick="applyPageLayout('full_page')">
+                <div class="layout-card" data-layout="full_page" onclick="applyPageLayout('full_page')" title="Full Page 100% Canvas Drawing">
                   <div class="layout-mini-preview preview-full-page">
                     <div class="mini-box mini-main full">Full Drawing Area (100%)</div>
                   </div>
                   <div class="layout-info">
-                    <div class="layout-title">Full Page Drawing</div>
-                    <div class="layout-sub">Maximum coloring canvas (100% Art)</div>
+                    <div class="layout-title">Full Page Art</div>
+                    <div class="layout-sub">100% Coloring Canvas</div>
                   </div>
                 </div>
 
-                <div class="media-helper-note" style="margin-top: 15px;">
-                  ✨ <strong>Auto KDP Compilation:</strong> Front matter pages (<em>Disclaimer, Table of Contents with
-                    Auto Item List, Belongs To, Color Test Palette</em>) and <em>Bleed-Proof Blank Back Pages</em> are
-                  automatically included when exporting!
+                <!-- Layout 3: Top-Center Reference + Big Outline Title -->
+                <div class="layout-card" data-layout="kdp_center_ref" onclick="applyPageLayout('kdp_center_ref')" title="Top-Center Reference + Large Art Below">
+                  <div class="layout-mini-preview" style="display: flex; flex-direction: column; gap: 3px; padding: 4px;">
+                    <div class="mini-box mini-ref" style="width: 45%; height: 26px; align-self: center; border-color: var(--primary); color: var(--primary);">🦁 Ref</div>
+                    <div class="mini-box mini-txt" style="width: 80%; height: 12px; align-self: center; font-size: 7px; font-weight: 900;">LION</div>
+                    <div class="mini-box mini-main" style="flex: 1; height: 44px;">🎨 70% Art Area</div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">Center Reference</div>
+                    <div class="layout-sub">Centered Ref • 70% Art</div>
+                  </div>
                 </div>
+
+                <!-- Layout 4: Side-by-Side Dual (Split Look & Draw) -->
+                <div class="layout-card" data-layout="kdp_side_by_side" onclick="applyPageLayout('kdp_side_by_side')" title="Side-by-Side Comparison & Look-and-Draw">
+                  <div class="layout-mini-preview" style="display: flex; flex-direction: column; gap: 3px; padding: 4px;">
+                    <div class="mini-box mini-txt" style="width: 100%; height: 12px; font-size: 7px; font-weight: 800;">COLOR THIS!</div>
+                    <div style="display: flex; gap: 3px; flex: 1;">
+                      <div class="mini-box mini-ref" style="flex: 1; border-color: var(--primary); color: var(--primary); font-size: 6.5px;">Left Ref</div>
+                      <div class="mini-box mini-main" style="flex: 1; font-size: 6.5px;">Right Art</div>
+                    </div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">Side-by-Side Dual</div>
+                    <div class="layout-sub">50/50 Look & Draw</div>
+                  </div>
+                </div>
+
+                <!-- Layout 5: Kids Story & Handwriting Guideline -->
+                <div class="layout-card" data-layout="kdp_story_drawing" onclick="applyPageLayout('kdp_story_drawing')" title="Drawing with 3-Tier Handwriting Guidelines">
+                  <div class="layout-mini-preview" style="display: flex; flex-direction: column; gap: 3px; padding: 4px;">
+                    <div class="mini-box mini-main" style="flex: 1; height: 50px;">🎨 65% Art</div>
+                    <div class="mini-box mini-txt" style="height: 14px; font-size: 6px; font-family: monospace; border-style: dotted;">_ _ A B C _ _</div>
+                    <div class="mini-box mini-txt" style="height: 14px; font-size: 6px; font-family: monospace; border-style: dotted;">_ _ D E F _ _</div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">Story & Tracing</div>
+                    <div class="layout-sub">Art + Writing Guidelines</div>
+                  </div>
+                </div>
+
+                <!-- Layout 6: 4-in-1 Mini Drawing Challenge Grid -->
+                <div class="layout-card" data-layout="kdp_4grid" onclick="applyPageLayout('kdp_4grid')" title="4-in-1 Mini Drawing Quadrants">
+                  <div class="layout-mini-preview" style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; padding: 4px;">
+                    <div class="mini-box mini-main" style="font-size: 6px;">Box 1</div>
+                    <div class="mini-box mini-main" style="font-size: 6px;">Box 2</div>
+                    <div class="mini-box mini-main" style="font-size: 6px;">Box 3</div>
+                    <div class="mini-box mini-main" style="font-size: 6px;">Box 4</div>
+                  </div>
+                  <div class="layout-info">
+                    <div class="layout-title">4-in-1 Grid</div>
+                    <div class="layout-sub">4 Mini Drawing Boxes</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Custom User-Saved Layouts Section -->
+              <div id="custom-layouts-section" style="margin-top: 14px; display: none;">
+                <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                  <span>⭐ Your Custom Layouts:</span>
+                  <span id="custom-layouts-count" style="font-size: 10px; color: var(--primary);">0 saved</span>
+                </div>
+                <div class="layouts-grid" id="custom-layouts-grid">
+                  <!-- Dynamically populated from currentProject.custom_layouts -->
+                </div>
+              </div>
+
+              <!-- Responsive Auto KDP Compilation Info Card -->
+              <div class="kdp-compilation-card">
+                <div class="kdp-compilation-header">
+                  <span>⚡ Auto KDP Compilation Engine</span>
+                  <span class="kdp-compilation-badge">Print-Ready</span>
+                </div>
+                <ul class="kdp-compilation-list">
+                  <li>
+                    <span class="bullet">📜</span>
+                    <span><strong>Front Matter</strong>: Disclaimer, TOC, Belongs To, Color Test Palette.</span>
+                  </li>
+                  <li>
+                    <span class="bullet">🛡️</span>
+                    <span><strong>Bleed Guard</strong>: Blank verso pages prevent marker bleed-through.</span>
+                  </li>
+                  <li>
+                    <span class="bullet">📐</span>
+                    <span><strong>KDP Compliant</strong>: 300 DPI, margin & spine verified.</span>
+                  </li>
+                </ul>
               </div>
             </div>
 
@@ -794,29 +931,52 @@
               📁 C:\Users\KadiR-PC\Documents\KDP_Studio_Projects\My_Jungle_Coloring_Book\
             </div>
             <div style="font-size: 11px; color: var(--secondary); margin-top: 4px;">
-              ✓ Will auto-create <code>project.json</code>, <code>/assets</code> (isolated media), and
-              <code>/exports</code>
+              ✓ Will auto-create <code>project.json</code>, <code>/media</code> (isolated media), and <code>/exports</code>
+            </div>
+            <!-- Duplicate Project Warning Box -->
+            <div id="modal-duplicate-warning" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid var(--danger); border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 11.5px; color: var(--danger); font-weight: 700;">
+              ⚠️ A project named '<span id="modal-dup-name"></span>' already exists in this folder! Please choose a unique name.
             </div>
           </div>
 
           <div class="form-row-dual">
             <div>
               <label>KDP Trim Preset</label>
-              <select id="modal-trim-preset" class="form-control">
+              <select id="modal-trim-preset" class="form-control" onchange="onModalTrimPresetChange(this.value)">
                 <option value="8.5x11">8.5 x 11 in (Standard)</option>
                 <option value="8x10">8 x 10 in (Activity Book)</option>
                 <option value="8.5x8.5">8.5 x 8.5 in (Square Book)</option>
                 <option value="6x9">6 x 9 in (Puzzles / Sudoku)</option>
+                <option value="custom">✏️ Custom Trim Size...</option>
               </select>
+              <!-- Custom Trim Size Inline Inputs -->
+              <div id="modal-custom-trim-container" style="display: none; margin-top: 8px;">
+                <label style="font-size: 11px; font-weight: 700; color: var(--primary);">Enter Custom Trim (Width × Height):</label>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <input type="number" id="modal-custom-trim-w" class="form-control" min="4" max="15" step="0.1" value="8.5" placeholder="W" style="width: 45%;">
+                  <span style="font-weight: 700; color: var(--text-muted);">×</span>
+                  <input type="number" id="modal-custom-trim-h" class="form-control" min="4" max="15" step="0.1" value="11" placeholder="H" style="width: 45%;">
+                  <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">in</span>
+                </div>
+              </div>
             </div>
             <div>
               <label id="modal-count-label">Initial Pages / Puzzles</label>
-              <select id="modal-page-count" class="form-control">
+              <select id="modal-page-count" class="form-control" onchange="onModalPageCountChange(this.value)">
                 <option value="10">10 Pages / Items</option>
                 <option value="25">25 Pages (KDP Standard)</option>
                 <option value="50">50 Pages</option>
                 <option value="100">100 Puzzles (Bulk)</option>
+                <option value="custom">✏️ Custom Page Count...</option>
               </select>
+              <!-- Custom Page Count Inline Input -->
+              <div id="modal-custom-page-container" style="display: none; margin-top: 8px;">
+                <label style="font-size: 11px; font-weight: 700; color: var(--primary);">Enter Custom Pages:</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <input type="number" id="modal-custom-page-input" class="form-control" min="1" max="600" value="40" placeholder="e.g. 48">
+                  <span style="font-size: 11px; color: var(--text-muted);">pages</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1039,7 +1199,7 @@
           <!-- Amazon KDP Single-Sided Coloring Book Rule Toggle -->
           <div class="export-options-box">
             <div
-              style="font-size: 13px; font-weight: 700; color: #ffffff; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+              style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
               <span>🎨 Amazon KDP Coloring Book Bleed-Through Protection</span>
               <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: var(--secondary);">KDP
                 Recommended</span>
@@ -1058,18 +1218,23 @@
                 <span style="font-size: 12px; color: var(--text-muted);">Add subtle watermark on blank pages <em>"[
                     Blank page for color bleed-through protection ]"</em></span>
               </label>
+              <!-- NEW: Bottom Middle Page Numbering Option (Unticked by default) -->
+              <label class="checkbox-label" style="margin-top: 4px;">
+                <input type="checkbox" id="exp-opt-page-numbers" onchange="updateExportModalPreview()">
+                <span>🔢 <strong>Add Page Numbers in Bottom Middle (e.g. Page 1, 2, 3...)</strong> <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary); font-size: 10px; margin-left: 4px;">Centered</span></span>
+              </label>
             </div>
             <!-- Important Front & Back Matter Pages Selector & Content Editor -->
             <div class="export-options-box"
-              style="margin-top: 14px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+              style="margin-top: 14px; background: rgba(15, 23, 42, 0.04); border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
               <div
-                style="font-size: 13px; font-weight: 700; color: #ffffff; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
                 <span>📑 Front & Back Matter Pages (Tick to Include in Book):</span>
                 <button class="btn btn-xs btn-outline" type="button" id="btn-toggle-fm-editor" onclick="toggleFrontMatterEditor()">
                   ✏️ Edit Page Content & Custom Texts
                 </button>
               </div>
-              <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 12px;">
+              <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 12px;">
                 Select which opening and closing pages to include, and customize what is written on each page:
               </p>
 

@@ -18,6 +18,7 @@ class ProjectStorage:
     BAK_EXT = ".bak"
 
     SUBDIRECTORIES = [
+        "media",
         "assets",
         "pages",
         "previews",

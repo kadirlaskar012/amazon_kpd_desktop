@@ -181,13 +181,44 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
         except Exception:
             req_data = {}
 
-        if req_path == "/api/projects/create":
+        if req_path == "/api/projects/check_exists":
+            proj_name = req_data.get("name", "").strip()
+            folder_name = req_data.get("folder_name") or proj_name.replace(" ", "_")
+            root_dir = Path(req_data.get("root_path") or DEFAULT_PROJECTS_DIR)
+            project_dir = (root_dir / folder_name).resolve()
+            exists = (project_dir / "project.json").exists() or project_dir.exists()
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "exists": exists,
+                "project_dir": str(project_dir)
+            }).encode("utf-8"))
+            return
+
+        elif req_path == "/api/projects/create":
             proj_name = req_data.get("name", "Untitled Project").strip()
             folder_name = req_data.get("folder_name") or proj_name.replace(" ", "_")
             root_dir = Path(req_data.get("root_path") or DEFAULT_PROJECTS_DIR)
             project_dir = (root_dir / folder_name).resolve()
+            force_overwrite = bool(req_data.get("force_overwrite", False))
+
+            # Prevent duplicate overwrite if project already exists
+            if not force_overwrite and ((project_dir / "project.json").exists() or (project_dir.exists() and any(project_dir.iterdir()))):
+                self.send_response(409)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "status": "error",
+                    "error": f"A project named '{proj_name}' already exists at this location!",
+                    "exists": True,
+                    "project_dir": str(project_dir)
+                }).encode("utf-8"))
+                return
 
             ProjectStorage.initialize_project_directory(project_dir)
+            (project_dir / "media").mkdir(parents=True, exist_ok=True)
 
             project_file = project_dir / "project.json"
             with open(project_file, "w", encoding="utf-8") as f:
@@ -200,6 +231,7 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                 "status": "success",
                 "project_dir": str(project_dir),
                 "project_file": str(project_file),
+                "media_dir": str(project_dir / "media"),
                 "assets_dir": str(project_dir / "assets")
             }
             self.wfile.write(json.dumps(resp).encode("utf-8"))
@@ -231,6 +263,7 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             single_sided = req_data.get("single_sided", True)
             blank_page_note = req_data.get("blank_page_note", False)
             include_front_matter = req_data.get("include_front_matter", True)
+            include_page_numbers = req_data.get("include_page_numbers", False)
 
             try:
                 KDPPdfExporter.generate_pdf(
@@ -238,7 +271,8 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                     out_pdf, 
                     include_front_matter=include_front_matter, 
                     single_sided=single_sided, 
-                    blank_page_note=blank_page_note
+                    blank_page_note=blank_page_note,
+                    include_page_numbers=include_page_numbers
                 )
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
@@ -381,6 +415,8 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         elif req_path == "/api/projects/upload_asset":
             project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "Default")).resolve()
+            media_dir = project_dir / "media"
+            media_dir.mkdir(parents=True, exist_ok=True)
             assets_dir = project_dir / "assets"
             assets_dir.mkdir(parents=True, exist_ok=True)
 
@@ -402,8 +438,15 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             if "," in opt_data_url:
                 header, encoded = opt_data_url.split(",", 1)
                 file_bytes = base64.b64decode(encoded)
-                target_path = assets_dir / filename
-                with open(target_path, "wb") as f:
+                
+                # Write to media directory
+                target_media_path = media_dir / filename
+                with open(target_media_path, "wb") as f:
+                    f.write(file_bytes)
+
+                # Keep assets directory synchronized for backward compatibility
+                target_asset_path = assets_dir / filename
+                with open(target_asset_path, "wb") as f:
                     f.write(file_bytes)
 
             self.send_response(200)
@@ -411,6 +454,7 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({
                 "status": "uploaded", 
+                "media_path": str(media_dir / filename),
                 "asset_path": str(assets_dir / filename),
                 "data_url": opt_data_url,
                 "size_kb": opt_size_kb

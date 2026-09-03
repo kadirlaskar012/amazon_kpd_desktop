@@ -21,7 +21,8 @@ class KDPPdfExporter:
         output_path: Path, 
         include_front_matter: bool = True,
         single_sided: bool = True,
-        blank_page_note: bool = False
+        blank_page_note: bool = False,
+        include_page_numbers: bool = False
     ) -> Path:
         """
         Generates a complete multi-page Amazon KDP Interior PDF.
@@ -40,6 +41,9 @@ class KDPPdfExporter:
             single_sided = bool(settings["single_sided"])
         elif b_type in ("sudoku", "tic_tac_toe", "maze", "word_search", "puzzle_book", "activity_book"):
             single_sided = False
+
+        if "include_page_numbers" in project_data:
+            include_page_numbers = bool(project_data["include_page_numbers"])
 
         # Physical page dimensions including bleed
         page_w = trim_w + (bleed_pt * 2)
@@ -1084,6 +1088,13 @@ class KDPPdfExporter:
                 c.setStrokeColor(colors.HexColor("#0f172a"))
                 c.setLineWidth(1.5)
                 c.rect(gx2, gy, grid_px, grid_px, fill=0, stroke=1)
+
+            # Optional Bottom-Center Page Number
+            if include_page_numbers:
+                page_display_num = fm_count + 1 + (page_idx * 2 if single_sided else page_idx)
+                c.setFont("Helvetica-Bold", 10)
+                c.setFillColor(colors.HexColor("#334155"))
+                c.drawCentredString(page_w / 2.0, 18 + bleed_pt, str(page_display_num))
 
             c.showPage()
 
