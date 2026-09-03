@@ -92,6 +92,7 @@ let currentPageIndex = 0; // Default on first coloring page
 let currentSpreadIndex = 0;
 let activeElementId = null;
 let currentZoom = 1.0;
+let cachedPageRect = null;
 let showGuides = true;
 let snapToGuides = true;
 
@@ -165,9 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   setupNavigation();
   setupGlobalKeyboardShortcuts();
-  fetchDefaultLocation();
   loadInitialProject();
-  fetchRecentProjects();
   setupCanvasInteractions();
   updateUndoRedoButtons();
 
@@ -177,24 +176,40 @@ document.addEventListener("DOMContentLoaded", () => {
       saveProject(false);
     }
   }, 10000);
-  // Window resize responsive canvas auto-fitter
+  
+  // Window resize responsive canvas auto-fitter (debounced with rAF)
+  let resizeTimer = null;
   window.addEventListener("resize", () => {
-    const activePanel = document.querySelector(".tab-panel.active");
-    if (activePanel && activePanel.id === "panel-canvas") {
-      fitCanvasView();
-    }
+    cachedPageRect = null;
+    if (resizeTimer) cancelAnimationFrame(resizeTimer);
+    resizeTimer = requestAnimationFrame(() => {
+      const activePanel = document.querySelector(".tab-panel.active");
+      if (activePanel && activePanel.id === "panel-canvas") {
+        fitCanvasView();
+      }
+    });
   });
 });
 
 // ==========================================
 // Undo / Redo History Stack Implementation
 // ==========================================
+function cloneProjectForHistory(proj) {
+  if (!proj) return null;
+  return {
+    ...proj,
+    settings: proj.settings ? JSON.parse(JSON.stringify(proj.settings)) : {},
+    pages: proj.pages ? JSON.parse(JSON.stringify(proj.pages)) : [],
+    media: proj.media || []
+  };
+}
+
 function recordHistoryState(actionName = "Edit") {
   if (isHistoryAction) return;
 
   try {
     const snapshot = {
-      project: JSON.parse(JSON.stringify(currentProject)),
+      project: cloneProjectForHistory(currentProject),
       pageIndex: currentPageIndex,
       activeElementId: activeElementId,
       action: actionName
@@ -221,7 +236,7 @@ function performUndo() {
   isHistoryAction = true;
   try {
     const currentState = {
-      project: JSON.parse(JSON.stringify(currentProject)),
+      project: cloneProjectForHistory(currentProject),
       pageIndex: currentPageIndex,
       activeElementId: activeElementId,
       action: "Current State"
@@ -229,7 +244,10 @@ function performUndo() {
     redoStack.push(currentState);
 
     const previousState = undoStack.pop();
-    currentProject = previousState.project;
+    currentProject = {
+      ...previousState.project,
+      media: currentProject.media || previousState.project.media || []
+    };
     currentPageIndex = Math.min(previousState.pageIndex, currentProject.pages.length - 1);
     activeElementId = previousState.activeElementId;
 
@@ -257,7 +275,7 @@ function performRedo() {
   isHistoryAction = true;
   try {
     const currentState = {
-      project: JSON.parse(JSON.stringify(currentProject)),
+      project: cloneProjectForHistory(currentProject),
       pageIndex: currentPageIndex,
       activeElementId: activeElementId,
       action: "Current State"
@@ -265,7 +283,10 @@ function performRedo() {
     undoStack.push(currentState);
 
     const nextState = redoStack.pop();
-    currentProject = nextState.project;
+    currentProject = {
+      ...nextState.project,
+      media: currentProject.media || nextState.project.media || []
+    };
     currentPageIndex = Math.min(nextState.pageIndex, currentProject.pages.length - 1);
     activeElementId = nextState.activeElementId;
 
@@ -603,7 +624,34 @@ function loadInitialProject() {
   // Restore the last active tab from URL query params or sessionStorage
   const urlParams = new URLSearchParams(window.location.search);
   const queryTab = urlParams.get("tab");
-  const lastTab = queryTab || sessionStorage.getItem("kdp_active_tab") || "dashboard";
+  const lastTab = queryTab || sessionStorage.getItem("kdp_active_tab") || localStorage.getItem("kdp_active_tab") || "dashboard";
+
+  // Hydrate UI state synchronously to prevent toolbar and content flash
+  document.documentElement.setAttribute("data-active-tab", lastTab);
+  const headerCanvasActions = document.getElementById("header-canvas-actions");
+  if (headerCanvasActions) {
+    headerCanvasActions.style.display = (lastTab === "canvas") ? "flex" : "none";
+  }
+
+  // Pre-hydrate cached project title to eliminate placeholder text flash
+  try {
+    const cachedData = localStorage.getItem("kdp_active_project_data");
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      if (parsed && parsed.name) {
+        const navProjName = document.getElementById("nav-project-name");
+        if (navProjName) navProjName.innerText = parsed.name;
+      }
+    }
+  } catch (e) {}
+
+  // Synchronously activate correct tab nav and panel before async operations
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+  const targetBtn = document.querySelector(`.nav-btn[data-tab="${lastTab}"]`);
+  const targetPanel = document.getElementById(`panel-${lastTab}`);
+  if (targetBtn) targetBtn.classList.add("active");
+  if (targetPanel) targetPanel.classList.add("active");
 
   // Query real projects list from local disk
   fetch("/api/projects")
@@ -957,7 +1005,23 @@ function openExportPdfModal() {
   modal.classList.add("active");
 }
 
+let exportModalUpdateTimer = null;
+let lastExportModalUpdateTime = 0;
 function updateExportModalPreview() {
+  const now = performance.now();
+  if (now - lastExportModalUpdateTime < 75) {
+    if (exportModalUpdateTimer) cancelAnimationFrame(exportModalUpdateTimer);
+    exportModalUpdateTimer = requestAnimationFrame(() => {
+      renderExportModalPreview();
+      lastExportModalUpdateTime = performance.now();
+    });
+    return;
+  }
+  lastExportModalUpdateTime = now;
+  renderExportModalPreview();
+}
+
+function renderExportModalPreview() {
   const container = document.getElementById("export-pages-grid");
   const totalLabel = document.getElementById("exp-spec-pages");
   const countLabel = document.getElementById("exp-grid-count");
@@ -1109,7 +1173,7 @@ function updateExportModalPreview() {
       const mainEl = (p.elements || []).find(e => (e.type === "main_image" || e.type === "ref_image") && e.image_src);
       let thumbImg = "";
       if (mainEl && mainEl.image_src) {
-        thumbImg = `<img src="${mainEl.image_src}">`;
+        thumbImg = `<img src="${mainEl.image_src}" loading="lazy" decoding="async">`;
       } else if (isDisclaimer) {
         thumbImg = `<span style="font-size:24px;">📜</span>`;
       } else if (isContents) {
@@ -1912,6 +1976,7 @@ function setupNavigation() {
 function switchTab(tabId) {
   sessionStorage.setItem("kdp_active_tab", tabId);
   localStorage.setItem("kdp_active_tab", tabId);
+  document.documentElement.setAttribute("data-active-tab", tabId);
 
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
@@ -3644,6 +3709,7 @@ function renderMediaLibrary() {
     sortedMedia.reverse();
   }
 
+  const fragment = document.createDocumentFragment();
   sortedMedia.forEach(item => {
     const isSelected = selectedMediaIds.has(item.id);
     const card = document.createElement("div");
@@ -3679,8 +3745,9 @@ function renderMediaLibrary() {
       </div>
     `;
 
-    container.appendChild(card);
+    fragment.appendChild(card);
   });
+  container.appendChild(fragment);
 
   updateMediaSelectionUI();
   populateQuickMediaPicker();
@@ -4238,6 +4305,7 @@ function loadPageIntoCanvas(index) {
     return;
   }
 
+  const fragment = document.createDocumentFragment();
   page.elements.forEach(elem => {
     const elDiv = document.createElement("div");
     elDiv.id = elem.id;
@@ -4331,23 +4399,23 @@ function loadPageIntoCanvas(index) {
       elDiv.classList.add("elem-border-box");
     }
 
-    elDiv.innerHTML += `
+    elDiv.insertAdjacentHTML("beforeend", `
       <div class="handle tl" data-handle="tl"></div>
       <div class="handle tr" data-handle="tr"></div>
       <div class="handle bl" data-handle="bl"></div>
       <div class="handle br" data-handle="br"></div>
-    `;
+    `);
 
     elDiv.addEventListener("mousedown", (e) => {
-      e.stopPropagation();
       setActiveElement(elem.id);
       if (elem.type === "ref_image" || elem.type === "main_image") {
         switchDrawerTab("media");
       }
     });
 
-    layer.appendChild(elDiv);
+    fragment.appendChild(elDiv);
   });
+  layer.appendChild(fragment);
 
   // If page has Sudoku Puzzles attached, render vector Sudoku interactive board
   if (page.puzzles && page.puzzles.length > 0) {
@@ -4542,7 +4610,7 @@ function loadPageIntoCanvas(index) {
   }
 }
 
-// Drag & Resize Canvas Interactions with Undo History
+// Drag & Resize Canvas Interactions with Undo History (Throttled with requestAnimationFrame)
 function setupCanvasInteractions() {
   let isDragging = false;
   let isResizing = false;
@@ -4550,9 +4618,82 @@ function setupCanvasInteractions() {
   let startX = 0, startY = 0;
   let elemStart = { x: 0, y: 0, w: 0, h: 0 };
   let hasMoved = false;
+  let mouseMoveRaf = null;
+  let lastClientX = 0, lastClientY = 0;
 
   const stage = document.getElementById("canvas-stage");
   if (!stage) return;
+
+  const viewport = document.getElementById("canvas-viewport");
+  if (viewport) {
+    viewport.addEventListener("scroll", () => { cachedPageRect = null; }, { passive: true });
+  }
+
+  function updateInspectorCoordsFast(elem) {
+    const px = document.getElementById("prop-x");
+    const py = document.getElementById("prop-y");
+    const pw = document.getElementById("prop-w");
+    const ph = document.getElementById("prop-h");
+    if (px) px.value = (elem.x / 60.0).toFixed(2);
+    if (py) py.value = (elem.y / 60.0).toFixed(2);
+    if (pw) pw.value = (elem.w / 60.0).toFixed(2);
+    if (ph) ph.value = (elem.h / 60.0).toFixed(2);
+  }
+
+  function processCanvasMouseMove() {
+    mouseMoveRaf = null;
+
+    // Fast coordinate readout with cached page bounding box
+    const pageNode = document.getElementById("paper-page");
+    if (pageNode) {
+      if (!cachedPageRect) cachedPageRect = pageNode.getBoundingClientRect();
+      const curX = ((lastClientX - cachedPageRect.left) / 60.0).toFixed(2);
+      const curY = ((lastClientY - cachedPageRect.top) / 60.0).toFixed(2);
+      const readout = document.getElementById("coord-readout");
+      if (readout) readout.innerText = `X: ${curX} in | Y: ${curY} in`;
+    }
+
+    const elem = getActiveElement();
+    if (!elem || currentProject.is_locked) return;
+
+    const dx = (lastClientX - startX) / currentZoom;
+    const dy = (lastClientY - startY) / currentZoom;
+
+    if (isDragging) {
+      if (!hasMoved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
+        recordHistoryState("Move Element");
+        hasMoved = true;
+      }
+      elem.x = Math.max(0, Math.min(510 - elem.w, Math.round(elemStart.x + dx)));
+      elem.y = Math.max(0, Math.min(660 - elem.h, Math.round(elemStart.y + dy)));
+      applyElementStyles(elem);
+      updateInspectorCoordsFast(elem);
+    } else if (isResizing) {
+      if (!hasMoved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
+        recordHistoryState("Resize Element");
+        hasMoved = true;
+      }
+      if (activeHandle === "br") {
+        elem.w = Math.max(30, Math.round(elemStart.w + dx));
+        elem.h = Math.max(30, Math.round(elemStart.h + dy));
+      } else if (activeHandle === "bl") {
+        elem.w = Math.max(30, Math.round(elemStart.w - dx));
+        elem.x = Math.round(elemStart.x + dx);
+        elem.h = Math.max(30, Math.round(elemStart.h + dy));
+      } else if (activeHandle === "tr") {
+        elem.w = Math.max(30, Math.round(elemStart.w + dx));
+        elem.h = Math.max(30, Math.round(elemStart.h - dy));
+        elem.y = Math.round(elemStart.y + dy);
+      } else if (activeHandle === "tl") {
+        elem.w = Math.max(30, Math.round(elemStart.w - dx));
+        elem.h = Math.max(30, Math.round(elemStart.h - dy));
+        elem.x = Math.round(elemStart.x + dx);
+        elem.y = Math.round(elemStart.y + dy);
+      }
+      applyElementStyles(elem);
+      updateInspectorCoordsFast(elem);
+    }
+  }
 
   stage.addEventListener("mousedown", (e) => {
     if (currentProject.is_locked) return;
@@ -4565,18 +4706,21 @@ function setupCanvasInteractions() {
       const elem = getActiveElement();
       if (elem) elemStart = { ...elem };
       hasMoved = false;
+      cachedPageRect = null;
       e.preventDefault();
       return;
     }
 
     const elemNode = e.target.closest(".canvas-element");
     if (elemNode) {
+      setActiveElement(elemNode.id);
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
       const elem = getActiveElement();
       if (elem) elemStart = { ...elem };
       hasMoved = false;
+      cachedPageRect = null;
       e.preventDefault();
     } else {
       setActiveElement(null);
@@ -4584,64 +4728,28 @@ function setupCanvasInteractions() {
   });
 
   window.addEventListener("mousemove", (e) => {
-    const pageNode = document.getElementById("paper-page");
-    if (pageNode) {
-      const pageRect = pageNode.getBoundingClientRect();
-      const curX = ((e.clientX - pageRect.left) / 60.0).toFixed(2);
-      const curY = ((e.clientY - pageRect.top) / 60.0).toFixed(2);
-      const readout = document.getElementById("coord-readout");
-      if (readout) readout.innerText = `X: ${curX} in | Y: ${curY} in`;
+    lastClientX = e.clientX;
+    lastClientY = e.clientY;
+    if (!mouseMoveRaf) {
+      mouseMoveRaf = requestAnimationFrame(processCanvasMouseMove);
     }
-
-    const elem = getActiveElement();
-    if (!elem || currentProject.is_locked) return;
-
-    const dx = (e.clientX - startX) / currentZoom;
-    const dy = (e.clientY - startY) / currentZoom;
-
-    if (isDragging) {
-      if (!hasMoved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
-        recordHistoryState("Move Element");
-        hasMoved = true;
-      }
-      elem.x = Math.max(0, Math.min(510 - elem.w, elemStart.x + dx));
-      elem.y = Math.max(0, Math.min(660 - elem.h, elemStart.y + dy));
-      applyElementStyles(elem);
-      updatePropertiesInspector();
-      markProjectDirty();
-    } else if (isResizing) {
-      if (!hasMoved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
-        recordHistoryState("Resize Element");
-        hasMoved = true;
-      }
-      if (activeHandle === "br") {
-        elem.w = Math.max(30, elemStart.w + dx);
-        elem.h = Math.max(30, elemStart.h + dy);
-      } else if (activeHandle === "bl") {
-        elem.w = Math.max(30, elemStart.w - dx);
-        elem.x = elemStart.x + dx;
-        elem.h = Math.max(30, elemStart.h + dy);
-      } else if (activeHandle === "tr") {
-        elem.w = Math.max(30, elemStart.w + dx);
-        elem.h = Math.max(30, elemStart.h - dy);
-        elem.y = elemStart.y + dy;
-      } else if (activeHandle === "tl") {
-        elem.w = Math.max(30, elemStart.w - dx);
-        elem.h = Math.max(30, elemStart.h - dy);
-        elem.x = elemStart.x + dx;
-        elem.y = elemStart.y + dy;
-      }
-      applyElementStyles(elem);
-      updatePropertiesInspector();
-      markProjectDirty();
-    }
-  });
+  }, { passive: true });
 
   window.addEventListener("mouseup", () => {
+    if (isDragging || isResizing) {
+      if (hasMoved) {
+        markProjectDirty();
+        updatePropertiesInspector();
+      }
+    }
     isDragging = false;
     isResizing = false;
     activeHandle = null;
     hasMoved = false;
+    if (mouseMoveRaf) {
+      cancelAnimationFrame(mouseMoveRaf);
+      mouseMoveRaf = null;
+    }
   });
 }
 
@@ -5686,8 +5794,9 @@ function renderTimeline() {
     return slot;
   };
 
-  // Add initial insert slot before first page
-  strip.appendChild(createInsertSlot(0));
+  // Add initial insert slot before first page with DocumentFragment
+  const fragment = document.createDocumentFragment();
+  fragment.appendChild(createInsertSlot(0));
 
   pages.forEach((page, idx) => {
     const card = document.createElement("div");
@@ -5763,15 +5872,22 @@ function renderTimeline() {
       reorderPage(fromIdx, toIdx);
     });
 
-    let pageLabel = `Page ${idx + 1}`;
+    // Determine preview content
     let previewContent = "";
+    let pageLabel = `Page ${idx + 1}`;
 
-    if (isBlank) {
-      pageLabel = `Blank ${idx + 1}`;
-      previewContent = `<span style="font-size:16px;">⚪</span>`;
+    if (page.page_type === "blank_verso" || page.layout === "blank_page") {
+      pageLabel = `Blank Verso ${idx + 1}`;
+      previewContent = `<span style="font-size:16px;">🛡️</span>`;
+    } else if (page.page_type === "front_matter_disclaimer") {
+      pageLabel = `Disclaimer`;
+      previewContent = `<span style="font-size:16px;">⚖️</span>`;
+    } else if (page.page_type === "front_matter_contents") {
+      pageLabel = `Contents`;
+      previewContent = `<span style="font-size:16px;">📋</span>`;
     } else if (page.puzzles || page.layout === "sudoku" || bType === "sudoku") {
       pageLabel = `Sudoku ${idx + 1}`;
-      previewContent = `<span style="font-size:16px;">🔢</span>`;
+      previewContent = `<span style="font-size:16px;">🧩</span>`;
     } else if (page.games || page.layout === "tic_tac_toe" || bType === "tic_tac_toe") {
       pageLabel = `Game Page ${idx + 1}`;
       previewContent = `<span style="font-size:16px;">⭕</span>`;
@@ -5800,11 +5916,13 @@ function renderTimeline() {
       <div class="thumb-preview-box">${previewContent}</div>
       <div class="thumb-title" title="${page.title || pageLabel}">${page.title || pageLabel}</div>
     `;
-    strip.appendChild(card);
+    fragment.appendChild(card);
 
     // In-between insert slot after this page
-    strip.appendChild(createInsertSlot(idx + 1));
+    fragment.appendChild(createInsertSlot(idx + 1));
   });
+
+  strip.appendChild(fragment);
 
   const countBadge = document.getElementById("stat-page-count");
   if (countBadge) countBadge.innerText = currentProject.pages.length;
@@ -6188,13 +6306,15 @@ function toggleSnap() {
 }
 
 function changeZoom(delta) {
+  cachedPageRect = null;
   currentZoom = Math.max(0.4, Math.min(2.5, currentZoom + delta));
   document.getElementById("canvas-stage").style.transform = `scale(${currentZoom})`;
   document.getElementById("zoom-readout").innerText = `Zoom: ${Math.round(currentZoom * 100)}%`;
 }
 
 function fitCanvasView() {
-  const viewport = document.getElementById("canvas-viewport");
+  cachedPageRect = null;
+  const viewport = document.getElementById("canvas-viewport") || document.getElementById("viewport-container");
   const stage = document.getElementById("canvas-stage");
   const paper = document.getElementById("paper-page");
   if (!viewport || !stage || !paper) return;
@@ -6208,21 +6328,21 @@ function fitCanvasView() {
   const paperH = paper.offsetHeight || 660;
 
   // Safe padding around canvas for bleed envelope, shadow, and status bar
-  const padW = 70;
-  const padH = 80;
+  const padW = 40;
+  const padH = 48;
 
-  const availW = Math.max(120, vpW - padW);
-  const availH = Math.max(120, vpH - padH);
+  const availW = Math.max(80, vpW - padW);
+  const availH = Math.max(80, vpH - padH);
 
   const scaleW = availW / paperW;
   const scaleH = availH / paperH;
 
   // Calculate perfect auto-fit zoom scale so it fits 100% inside screen without overflow
   let targetScale = Math.min(scaleW, scaleH);
-  // Cap between 0.35 and 1.15
-  targetScale = Math.max(0.35, Math.min(1.15, targetScale));
-  // Round to nearest 0.05 (5%)
-  targetScale = Math.round(targetScale * 20) / 20;
+  // Cap between 0.35 and 1.25
+  targetScale = Math.max(0.35, Math.min(1.25, targetScale));
+  // Round to nearest 0.01 for smooth precision fit
+  targetScale = Math.round(targetScale * 100) / 100;
 
   currentZoom = targetScale;
   stage.style.transform = `scale(${currentZoom})`;

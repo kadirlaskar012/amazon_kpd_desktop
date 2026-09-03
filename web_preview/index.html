@@ -11,6 +11,19 @@
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Fredoka:wght@600;700;900&family=Balsamiq+Sans:wght@700&family=Nunito:wght@800;900&family=Chewy&family=Short+Stack&family=JetBrains+Mono:wght@400;500&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+  <script>
+    (function() {
+      try {
+        var theme = localStorage.getItem("kdp_studio_theme") || "light";
+        document.documentElement.setAttribute("data-theme", theme);
+        var urlParams = new URLSearchParams(window.location.search);
+        var tab = urlParams.get("tab") || sessionStorage.getItem("kdp_active_tab") || localStorage.getItem("kdp_active_tab") || "dashboard";
+        document.documentElement.setAttribute("data-active-tab", tab);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>
@@ -45,7 +58,8 @@
 
       <div class="top-actions" id="header-canvas-actions">
         <!-- Theme Toggle Switcher (Default: Light Mode) -->
-        <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Switch Light / Dark Theme">
+        <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()"
+          title="Switch Light / Dark Theme">
           <span id="theme-toggle-icon" class="theme-icon">🌙</span>
           <span id="theme-toggle-text" class="theme-label">Dark</span>
         </button>
@@ -325,19 +339,23 @@
 
               <!-- Quick Layout Action Buttons -->
               <div class="layout-actions-bar">
-                <button class="btn btn-xs btn-outline" type="button" onclick="toggleLayoutCustomizer()" style="flex: 1;" title="Customize current layout elements">
+                <button class="btn btn-xs btn-outline" type="button" onclick="toggleLayoutCustomizer()" style="flex: 1;"
+                  title="Customize current layout elements">
                   ⚙️ Customize
                 </button>
-                <button class="btn btn-xs btn-primary" type="button" onclick="promptSaveCustomLayout()" style="flex: 1;" title="Save current canvas elements as a reusable template">
+                <button class="btn btn-xs btn-primary" type="button" onclick="promptSaveCustomLayout()" style="flex: 1;"
+                  title="Save current canvas elements as a reusable template">
                   💾 Save As Layout
                 </button>
               </div>
 
               <!-- Collapsible Quick Layout Customizer Panel -->
               <div class="layout-customizer-box" id="layout-customizer-panel" style="display: none;">
-                <div style="font-size: 11.5px; font-weight: 700; color: var(--primary); display: flex; justify-content: space-between; align-items: center;">
+                <div
+                  style="font-size: 11.5px; font-weight: 700; color: var(--primary); display: flex; justify-content: space-between; align-items: center;">
                   <span>⚙️ Quick Layout Customizer</span>
-                  <button type="button" class="close-btn" style="padding: 0; font-size: 14px;" onclick="toggleLayoutCustomizer()">✕</button>
+                  <button type="button" class="close-btn" style="padding: 0; font-size: 14px;"
+                    onclick="toggleLayoutCustomizer()">✕</button>
                 </div>
                 <div class="layout-customizer-row">
                   <label>Ref Image Size:</label>
@@ -376,11 +394,16 @@
 
               <div class="layouts-grid" id="layouts-template-list">
                 <!-- Layout 1: Primary Standard KDP Coloring Layout (Top-Left Ref + Big Outline Title + 75% Drawing) -->
-                <div class="layout-card active" data-layout="kdp_top_ref" onclick="applyPageLayout('kdp_top_ref')" title="Standard KDP Coloring Page with Reference">
-                  <div class="layout-mini-preview" style="display: flex; flex-direction: column; gap: 4px; padding: 4px;">
+                <div class="layout-card active" data-layout="kdp_top_ref" onclick="applyPageLayout('kdp_top_ref')"
+                  title="Standard KDP Coloring Page with Reference">
+                  <div class="layout-mini-preview"
+                    style="display: flex; flex-direction: column; gap: 4px; padding: 4px;">
                     <div style="display: flex; gap: 4px; height: 32px;">
-                      <div class="mini-box mini-ref" style="width: 38%; height: 100%; border-color: var(--primary); color: var(--primary);">🐶 Ref</div>
-                      <div class="mini-box mini-txt" style="width: 62%; height: 100%; font-size: 8px; font-weight: 900;">DOG</div>
+                      <div class="mini-box mini-ref"
+                        style="width: 38%; height: 100%; border-color: var(--primary); color: var(--primary);">🐶 Ref
+                      </div>
+                      <div class="mini-box mini-txt"
+                        style="width: 62%; height: 100%; font-size: 8px; font-weight: 900;">DOG</div>
                     </div>
                     <div class="mini-box mini-main" style="flex: 1; height: 50px;">🎨 75% Drawing</div>
                   </div>
@@ -391,7 +414,8 @@
                 </div>
 
                 <!-- Layout 2: Full Page Big Drawing -->
-                <div class="layout-card" data-layout="full_page" onclick="applyPageLayout('full_page')" title="Full Page 100% Canvas Drawing">
+                <div class="layout-card" data-layout="full_page" onclick="applyPageLayout('full_page')"
+                  title="Full Page 100% Canvas Drawing">
                   <div class="layout-mini-preview preview-full-page">
                     <div class="mini-box mini-main full">Full Drawing Area (100%)</div>
                   </div>
@@ -402,10 +426,15 @@
                 </div>
 
                 <!-- Layout 3: Top-Center Reference + Big Outline Title -->
-                <div class="layout-card" data-layout="kdp_center_ref" onclick="applyPageLayout('kdp_center_ref')" title="Top-Center Reference + Large Art Below">
-                  <div class="layout-mini-preview" style="display: flex; flex-direction: column; gap: 3px; padding: 4px;">
-                    <div class="mini-box mini-ref" style="width: 45%; height: 26px; align-self: center; border-color: var(--primary); color: var(--primary);">🦁 Ref</div>
-                    <div class="mini-box mini-txt" style="width: 80%; height: 12px; align-self: center; font-size: 7px; font-weight: 900;">LION</div>
+                <div class="layout-card" data-layout="kdp_center_ref" onclick="applyPageLayout('kdp_center_ref')"
+                  title="Top-Center Reference + Large Art Below">
+                  <div class="layout-mini-preview"
+                    style="display: flex; flex-direction: column; gap: 3px; padding: 4px;">
+                    <div class="mini-box mini-ref"
+                      style="width: 45%; height: 26px; align-self: center; border-color: var(--primary); color: var(--primary);">
+                      🦁 Ref</div>
+                    <div class="mini-box mini-txt"
+                      style="width: 80%; height: 12px; align-self: center; font-size: 7px; font-weight: 900;">LION</div>
                     <div class="mini-box mini-main" style="flex: 1; height: 44px;">🎨 70% Art Area</div>
                   </div>
                   <div class="layout-info">
@@ -415,11 +444,16 @@
                 </div>
 
                 <!-- Layout 4: Side-by-Side Dual (Split Look & Draw) -->
-                <div class="layout-card" data-layout="kdp_side_by_side" onclick="applyPageLayout('kdp_side_by_side')" title="Side-by-Side Comparison & Look-and-Draw">
-                  <div class="layout-mini-preview" style="display: flex; flex-direction: column; gap: 3px; padding: 4px;">
-                    <div class="mini-box mini-txt" style="width: 100%; height: 12px; font-size: 7px; font-weight: 800;">COLOR THIS!</div>
+                <div class="layout-card" data-layout="kdp_side_by_side" onclick="applyPageLayout('kdp_side_by_side')"
+                  title="Side-by-Side Comparison & Look-and-Draw">
+                  <div class="layout-mini-preview"
+                    style="display: flex; flex-direction: column; gap: 3px; padding: 4px;">
+                    <div class="mini-box mini-txt" style="width: 100%; height: 12px; font-size: 7px; font-weight: 800;">
+                      COLOR THIS!</div>
                     <div style="display: flex; gap: 3px; flex: 1;">
-                      <div class="mini-box mini-ref" style="flex: 1; border-color: var(--primary); color: var(--primary); font-size: 6.5px;">Left Ref</div>
+                      <div class="mini-box mini-ref"
+                        style="flex: 1; border-color: var(--primary); color: var(--primary); font-size: 6.5px;">Left Ref
+                      </div>
                       <div class="mini-box mini-main" style="flex: 1; font-size: 6.5px;">Right Art</div>
                     </div>
                   </div>
@@ -430,11 +464,17 @@
                 </div>
 
                 <!-- Layout 5: Kids Story & Handwriting Guideline -->
-                <div class="layout-card" data-layout="kdp_story_drawing" onclick="applyPageLayout('kdp_story_drawing')" title="Drawing with 3-Tier Handwriting Guidelines">
-                  <div class="layout-mini-preview" style="display: flex; flex-direction: column; gap: 3px; padding: 4px;">
+                <div class="layout-card" data-layout="kdp_story_drawing" onclick="applyPageLayout('kdp_story_drawing')"
+                  title="Drawing with 3-Tier Handwriting Guidelines">
+                  <div class="layout-mini-preview"
+                    style="display: flex; flex-direction: column; gap: 3px; padding: 4px;">
                     <div class="mini-box mini-main" style="flex: 1; height: 50px;">🎨 65% Art</div>
-                    <div class="mini-box mini-txt" style="height: 14px; font-size: 6px; font-family: monospace; border-style: dotted;">_ _ A B C _ _</div>
-                    <div class="mini-box mini-txt" style="height: 14px; font-size: 6px; font-family: monospace; border-style: dotted;">_ _ D E F _ _</div>
+                    <div class="mini-box mini-txt"
+                      style="height: 14px; font-size: 6px; font-family: monospace; border-style: dotted;">_ _ A B C _ _
+                    </div>
+                    <div class="mini-box mini-txt"
+                      style="height: 14px; font-size: 6px; font-family: monospace; border-style: dotted;">_ _ D E F _ _
+                    </div>
                   </div>
                   <div class="layout-info">
                     <div class="layout-title">Story & Tracing</div>
@@ -443,8 +483,10 @@
                 </div>
 
                 <!-- Layout 6: 4-in-1 Mini Drawing Challenge Grid -->
-                <div class="layout-card" data-layout="kdp_4grid" onclick="applyPageLayout('kdp_4grid')" title="4-in-1 Mini Drawing Quadrants">
-                  <div class="layout-mini-preview" style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; padding: 4px;">
+                <div class="layout-card" data-layout="kdp_4grid" onclick="applyPageLayout('kdp_4grid')"
+                  title="4-in-1 Mini Drawing Quadrants">
+                  <div class="layout-mini-preview"
+                    style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; padding: 4px;">
                     <div class="mini-box mini-main" style="font-size: 6px;">Box 1</div>
                     <div class="mini-box mini-main" style="font-size: 6px;">Box 2</div>
                     <div class="mini-box mini-main" style="font-size: 6px;">Box 3</div>
@@ -459,7 +501,8 @@
 
               <!-- Custom User-Saved Layouts Section -->
               <div id="custom-layouts-section" style="margin-top: 14px; display: none;">
-                <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                <div
+                  style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
                   <span>⭐ Your Custom Layouts:</span>
                   <span id="custom-layouts-count" style="font-size: 10px; color: var(--primary);">0 saved</span>
                 </div>
@@ -572,7 +615,7 @@
           </div>
 
           <!-- Canvas Viewport -->
-          <div class="canvas-viewport" id="viewport-container">
+          <div class="canvas-viewport" id="canvas-viewport">
             <div class="canvas-stage" id="canvas-stage">
               <!-- Physical Paper Page -->
               <div class="paper-page" id="paper-page">
@@ -931,11 +974,14 @@
               📁 C:\Users\KadiR-PC\Documents\KDP_Studio_Projects\My_Jungle_Coloring_Book\
             </div>
             <div style="font-size: 11px; color: var(--secondary); margin-top: 4px;">
-              ✓ Will auto-create <code>project.json</code>, <code>/media</code> (isolated media), and <code>/exports</code>
+              ✓ Will auto-create <code>project.json</code>, <code>/media</code> (isolated media), and
+              <code>/exports</code>
             </div>
             <!-- Duplicate Project Warning Box -->
-            <div id="modal-duplicate-warning" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid var(--danger); border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 11.5px; color: var(--danger); font-weight: 700;">
-              ⚠️ A project named '<span id="modal-dup-name"></span>' already exists in this folder! Please choose a unique name.
+            <div id="modal-duplicate-warning"
+              style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid var(--danger); border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 11.5px; color: var(--danger); font-weight: 700;">
+              ⚠️ A project named '<span id="modal-dup-name"></span>' already exists in this folder! Please choose a
+              unique name.
             </div>
           </div>
 
@@ -951,11 +997,14 @@
               </select>
               <!-- Custom Trim Size Inline Inputs -->
               <div id="modal-custom-trim-container" style="display: none; margin-top: 8px;">
-                <label style="font-size: 11px; font-weight: 700; color: var(--primary);">Enter Custom Trim (Width × Height):</label>
+                <label style="font-size: 11px; font-weight: 700; color: var(--primary);">Enter Custom Trim (Width ×
+                  Height):</label>
                 <div style="display: flex; gap: 6px; align-items: center;">
-                  <input type="number" id="modal-custom-trim-w" class="form-control" min="4" max="15" step="0.1" value="8.5" placeholder="W" style="width: 45%;">
+                  <input type="number" id="modal-custom-trim-w" class="form-control" min="4" max="15" step="0.1"
+                    value="8.5" placeholder="W" style="width: 45%;">
                   <span style="font-weight: 700; color: var(--text-muted);">×</span>
-                  <input type="number" id="modal-custom-trim-h" class="form-control" min="4" max="15" step="0.1" value="11" placeholder="H" style="width: 45%;">
+                  <input type="number" id="modal-custom-trim-h" class="form-control" min="4" max="15" step="0.1"
+                    value="11" placeholder="H" style="width: 45%;">
                   <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">in</span>
                 </div>
               </div>
@@ -973,7 +1022,8 @@
               <div id="modal-custom-page-container" style="display: none; margin-top: 8px;">
                 <label style="font-size: 11px; font-weight: 700; color: var(--primary);">Enter Custom Pages:</label>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                  <input type="number" id="modal-custom-page-input" class="form-control" min="1" max="600" value="40" placeholder="e.g. 48">
+                  <input type="number" id="modal-custom-page-input" class="form-control" min="1" max="600" value="40"
+                    placeholder="e.g. 48">
                   <span style="font-size: 11px; color: var(--text-muted);">pages</span>
                 </div>
               </div>
@@ -1221,7 +1271,8 @@
               <!-- NEW: Bottom Middle Page Numbering Option (Unticked by default) -->
               <label class="checkbox-label" style="margin-top: 4px;">
                 <input type="checkbox" id="exp-opt-page-numbers" onchange="updateExportModalPreview()">
-                <span>🔢 <strong>Add Page Numbers in Bottom Middle (e.g. Page 1, 2, 3...)</strong> <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary); font-size: 10px; margin-left: 4px;">Centered</span></span>
+                <span>🔢 <strong>Add Page Numbers in Bottom Middle (e.g. Page 1, 2, 3...)</strong> <span class="badge"
+                    style="background: rgba(99, 102, 241, 0.15); color: var(--primary); font-size: 10px; margin-left: 4px;">Centered</span></span>
               </label>
             </div>
             <!-- Important Front & Back Matter Pages Selector & Content Editor -->
@@ -1230,7 +1281,8 @@
               <div
                 style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
                 <span>📑 Front & Back Matter Pages (Tick to Include in Book):</span>
-                <button class="btn btn-xs btn-outline" type="button" id="btn-toggle-fm-editor" onclick="toggleFrontMatterEditor()">
+                <button class="btn btn-xs btn-outline" type="button" id="btn-toggle-fm-editor"
+                  onclick="toggleFrontMatterEditor()">
                   ✏️ Edit Page Content & Custom Texts
                 </button>
               </div>
@@ -1275,19 +1327,23 @@
               <div id="export-fm-text-editor" class="fm-editor-container" style="display: none;">
                 <!-- Tab Nav Bar -->
                 <div class="fm-tab-nav">
-                  <button type="button" class="fm-tab-btn active" id="btn-fmtab-disclaimer" onclick="switchFrontMatterTab('disclaimer')">
+                  <button type="button" class="fm-tab-btn active" id="btn-fmtab-disclaimer"
+                    onclick="switchFrontMatterTab('disclaimer')">
                     📜 Disclaimer & Legal
                   </button>
-                  <button type="button" class="fm-tab-btn" id="btn-fmtab-contents" onclick="switchFrontMatterTab('contents')">
+                  <button type="button" class="fm-tab-btn" id="btn-fmtab-contents"
+                    onclick="switchFrontMatterTab('contents')">
                     📑 Table of Contents
                   </button>
-                  <button type="button" class="fm-tab-btn" id="btn-fmtab-belongs" onclick="switchFrontMatterTab('belongs')">
+                  <button type="button" class="fm-tab-btn" id="btn-fmtab-belongs"
+                    onclick="switchFrontMatterTab('belongs')">
                     🎁 Belongs To
                   </button>
                   <button type="button" class="fm-tab-btn" id="btn-fmtab-color" onclick="switchFrontMatterTab('color')">
                     🎨 Color Test
                   </button>
-                  <button type="button" class="fm-tab-btn" id="btn-fmtab-custom" onclick="switchFrontMatterTab('custom')">
+                  <button type="button" class="fm-tab-btn" id="btn-fmtab-custom"
+                    onclick="switchFrontMatterTab('custom')">
                     💌 Custom Page / Thank You
                   </button>
                 </div>
@@ -1299,43 +1355,55 @@
                     <div class="fm-form-grid">
                       <div>
                         <div class="fm-field-label">Book Title <span class="fm-field-hint">(Front Matter)</span></div>
-                        <input type="text" id="exp-fm-text-title" class="form-control" style="font-size: 12px; padding: 6px;"
-                          placeholder="My Awesome Book" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-title" class="form-control"
+                          style="font-size: 12px; padding: 6px;" placeholder="My Awesome Book"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div>
                         <div class="fm-field-label">Author Name</div>
-                        <input type="text" id="exp-fm-text-author" class="form-control" style="font-size: 12px; padding: 6px;"
-                          placeholder="Creative Kids Studio" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-author" class="form-control"
+                          style="font-size: 12px; padding: 6px;" placeholder="Creative Kids Studio"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div>
                         <div class="fm-field-label">Publisher Name</div>
-                        <input type="text" id="exp-fm-text-publisher" class="form-control" style="font-size: 12px; padding: 6px;"
-                          placeholder="KDP Creative Publishing" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-publisher" class="form-control"
+                          style="font-size: 12px; padding: 6px;" placeholder="KDP Creative Publishing"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div>
                         <div class="fm-field-label">Edition Subtitle</div>
-                        <input type="text" id="exp-fm-text-edition" class="form-control" style="font-size: 12px; padding: 6px;"
-                          value="First Edition  •  Amazon KDP Publication" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-edition" class="form-control"
+                          style="font-size: 12px; padding: 6px;" value="First Edition  •  Amazon KDP Publication"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div>
                         <div class="fm-field-label">Copyright Line</div>
-                        <input type="text" id="exp-fm-text-copyright" class="form-control" style="font-size: 12px; padding: 6px;"
-                          placeholder="Copyright © 2026 by Author. All Rights Reserved." oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-copyright" class="form-control"
+                          style="font-size: 12px; padding: 6px;"
+                          placeholder="Copyright © 2026 by Author. All Rights Reserved."
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div>
                         <div class="fm-field-label">ISBN-13 Code / Identifier</div>
-                        <input type="text" id="exp-fm-text-isbn" class="form-control" style="font-size: 12px; padding: 6px;"
-                          value="ISBN-13: 978-X-XXXXX-XXX-X" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-isbn" class="form-control"
+                          style="font-size: 12px; padding: 6px;" value="ISBN-13: 978-X-XXXXX-XXX-X"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div class="fm-field-full">
-                        <div class="fm-field-label">Legal Disclaimer Notice <span class="fm-field-hint">(Fully editable)</span></div>
-                        <textarea id="exp-fm-text-disclaimer" class="form-control" rows="3" style="font-size: 11.5px; padding: 6px; line-height: 1.4;"
+                        <div class="fm-field-label">Legal Disclaimer Notice <span class="fm-field-hint">(Fully
+                            editable)</span></div>
+                        <textarea id="exp-fm-text-disclaimer" class="form-control" rows="3"
+                          style="font-size: 11.5px; padding: 6px; line-height: 1.4;"
                           oninput="updateExportModalPreview()"></textarea>
                       </div>
                       <div class="fm-field-full">
-                        <div class="fm-field-label">Special Dedication or Additional Note <span class="fm-field-hint">(Optional)</span></div>
-                        <input type="text" id="exp-fm-text-extra-note" class="form-control" style="font-size: 12px; padding: 6px;"
-                          placeholder="e.g. Dedicated to all young artists and dreamers worldwide." oninput="updateExportModalPreview()">
+                        <div class="fm-field-label">Special Dedication or Additional Note <span
+                            class="fm-field-hint">(Optional)</span></div>
+                        <input type="text" id="exp-fm-text-extra-note" class="form-control"
+                          style="font-size: 12px; padding: 6px;"
+                          placeholder="e.g. Dedicated to all young artists and dreamers worldwide."
+                          oninput="updateExportModalPreview()">
                       </div>
                     </div>
                   </div>
@@ -1345,18 +1413,24 @@
                     <div class="fm-form-grid">
                       <div>
                         <div class="fm-field-label">Contents Heading</div>
-                        <input type="text" id="exp-fm-text-toc-heading" class="form-control" style="font-size: 12px; padding: 6px;"
-                          value="TABLE OF CONTENTS" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-toc-heading" class="form-control"
+                          style="font-size: 12px; padding: 6px;" value="TABLE OF CONTENTS"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div>
                         <div class="fm-field-label">Contents Subtitle</div>
-                        <input type="text" id="exp-fm-text-toc-subtext" class="form-control" style="font-size: 12px; padding: 6px;"
-                          value="Complete list of coloring illustrations in this book" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-toc-subtext" class="form-control"
+                          style="font-size: 12px; padding: 6px;"
+                          value="Complete list of coloring illustrations in this book"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div class="fm-field-full">
-                        <div class="fm-field-label">Footer Note / Tip <span class="fm-field-hint">(Optional)</span></div>
-                        <input type="text" id="exp-fm-text-toc-footer" class="form-control" style="font-size: 12px; padding: 6px;"
-                          placeholder="e.g. Tip: Test your pencils on Page 4 before coloring!" oninput="updateExportModalPreview()">
+                        <div class="fm-field-label">Footer Note / Tip <span class="fm-field-hint">(Optional)</span>
+                        </div>
+                        <input type="text" id="exp-fm-text-toc-footer" class="form-control"
+                          style="font-size: 12px; padding: 6px;"
+                          placeholder="e.g. Tip: Test your pencils on Page 4 before coloring!"
+                          oninput="updateExportModalPreview()">
                       </div>
                     </div>
                   </div>
@@ -1366,23 +1440,29 @@
                     <div class="fm-form-grid">
                       <div>
                         <div class="fm-field-label">Top Title</div>
-                        <input type="text" id="exp-fm-text-belongs-title" class="form-control" style="font-size: 12px; padding: 6px;"
-                          value="THIS COLORING BOOK" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-belongs-title" class="form-control"
+                          style="font-size: 12px; padding: 6px;" value="THIS COLORING BOOK"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div>
                         <div class="fm-field-label">Outlined Header Text</div>
-                        <input type="text" id="exp-fm-text-belongs-header" class="form-control" style="font-size: 12px; padding: 6px;"
-                          value="BELONGS TO:" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-belongs-header" class="form-control"
+                          style="font-size: 12px; padding: 6px;" value="BELONGS TO:"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div class="fm-field-full">
                         <div class="fm-field-label">Motivational Subtext / Message</div>
-                        <input type="text" id="exp-fm-text-subtext" class="form-control" style="font-size: 12px; padding: 6px;"
-                          value="Color with joy, love and your wild imagination!" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-subtext" class="form-control"
+                          style="font-size: 12px; padding: 6px;" value="Color with joy, love and your wild imagination!"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div class="fm-field-full">
-                        <div class="fm-field-label">Gift Dedication Line <span class="fm-field-hint">(Optional gift prompt)</span></div>
-                        <input type="text" id="exp-fm-text-belongs-gift" class="form-control" style="font-size: 12px; padding: 6px;"
-                          placeholder="e.g. A special gift given with love by: ____________________" oninput="updateExportModalPreview()">
+                        <div class="fm-field-label">Gift Dedication Line <span class="fm-field-hint">(Optional gift
+                            prompt)</span></div>
+                        <input type="text" id="exp-fm-text-belongs-gift" class="form-control"
+                          style="font-size: 12px; padding: 6px;"
+                          placeholder="e.g. A special gift given with love by: ____________________"
+                          oninput="updateExportModalPreview()">
                       </div>
                     </div>
                   </div>
@@ -1392,17 +1472,22 @@
                     <div class="fm-form-grid">
                       <div>
                         <div class="fm-field-label">Palette Title</div>
-                        <input type="text" id="exp-fm-text-color-title" class="form-control" style="font-size: 12px; padding: 6px;"
-                          value="COLOR TEST PALETTE" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-color-title" class="form-control"
+                          style="font-size: 12px; padding: 6px;" value="COLOR TEST PALETTE"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div>
                         <div class="fm-field-label">Instructions Subtitle</div>
-                        <input type="text" id="exp-fm-text-color-subtext" class="form-control" style="font-size: 12px; padding: 6px;"
-                          value="Test your pencils, markers, and crayons here before coloring!" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-text-color-subtext" class="form-control"
+                          style="font-size: 12px; padding: 6px;"
+                          value="Test your pencils, markers, and crayons here before coloring!"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div class="fm-field-full">
-                        <div class="fm-field-label">Artist Tip Note <span class="fm-field-hint">(Displayed at bottom)</span></div>
-                        <input type="text" id="exp-fm-text-color-note" class="form-control" style="font-size: 12px; padding: 6px;"
+                        <div class="fm-field-label">Artist Tip Note <span class="fm-field-hint">(Displayed at
+                            bottom)</span></div>
+                        <input type="text" id="exp-fm-text-color-note" class="form-control"
+                          style="font-size: 12px; padding: 6px;"
                           placeholder="e.g. Colored pencils and water-based markers work best. Experiment with shading!"
                           oninput="updateExportModalPreview()">
                       </div>
@@ -1422,24 +1507,31 @@
                       </div>
                       <div>
                         <div class="fm-field-label">Page Title</div>
-                        <input type="text" id="exp-fm-custom-title" class="form-control" style="font-size: 12px; padding: 6px;"
-                          value="A NOTE FROM THE AUTHOR" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-custom-title" class="form-control"
+                          style="font-size: 12px; padding: 6px;" value="A NOTE FROM THE AUTHOR"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div class="fm-field-full">
                         <div class="fm-field-label">Subtitle</div>
-                        <input type="text" id="exp-fm-custom-subtitle" class="form-control" style="font-size: 12px; padding: 6px;"
-                          value="Thank you for supporting our work!" oninput="updateExportModalPreview()">
+                        <input type="text" id="exp-fm-custom-subtitle" class="form-control"
+                          style="font-size: 12px; padding: 6px;" value="Thank you for supporting our work!"
+                          oninput="updateExportModalPreview()">
                       </div>
                       <div class="fm-field-full">
-                        <div class="fm-field-label">Message Body / Paragraphs <span class="fm-field-hint">(Multi-line, custom text)</span></div>
-                        <textarea id="exp-fm-custom-body" class="form-control" rows="4" style="font-size: 11.5px; padding: 6px; line-height: 1.4;"
+                        <div class="fm-field-label">Message Body / Paragraphs <span class="fm-field-hint">(Multi-line,
+                            custom text)</span></div>
+                        <textarea id="exp-fm-custom-body" class="form-control" rows="4"
+                          style="font-size: 11.5px; padding: 6px; line-height: 1.4;"
                           placeholder="Write whatever you want here: thank you note, author story, dedication, or instructions..."
                           oninput="updateExportModalPreview()"></textarea>
                       </div>
                       <div class="fm-field-full">
-                        <div class="fm-field-label">Author Sign-off / Review Callout <span class="fm-field-hint">(Bottom call-to-action)</span></div>
-                        <input type="text" id="exp-fm-custom-signoff" class="form-control" style="font-size: 12px; padding: 6px;"
-                          placeholder="e.g. ⭐ Loved this book? Please leave a review on Amazon! ⭐" oninput="updateExportModalPreview()">
+                        <div class="fm-field-label">Author Sign-off / Review Callout <span class="fm-field-hint">(Bottom
+                            call-to-action)</span></div>
+                        <input type="text" id="exp-fm-custom-signoff" class="form-control"
+                          style="font-size: 12px; padding: 6px;"
+                          placeholder="e.g. ⭐ Loved this book? Please leave a review on Amazon! ⭐"
+                          oninput="updateExportModalPreview()">
                       </div>
                     </div>
                   </div>

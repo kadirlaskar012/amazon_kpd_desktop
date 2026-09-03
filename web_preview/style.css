@@ -248,6 +248,14 @@ body {
   gap: 12px;
 }
 
+/* Initial render state & hydration: show header-canvas-actions ONLY when current page is canvas */
+#header-canvas-actions {
+  display: none;
+}
+html[data-active-tab="canvas"] #header-canvas-actions {
+  display: flex;
+}
+
 .undo-redo-btn-group {
   display: flex;
   gap: 4px;
@@ -299,20 +307,24 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: var(--bg-input);
+  background-color: var(--bg-card);
   border: 1px solid var(--border);
   padding: 5px 12px;
   border-radius: 20px;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-weight: 700;
+  color: var(--text-primary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
 }
 
 .project-pill:hover {
+  background-color: var(--bg-surface);
   border-color: var(--primary);
-  color: #ffffff;
+  color: var(--primary);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+  transform: translateY(-1px);
 }
 
 .status-dot {
@@ -480,6 +492,30 @@ body {
 .tab-panel.active {
   display: flex;
   flex-direction: column;
+}
+
+/* Immediate tab panel display matching active tab to prevent content flash */
+html[data-active-tab="canvas"] #panel-canvas,
+html[data-active-tab="settings"] #panel-settings,
+html[data-active-tab="preflight"] #panel-preflight,
+html[data-active-tab="preview"] #panel-preview {
+  display: flex;
+  flex-direction: column;
+}
+html[data-active-tab]:not([data-active-tab="dashboard"]) #panel-dashboard {
+  display: none;
+}
+
+html[data-active-tab="canvas"] .nav-btn[data-tab="canvas"],
+html[data-active-tab="settings"] .nav-btn[data-tab="settings"],
+html[data-active-tab="preflight"] .nav-btn[data-tab="preflight"],
+html[data-active-tab="preview"] .nav-btn[data-tab="preview"] {
+  background: var(--primary);
+  color: #ffffff;
+}
+html[data-active-tab]:not([data-active-tab="dashboard"]) .nav-btn[data-tab="dashboard"] {
+  background: transparent;
+  color: var(--text-secondary);
 }
 
 /* ===================================================
@@ -1479,20 +1515,22 @@ kbd {
   margin: 4px 0;
 }
 
-/* Canvas Viewport */
+/* Canvas Viewport (Auto-fits canvas without vertical scrollbar) */
 .canvas-viewport {
   flex: 1;
   background-color: var(--bg-dark);
   background-image: radial-gradient(var(--canvas-grid-dot) 1.2px, transparent 1.2px);
   background-size: 20px 20px;
   display: flex;
-  overflow: auto;
+  overflow: hidden;
   position: relative;
+  align-items: center;
+  justify-content: center;
 }
 
 .canvas-stage {
   margin: auto;
-  padding: 28px 40px 48px 40px;
+  padding: 16px 20px;
   transform-origin: center center;
   transition: transform 0.1s ease;
   display: flex;
@@ -1622,6 +1660,7 @@ kbd {
   justify-content: center;
   overflow: hidden;
   background-color: #ffffff;
+  will-change: left, top, width, height;
 }
 
 .canvas-element.selected {
@@ -1653,7 +1692,7 @@ kbd {
   font-weight: 600;
   text-align: center;
   padding: 4px;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .elem-ref-box:hover {
@@ -1681,7 +1720,7 @@ kbd {
   justify-content: center;
   gap: 6px;
   padding: 4px;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .elem-main-box:hover {
@@ -1983,7 +2022,7 @@ kbd {
   cursor: pointer;
   flex-shrink: 0;
   position: relative;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   box-shadow: var(--shadow-sm);
   box-sizing: border-box;
 }
@@ -2529,6 +2568,8 @@ kbd {
   padding: 20px;
   overflow-y: auto;
   max-height: 70vh;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
 }
 
 .modal-footer {
@@ -2951,8 +2992,11 @@ kbd {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 14px;
-  max-height: 280px;
+  max-height: 300px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
 }
 
 .export-page-card {
@@ -2963,13 +3007,17 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
-  transition: transform 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  content-visibility: auto;
+  contain-intrinsic-size: 130px 170px;
+  contain: content;
+  transform: translateZ(0);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .export-page-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  border-color: var(--primary);
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.16);
 }
 
 .export-page-card.blank-verso {
