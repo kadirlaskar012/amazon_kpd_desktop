@@ -1,4 +1,4 @@
-﻿/**
+/**
  * KDP Book Production Studio - Exact Reference Layout (Top-Left Ref + Big Outline Title + 75% Drawing Area) & Single-Sided Blank Page Rules
  */
 
@@ -556,6 +556,9 @@ function clearActiveProject() {
 function loadInitialProject() {
   fetchDefaultLocation();
 
+  // Restore the last active tab from localStorage
+  const lastTab = localStorage.getItem("kdp_active_tab") || "dashboard";
+
   // Query real projects list from local disk
   fetch("/api/projects")
     .then(r => r.json())
@@ -564,7 +567,6 @@ function loadInitialProject() {
       renderRecentProjects();
 
       if (recentProjectsList.length === 0) {
-        // No projects on disk -> completely clear workspace & show dashboard
         clearActiveProject();
         switchTab("dashboard");
         return;
@@ -583,7 +585,8 @@ function loadInitialProject() {
       }
 
       if (matchedProj) {
-        openProjectByPath(matchedProj.path);
+        // Pass lastTab so we restore to wherever the user was
+        openProjectByPath(matchedProj.path, lastTab);
       } else {
         clearActiveProject();
         switchTab("dashboard");
@@ -2314,10 +2317,10 @@ function finishProjectSetup(proj) {
   loadPageIntoCanvas(0);
   switchTab("canvas");
 
-  showToast(`âœ¨ Created Project "${currentProject.name}"!`, "success");
+  showToast(`✨ Created Project "${currentProject.name}"!`, "success");
 }
 
-function openProjectByPath(path) {
+function openProjectByPath(path, restoreTab) {
   fetch(`/api/projects/load?path=${encodeURIComponent(path)}`)
     .then(r => r.json())
     .then(data => {
@@ -2332,7 +2335,12 @@ function openProjectByPath(path) {
           currentProject.is_locked = Boolean(found.is_locked);
         }
       }
-      currentPageIndex = 0; // Always start directly on Page 1
+
+      // Restore the last saved page index (not always 0)
+      const savedPageIdx = parseInt(localStorage.getItem("kdp_active_page_index") || "0", 10);
+      const maxPageIdx = Math.max(0, (currentProject.pages || []).length - 1);
+      currentPageIndex = Math.min(savedPageIdx, maxPageIdx);
+
       activeElementId = null;
       undoStack = [];
       redoStack = [];
@@ -2343,9 +2351,16 @@ function openProjectByPath(path) {
 
       closeModal("open-folder-modal");
       syncActiveProjectUI();
-      loadPageIntoCanvas(0);
-      switchTab("canvas");
-      showToast(`ðŸ“‚ Opened Project "${currentProject.name}"!`, "info");
+
+      // Restore last active tab or default to canvas
+      const targetTab = restoreTab || localStorage.getItem("kdp_active_tab") || "canvas";
+      loadPageIntoCanvas(currentPageIndex);
+      switchTab(targetTab);
+
+      // Only show toast when explicitly opened by user (no restoreTab = user clicked)
+      if (!restoreTab) {
+        showToast(`📂 Opened Project "${currentProject.name}"!`, "info");
+      }
     })
     .catch(() => {
       closeModal("open-folder-modal");
@@ -2469,17 +2484,11 @@ async function handleMediaLibraryUpload(event) {
   }
 
   recordHistoryState("Upload Media");
-  openImageProcessingModal(files.length, "Optimizing & Importing Media");
-
-  let totalKbSaved = 0;
   let lastMediaItem = null;
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const origSizeKb = Math.round(file.size / 1024);
-
-    updateImageProcessingProgress(i, files.length, file.name, "ðŸª„ [1/3] Purifying White Background (#FFFFFF)...", totalKbSaved);
-    await new Promise(r => setTimeout(r, 180));
 
     let rawDataUrl = "";
     try {
@@ -2489,61 +2498,43 @@ async function handleMediaLibraryUpload(event) {
       continue;
     }
 
-    updateImageProcessingProgress(i, files.length, file.name, "ðŸŽ¯ [2/3] Auto-focusing & cropping artwork borders...", totalKbSaved);
-    await new Promise(r => setTimeout(r, 180));
-
-    let finalDataUrl = rawDataUrl;
-    let finalSizeKb = origSizeKb;
-
-    try {
-      updateImageProcessingProgress(i, files.length, file.name, "âš¡ [3/3] Compressing 300 DPI Print-Ready PNG...", totalKbSaved);
-      const resp = await fetch("/api/projects/upload_asset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          project_dir: currentProject.project_dir,
-          filename: file.name,
-          data_url: rawDataUrl,
-          clean_bg: true,
-          auto_crop: true
-        })
-      });
-      const data = await resp.json();
-      if (data.data_url) {
-        finalDataUrl = data.data_url;
-        finalSizeKb = data.size_kb || finalSizeKb;
-      }
-    } catch (err) {
-      console.warn("Backend optimization fallback:", err);
-    }
-
-    const saved = Math.max(0, origSizeKb - finalSizeKb);
-    totalKbSaved += saved;
-
     const mediaItem = {
       id: `med_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       name: cleanFileName(file.name),
       fileName: file.name,
-      dataUrl: finalDataUrl,
-      sizeKb: finalSizeKb
+      dataUrl: rawDataUrl,
+      sizeKb: origSizeKb
     };
 
     currentProject.media.unshift(mediaItem);
     lastMediaItem = mediaItem;
 
-    updateImageProcessingProgress(i + 1, files.length, file.name, "âœ… Complete!", totalKbSaved);
-    await new Promise(r => setTimeout(r, 220));
+    // Immediately show in media library after each file
+    renderMediaLibrary();
   }
 
-  renderMediaLibrary();
   switchDrawerTab("media");
   syncActiveProjectUI();
   markProjectDirty();
 
-  await new Promise(r => setTimeout(r, 350));
-  closeImageProcessingModal();
-  const savedLabel = totalKbSaved > 1024 ? `${(totalKbSaved / 1024).toFixed(1)} MB` : `${totalKbSaved} KB`;
-  showToast(`âœ¨ Auto-Cleaned, Auto-Cropped & Compressed ${files.length} image(s)! Saved ~${savedLabel}!`, "success");
+  showToast(`✅ ${files.length} image(s) added to Media Library!`, "success");
+
+  // Background: silently save each file to disk
+  files.forEach(async (file) => {
+    let rawDataUrl = "";
+    try { rawDataUrl = await readAsDataURLAsync(file); } catch(e) { return; }
+    fetch("/api/projects/upload_asset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project_dir: currentProject.project_dir,
+        filename: file.name,
+        data_url: rawDataUrl,
+        clean_bg: false,
+        auto_crop: false
+      })
+    }).catch(() => {});
+  });
 
   if (lastMediaItem) {
     const activeElem = getActiveElement();
@@ -3278,7 +3269,10 @@ function loadPageIntoCanvas(index) {
     index = currentProject.pages.length - 1;
   }
   currentPageIndex = index;
+  // Persist current page so F5 refresh restores exact position
+  localStorage.setItem("kdp_active_page_index", String(currentPageIndex));
   const page = currentProject.pages[index];
+
   const layer = document.getElementById("elements-layer");
   if (!layer) return;
   layer.innerHTML = "";
