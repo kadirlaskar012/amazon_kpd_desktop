@@ -7302,7 +7302,15 @@ function executeCoverPdfExport(openInBrowser = true) {
 // Amazon KDP Publishing Intelligence & Packaging Engine
 // ==========================================
 let currentPublishMetadata = null;
-let currentPublishPrice = 6.99;
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 function openPublishHelperModal() {
   const modal = document.getElementById("publish-helper-modal");
@@ -7364,6 +7372,11 @@ function openPublishHelperModal() {
   // Switch to default tab
   switchPubTab("pricing");
 
+  // Initialize AI Engine Bar & preflight & cover
+  initAiEngineBar();
+  initCoverTab();
+  runAiPreflightAudit();
+
   // Fetch or generate metadata
   loadPublishMetadata();
 
@@ -7380,6 +7393,12 @@ function switchPubTab(tabName) {
   panels.forEach(p => {
     p.classList.toggle("active", p.id === `pub-content-${tabName}`);
   });
+
+  if (tabName === "cover") {
+    initCoverTab();
+  } else if (tabName === "preflight") {
+    runAiPreflightAudit();
+  }
 }
 
 function setCalculatorPrice(price) {
@@ -7454,6 +7473,180 @@ function updatePublishPricingView(listPrice) {
   if (chkPrice) chkPrice.innerText = `$${listPrice.toFixed(2)}`;
 }
 
+// ===================================================
+// AI Engine Toolbar & Model Selection
+// ===================================================
+let activeAiModel = "gemini-2.0-flash";
+
+function initAiEngineBar() {
+  fetch("/api/ai/models")
+    .then(r => r.json())
+    .then(cfg => {
+      const select = document.getElementById("pub-ai-model-select");
+      if (select && cfg.models) {
+        select.innerHTML = "";
+        cfg.models.forEach(m => {
+          const opt = document.createElement("option");
+          opt.value = m.id;
+          opt.innerText = m.name;
+          if (m.id === cfg.model) opt.selected = true;
+          select.appendChild(opt);
+        });
+      }
+      activeAiModel = cfg.model || "gemini-2.0-flash";
+      updateAiStatusBadge(cfg.has_api_key);
+    })
+    .catch(() => {
+      updateAiStatusBadge(false);
+    });
+}
+
+function updateAiStatusBadge(hasKey) {
+  const badge = document.getElementById("pub-ai-status-tag");
+  if (!badge) return;
+  if (hasKey) {
+    badge.innerText = "🟢 Gemini 2.0 Connected";
+    badge.className = "ai-status-tag active";
+    badge.title = "Connected to Google Gemini AI Engine with Search Grounding";
+  } else {
+    badge.innerText = "🟡 Smart Heuristic Mode";
+    badge.className = "ai-status-tag";
+    badge.title = "Offline Smart Intelligence Active (Add API Key for live web grounding)";
+  }
+}
+
+function onAiModelChange(modelId) {
+  activeAiModel = modelId;
+  fetch("/api/ai/save_key", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: modelId })
+  })
+  .then(r => r.json())
+  .then(() => {
+    showToast(`⚡ AI Engine switched to ${modelId}`, "info");
+  })
+  .catch(() => {});
+}
+
+function toggleAiApiKeyDrawer() {
+  const drawer = document.getElementById("pub-api-key-drawer");
+  if (drawer) {
+    drawer.style.display = (drawer.style.display === "none") ? "block" : "none";
+  }
+}
+
+function saveGeminiKeyFromModal() {
+  const input = document.getElementById("pub-gemini-key-input");
+  const key = input ? input.value.trim() : "";
+  if (!key) {
+    showToast("⚠️ Please enter a valid Gemini API Key", "warning");
+    return;
+  }
+
+  fetch("/api/ai/save_key", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ api_key: key, model: activeAiModel })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.status === "success") {
+      showToast("🎉 Google Gemini API Key saved & connected!", "success");
+      updateAiStatusBadge(true);
+      toggleAiApiKeyDrawer();
+      triggerFullAiMarketAnalysis();
+    } else {
+      showToast("⚠️ Failed to save API Key", "danger");
+    }
+  })
+  .catch(err => {
+    showToast(`⚠️ Error saving API Key: ${err.message}`, "danger");
+  });
+}
+
+function triggerFullAiMarketAnalysis() {
+  const btn = document.getElementById("btn-run-full-ai-research");
+  const icon = document.getElementById("ai-research-btn-icon");
+  const txt = document.getElementById("ai-research-btn-txt");
+
+  if (btn) btn.disabled = true;
+  if (icon) icon.innerText = "⏳";
+  if (txt) txt.innerText = "AI Searching Amazon & Analyzing Niche...";
+
+  showToast("🔍 Running Deep Amazon Search & Market Analysis with Gemini 2.0...", "info");
+
+  const topic = currentProject.name || "Jungle Animals";
+  const author = currentProject.author || "Creative Kids Studio";
+  const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
+  const trimSize = currentProject.settings?.trim_size || "8.5x11";
+
+  // Run Metadata & Cover generation in parallel
+  Promise.all([
+    fetch("/api/ai/generate_metadata", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic: topic,
+        book_type: "coloring_book",
+        target_age: "Ages 4-8",
+        author: author,
+        page_count: pagesCount,
+        trim_size: trimSize,
+        model: activeAiModel
+      })
+    }).then(r => r.json()),
+
+    fetch("/api/ai/generate_cover_metadata", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic: topic,
+        book_type: "coloring_book",
+        target_age: "Ages 4-8",
+        author: author,
+        page_count: pagesCount,
+        trim_size: trimSize,
+        model: activeAiModel
+      })
+    }).then(r => r.json())
+  ])
+  .then(([metaData, coverData]) => {
+    if (btn) btn.disabled = false;
+    if (icon) icon.innerText = "✨";
+    if (txt) txt.innerText = "Run Full Amazon AI Market Analysis";
+
+    if (metaData.status === "success" && metaData.metadata) {
+      currentPublishMetadata = metaData.metadata;
+      renderPublishMetadata(metaData.metadata);
+
+      // If competitor analysis present, update advice
+      if (metaData.metadata.competitor_analysis) {
+        const ca = metaData.metadata.competitor_analysis;
+        const adviceEl = document.getElementById("pub-strategy-advice");
+        if (adviceEl) {
+          adviceEl.innerHTML = `<strong>Amazon Market Benchmark:</strong> Lowest Competitor: <strong>${ca.lowest_competitor}</strong> • Category Median: <strong>${ca.average_competitor}</strong> • Bestseller Avg: <strong>${ca.top_bestseller_avg}</strong>.<br>${ca.conversion_tip || ''}`;
+        }
+      }
+    }
+
+    if (coverData.status === "success" && coverData.cover) {
+      applyAiCoverMetadata(coverData.cover);
+    }
+
+    // Run Preflight Check
+    runAiPreflightAudit();
+
+    showToast("🎉 Amazon Market Intelligence & Full Wrap Cover Auto-Filled!", "success");
+  })
+  .catch(err => {
+    if (btn) btn.disabled = false;
+    if (icon) icon.innerText = "✨";
+    if (txt) txt.innerText = "Run Full Amazon AI Market Analysis";
+    showToast(`⚠️ AI Analysis Warning: ${err.message}`, "warning");
+  });
+}
+
 function loadPublishMetadata(forceRefresh = false) {
   if (currentPublishMetadata && !forceRefresh) {
     renderPublishMetadata(currentPublishMetadata);
@@ -7465,9 +7658,11 @@ function loadPublishMetadata(forceRefresh = false) {
   const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
   const trimSize = currentProject.settings?.trim_size || "8.5x11";
 
-  // Instant default render so user never waits for network
+  // Instant default render
   if (!currentPublishMetadata) {
     const instantMeta = {
+      title: `My First ${topic} Coloring Book`,
+      subtitle: `${pagesCount}+ Fun & Easy Coloring Pages for Kids Ages 4-8`,
       backend_keywords: [
         "preschool animal coloring pages for boys and girls",
         "easy big simple bold outlines for tiny hands",
@@ -7476,6 +7671,15 @@ function loadPublishMetadata(forceRefresh = false) {
         "relaxing mindful screen free art creative pad",
         "single sided bleed safe illustrations gift idea",
         "birthday holiday stocking stuffer for little kids"
+      ],
+      keyword_intents: [
+        "🎁 Gift & Holiday Intent",
+        "🧠 Fine Motor & Skill Building",
+        "🏫 Preschool & Kindergarten Prep",
+        "✈️ Travel & Screen-Free Fun",
+        "🎨 Creative Drawing & Outlines",
+        "🏡 Homeschool Supplemental",
+        "⭐ High Search Volume Phrase"
       ],
       recommended_categories: [
         "Children's Books > Activities, Crafts & Games > Activity Books",
@@ -7496,7 +7700,8 @@ function loadPublishMetadata(forceRefresh = false) {
       target_age: "Ages 4-8",
       author: author,
       page_count: pagesCount,
-      trim_size: trimSize
+      trim_size: trimSize,
+      model: activeAiModel
     })
   })
   .then(r => r.json())
@@ -7519,16 +7724,18 @@ function regeneratePublishKeywords() {
 function renderPublishMetadata(meta) {
   if (!meta) return;
 
-  // 1. Render Keywords Slots
+  // 1. Render Keywords Slots with Intent Badges
   const kwContainer = document.getElementById("pub-keywords-container");
   if (kwContainer && meta.backend_keywords) {
     let kwHtml = "";
     meta.backend_keywords.slice(0, 7).forEach((kw, idx) => {
       const slotNum = idx + 1;
       const charCount = kw.length;
+      const intent = (meta.keyword_intents && meta.keyword_intents[idx]) ? meta.keyword_intents[idx] : "";
       kwHtml += `
         <div class="keyword-slot-row">
           <span class="slot-num-badge">Slot #${slotNum}</span>
+          ${intent ? `<span class="slot-intent-tag" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(99, 102, 241, 0.15); color: var(--primary); font-weight: 700;">${escapeHtml(intent)}</span>` : ''}
           <span class="slot-text-content">${escapeHtml(kw)}</span>
           <span class="slot-char-count">${charCount} / 50</span>
           <button class="btn btn-sm btn-outline" onclick="copyHelperText('${encodeURIComponent(kw)}', 'Keyword #${slotNum}')">
@@ -7566,6 +7773,14 @@ function renderPublishMetadata(meta) {
   const descRaw = document.getElementById("pub-desc-raw-code");
   if (descRaw && meta.html_description) {
     descRaw.value = meta.html_description;
+  }
+
+  // 4. Update Header Banner
+  if (meta.title) {
+    const bannerBookName = document.getElementById("pub-banner-book-name");
+    if (bannerBookName) bannerBookName.innerText = meta.title;
+    const chkTitle = document.getElementById("chk-title");
+    if (chkTitle) chkTitle.innerText = meta.title;
   }
 }
 
@@ -7623,6 +7838,355 @@ function copyHelperText(encodedText, label) {
   });
 }
 
+// ===================================================
+// AI Full Wrap Cover Generator Logic
+// ===================================================
+let currentCoverConfig = {
+  bg_color: "#1e1b4b",
+  accent_color: "#fbbf24",
+  spine_color: "#1e1b4b",
+  front_title: "MY JUNGLE COLORING BOOK",
+  front_subtitle: "50+ Fun & Easy Activity Pages For Kids",
+  badge_1: "50+ PAGES",
+  badge_2: "AGES 4-8",
+  back_heading: "WHY YOUR CHILD WILL LOVE THIS BOOK",
+  back_blurb: "Spark your little one's imagination with enchanting illustrations designed to develop motor skills and provide hours of joyful, screen-free entertainment.",
+  back_features: [
+    "✨ 50+ Hand-Drawn High-Resolution Illustrations",
+    "🛡️ Single-Sided Pages (No Marker Bleed-Through)",
+    "🎯 Large 8.5 x 11 in Format for Little Hands",
+    "🧠 Builds Fine Motor Skills & Focus",
+    "🎁 Wonderful Gift for Birthdays & Holidays"
+  ]
+};
+
+function initCoverTab() {
+  const topic = currentProject.name || "Jungle Animals";
+  const author = currentProject.author || "Creative Kids Studio";
+  const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
+
+  if (!currentCoverConfig.front_title || currentCoverConfig.front_title === "MY JUNGLE COLORING BOOK") {
+    currentCoverConfig.front_title = `MY FIRST ${topic.toUpperCase()} COLORING BOOK`;
+    currentCoverConfig.front_subtitle = `${pagesCount}+ Fun & Easy Coloring Pages For Kids`;
+    currentCoverConfig.badge_1 = `${pagesCount}+ PAGES`;
+  }
+
+  renderCoverPreview();
+}
+
+function renderCoverPreview() {
+  const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
+  const spineIn = Math.max(0.06, pagesCount * 0.002252);
+  const spinePt = spineIn * 72.0;
+
+  // Background
+  const wrap = document.getElementById("cover-wrap-preview");
+  if (wrap) wrap.style.background = currentCoverConfig.bg_color;
+
+  // Spine
+  const spineTextEl = document.getElementById("cov-spine-text");
+  if (spineTextEl) {
+    const title = currentCoverConfig.front_title.toUpperCase();
+    const author = currentProject.author || "Creative Kids Studio";
+    spineTextEl.innerText = `${title} • ${author}`;
+    spineTextEl.style.display = (pagesCount >= 79) ? "block" : "none";
+  }
+
+  const spineSpecLbl = document.getElementById("cov-spine-spec-lbl");
+  if (spineSpecLbl) {
+    spineSpecLbl.innerHTML = `Spine Width: <strong>${spineIn.toFixed(3)}" (${spinePt.toFixed(1)} pt)</strong> • B&W on White Paper`;
+  }
+
+  const spineRuleLbl = document.getElementById("cov-spine-rule-lbl");
+  if (spineRuleLbl) {
+    if (pagesCount >= 79) {
+      spineRuleLbl.innerHTML = `✅ <strong>${pagesCount} pages</strong>: Spine text permitted by Amazon KDP!`;
+      spineRuleLbl.style.color = "#10b981";
+    } else {
+      spineRuleLbl.innerHTML = `ℹ️ <strong>${pagesCount} pages</strong>: Amazon requires 79+ pages for spine text (spine will print solid color).`;
+      spineRuleLbl.style.color = "var(--text-secondary)";
+    }
+  }
+
+  // Front Cover
+  const fTitle = document.getElementById("cov-front-title");
+  if (fTitle) {
+    fTitle.innerText = currentCoverConfig.front_title;
+    fTitle.style.color = currentCoverConfig.accent_color;
+  }
+  const fSub = document.getElementById("cov-front-sub");
+  if (fSub) fSub.innerText = currentCoverConfig.front_subtitle;
+
+  const b1 = document.getElementById("cov-badge-1");
+  if (b1) {
+    b1.innerText = currentCoverConfig.badge_1;
+    b1.style.color = currentCoverConfig.accent_color;
+  }
+  const b2 = document.getElementById("cov-badge-2");
+  if (b2) {
+    b2.innerText = currentCoverConfig.badge_2;
+    b2.style.color = currentCoverConfig.accent_color;
+  }
+
+  const fAuthor = document.getElementById("cov-front-author");
+  if (fAuthor) fAuthor.innerText = `By ${currentProject.author || "Creative Kids Studio"}`;
+
+  // Artwork Image on Front Cover
+  let artSrc = null;
+  for (const p of (currentProject.pages || [])) {
+    for (const el of (p.elements || [])) {
+      if ((el.type === "main_image" || el.type === "ref_image") && el.image_src) {
+        artSrc = el.image_src;
+        break;
+      }
+    }
+    if (artSrc) break;
+  }
+
+  const thumb = document.getElementById("cov-art-thumb");
+  const placeholder = document.getElementById("cov-art-placeholder");
+  if (artSrc && thumb) {
+    thumb.src = artSrc;
+    thumb.style.display = "block";
+    if (placeholder) placeholder.style.display = "none";
+  } else if (placeholder) {
+    if (thumb) thumb.style.display = "none";
+    placeholder.style.display = "flex";
+  }
+
+  // Back Cover
+  const bHeading = document.getElementById("cov-back-title");
+  if (bHeading) {
+    bHeading.innerText = currentCoverConfig.back_heading;
+    bHeading.style.color = currentCoverConfig.accent_color;
+  }
+  const bBlurb = document.getElementById("cov-back-blurb");
+  if (bBlurb) bBlurb.innerText = currentCoverConfig.back_blurb;
+
+  const bBullets = document.getElementById("cov-back-bullets");
+  if (bBullets && currentCoverConfig.back_features) {
+    bBullets.innerHTML = currentCoverConfig.back_features.map(f => `<li>${escapeHtml(f)}</li>`).join("");
+  }
+}
+
+function onCoverColorChange(val, type) {
+  if (type === "bg") {
+    currentCoverConfig.bg_color = val;
+    currentCoverConfig.spine_color = val;
+  } else if (type === "accent") {
+    currentCoverConfig.accent_color = val;
+  }
+  renderCoverPreview();
+}
+
+function setCoverColorQuick(hex) {
+  const picker = document.getElementById("cov-bg-color-picker");
+  if (picker) picker.value = hex;
+  onCoverColorChange(hex, "bg");
+}
+
+function applyAiCoverMetadata(cover) {
+  if (!cover) return;
+  if (cover.front_title) currentCoverConfig.front_title = cover.front_title;
+  if (cover.front_subtitle) currentCoverConfig.front_subtitle = cover.front_subtitle;
+  if (cover.badge_1) currentCoverConfig.badge_1 = cover.badge_1;
+  if (cover.badge_2) currentCoverConfig.badge_2 = cover.badge_2;
+  if (cover.back_heading) currentCoverConfig.back_heading = cover.back_heading;
+  if (cover.back_blurb) currentCoverConfig.back_blurb = cover.back_blurb;
+  if (cover.back_features) currentCoverConfig.back_features = cover.back_features;
+  if (cover.bg_color) currentCoverConfig.bg_color = cover.bg_color;
+  if (cover.accent_color) currentCoverConfig.accent_color = cover.accent_color;
+
+  const bgPick = document.getElementById("cov-bg-color-picker");
+  if (bgPick && cover.bg_color) bgPick.value = cover.bg_color;
+  const accPick = document.getElementById("cov-accent-color-picker");
+  if (accPick && cover.accent_color) accPick.value = cover.accent_color;
+
+  renderCoverPreview();
+}
+
+function regenerateCoverMetadata() {
+  showToast("🔄 Generating AI Cover Layout & Blurb Copy...", "info");
+  const topic = currentProject.name || "Jungle Animals";
+  const author = currentProject.author || "Creative Kids Studio";
+  const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
+
+  fetch("/api/ai/generate_cover_metadata", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      topic: topic,
+      book_type: "coloring_book",
+      target_age: "Ages 4-8",
+      author: author,
+      page_count: pagesCount,
+      trim_size: currentProject.settings?.trim_size || "8.5x11",
+      model: activeAiModel
+    })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.status === "success" && res.cover) {
+      applyAiCoverMetadata(res.cover);
+      showToast("🎉 AI Cover Copy & Palette Updated!", "success");
+    }
+  })
+  .catch(err => {
+    showToast(`⚠️ Error: ${err.message}`, "warning");
+  });
+}
+
+function exportCoverPdfDirect() {
+  showToast("🎨 Generating 300 DPI Amazon KDP Full Wrap Cover PDF...", "info");
+
+  let coverImg = null;
+  for (const p of (currentProject.pages || [])) {
+    for (const el of (p.elements || [])) {
+      if ((el.type === "main_image" || el.type === "ref_image") && el.image_src) {
+        coverImg = el.image_src;
+        break;
+      }
+    }
+    if (coverImg) break;
+  }
+
+  const payload = {
+    ...currentProject,
+    cover_config: {
+      title: currentCoverConfig.front_title,
+      subtitle: currentCoverConfig.front_subtitle,
+      author: currentProject.author || "Creative Kids Studio",
+      bg_color: currentCoverConfig.bg_color,
+      spine_color: currentCoverConfig.bg_color,
+      back_heading: currentCoverConfig.back_heading,
+      paper_type: "white",
+      front_image: coverImg
+    }
+  };
+
+  fetch("/api/projects/export_cover_pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.status === "success" && data.download_url) {
+      showToast(`🎉 Cover PDF Downloaded: ${data.filename}!`, "success");
+      const a = document.createElement("a");
+      a.href = data.download_url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } else {
+      showToast(`⚠️ Cover generation failed: ${data.error}`, "danger");
+    }
+  })
+  .catch(err => {
+    showToast(`⚠️ Cover error: ${err.message}`, "danger");
+  });
+}
+
+// ===================================================
+// AI Quality Preflight Inspector Logic
+// ===================================================
+function runAiPreflightAudit() {
+  const payload = {
+    pages: currentProject.pages || [],
+    settings: currentProject.settings || {},
+    single_sided: true
+  };
+
+  fetch("/api/ai/preflight_check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.status === "success" && res.audit) {
+      populatePreflightChecks(res.audit);
+    }
+  })
+  .catch(err => {
+    console.warn("Preflight check warning:", err);
+  });
+}
+
+function populatePreflightChecks(audit) {
+  const scoreVal = document.getElementById("preflight-score-val");
+  if (scoreVal) scoreVal.innerText = audit.readiness_score;
+
+  const scoreDial = document.getElementById("preflight-score-dial");
+  if (scoreDial) {
+    const color = audit.grade_color || "#10b981";
+    scoreDial.style.borderColor = color;
+    if (scoreVal) scoreVal.style.color = color;
+  }
+
+  const badge = document.getElementById("preflight-grade-badge");
+  if (badge) {
+    badge.innerText = audit.grade;
+    badge.style.background = audit.readiness_score >= 95 ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)";
+    badge.style.color = audit.grade_color || "#10b981";
+    badge.style.borderColor = audit.grade_color || "#10b981";
+  }
+
+  const heroTitle = document.getElementById("preflight-hero-title");
+  if (heroTitle) {
+    heroTitle.innerText = (audit.readiness_score >= 95)
+      ? "Your book is 100% ready for Amazon KDP Paperback submission!"
+      : "Print Ready with Minor Recommendations";
+  }
+
+  const heroDesc = document.getElementById("preflight-hero-desc");
+  if (heroDesc) heroDesc.innerText = audit.summary_advice;
+
+  const container = document.getElementById("preflight-checks-container");
+  if (container && audit.checks) {
+    let html = "";
+    audit.checks.forEach(chk => {
+      const cls = chk.status.toLowerCase();
+      html += `
+        <div class="preflight-check-card">
+          <span class="chk-status-badge ${cls}">${chk.status}</span>
+          <div class="chk-details">
+            <div class="chk-title">${escapeHtml(chk.title)}</div>
+            <div class="chk-msg">${escapeHtml(chk.message)}</div>
+            ${chk.fix ? `<div class="chk-fix">💡 Recommended Action: ${escapeHtml(chk.fix)}</div>` : ''}
+          </div>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  }
+}
+
+function autoFixPreflightMargins() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot fix margins: Project is locked!", "warning");
+    return;
+  }
+
+  recordHistoryState("1-Click Auto-Fix Margins");
+  let fixedCount = 0;
+
+  (currentProject.pages || []).forEach(p => {
+    (p.elements || []).forEach(el => {
+      if (el.type !== "border") {
+        if (el.x < 25) { el.x = 25; fixedCount++; }
+        if (el.y < 25) { el.y = 25; fixedCount++; }
+      }
+    });
+  });
+
+  markProjectDirty();
+  loadPageIntoCanvas(currentPageIndex);
+  runAiPreflightAudit();
+  showToast(`🛠️ Aligned ${fixedCount} elements safely within Amazon KDP margins!`, "success");
+}
+
 function executePublishingBundleExport() {
   const btn = document.getElementById("btn-run-bundle-export");
   const statusWrap = document.getElementById("bundle-export-status");
@@ -7630,7 +8194,7 @@ function executePublishingBundleExport() {
 
   if (btn) btn.disabled = true;
   if (statusWrap) statusWrap.style.display = "block";
-  if (statusText) statusText.innerText = "Generating 300 DPI Interior, Cover PDF & Packaging ZIP...";
+  if (statusText) statusText.innerText = "Generating 300 DPI Interior, Cover PDF, Guide & AI Preflight Report...";
 
   showToast("📦 Packaging 1-Click Publishing Bundle...", "info");
 
@@ -7650,12 +8214,12 @@ function executePublishingBundleExport() {
     ...currentProject,
     metadata: currentPublishMetadata || {},
     cover_config: {
-      title: currentProject.name || "MY JUNGLE COLORING BOOK",
-      subtitle: currentPublishMetadata?.subtitle || "50+ Fun & Easy Coloring Pages",
+      title: currentCoverConfig.front_title || currentProject.name || "MY JUNGLE COLORING BOOK",
+      subtitle: currentCoverConfig.front_subtitle || currentPublishMetadata?.subtitle || "50+ Fun & Easy Coloring Pages",
       author: currentProject.author || "Creative Kids Studio",
-      bg_color: "#1e1b4b",
-      spine_color: "#1e1b4b",
-      back_heading: "WHY YOUR CHILD WILL LOVE THIS BOOK",
+      bg_color: currentCoverConfig.bg_color || "#1e1b4b",
+      spine_color: currentCoverConfig.bg_color || "#1e1b4b",
+      back_heading: currentCoverConfig.back_heading || "WHY YOUR CHILD WILL LOVE THIS BOOK",
       paper_type: "white",
       front_image: coverImg
     }

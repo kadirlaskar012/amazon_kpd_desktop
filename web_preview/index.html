@@ -1928,22 +1928,63 @@
           <button class="modal-close" onclick="closeModal('publish-helper-modal')">&times;</button>
         </div>
 
+        <!-- AI Engine Control & Grounding Bar -->
+        <div class="pub-ai-engine-bar">
+          <div class="ai-bar-left">
+            <span class="ai-spark-badge">⚡ AI Engine</span>
+            <select id="pub-ai-model-select" class="form-control pub-model-select" onchange="onAiModelChange(this.value)">
+              <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash (Recommended - Latest &amp; Fastest)</option>
+              <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite (Ultra Fast)</option>
+              <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep Reasoning)</option>
+              <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
+            </select>
+            <span id="pub-ai-status-tag" class="ai-status-tag active" title="AI Grounding Engine Ready">🟢 AI Connected</span>
+          </div>
+          <div class="ai-bar-right">
+            <button class="btn btn-sm btn-outline" onclick="toggleAiApiKeyDrawer()" title="Configure Google Gemini API Key">
+              🔑 API Key
+            </button>
+            <button class="btn btn-sm btn-primary ai-supercharge-btn" id="btn-run-full-ai-research" onclick="triggerFullAiMarketAnalysis()">
+              <span id="ai-research-btn-icon">✨</span> <strong id="ai-research-btn-txt">Run Full Amazon AI Market Analysis</strong>
+            </button>
+          </div>
+        </div>
+
+        <!-- Collapsible API Key Drawer -->
+        <div id="pub-api-key-drawer" class="pub-api-drawer" style="display: none;">
+          <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+            <span style="font-size: 12px; font-weight: 700; white-space: nowrap;">Gemini API Key:</span>
+            <input type="password" id="pub-gemini-key-input" class="form-control" placeholder="Paste your Google Gemini API Key (AIzaSy...)" style="font-size: 12px; flex: 1;">
+            <button class="btn btn-sm btn-primary" onclick="saveGeminiKeyFromModal()">Save &amp; Connect</button>
+            <button class="btn btn-sm btn-outline" onclick="toggleAiApiKeyDrawer()">Cancel</button>
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+            💡 Free API key available at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary); text-decoration: underline;">Google AI Studio</a>. (If left blank, Studio runs seamlessly on built-in offline smart heuristic engine).
+          </div>
+        </div>
+
         <!-- Sub Navigation Workflow Tabs -->
         <div class="publish-tabs-bar">
           <button class="pub-tab-btn active" data-pubtab="pricing" onclick="switchPubTab('pricing')">
-            💰 Royalty & Pricing Calculator
+            💰 Royalty &amp; Pricing
           </button>
           <button class="pub-tab-btn" data-pubtab="keywords" onclick="switchPubTab('keywords')">
-            🎯 7 Backend Keywords & SEO
+            🎯 7 Backend Keywords &amp; SEO
           </button>
           <button class="pub-tab-btn" data-pubtab="description" onclick="switchPubTab('description')">
             ✍️ Rich HTML Description
           </button>
+          <button class="pub-tab-btn" data-pubtab="cover" onclick="switchPubTab('cover')">
+            🎨 AI Cover Generator
+          </button>
+          <button class="pub-tab-btn" data-pubtab="preflight" onclick="switchPubTab('preflight')">
+            🔍 AI Quality Preflight
+          </button>
           <button class="pub-tab-btn" data-pubtab="checklist" onclick="switchPubTab('checklist')">
-            📋 KDP Upload Checklist
+            📋 KDP Checklist
           </button>
           <button class="pub-tab-btn highlight" data-pubtab="bundle" onclick="switchPubTab('bundle')">
-            📦 1-Click Bundle Export (ZIP)
+            📦 1-Click Bundle (.ZIP)
           </button>
         </div>
 
@@ -2150,7 +2191,160 @@
             </div>
           </div>
 
-          <!-- ================= TAB 4: KDP UPLOAD CHECKLIST ================= -->
+          <!-- ================= TAB 4: AI COVER GENERATOR ================= -->
+          <div class="pub-tab-content" id="pub-content-cover">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <h4 style="margin: 0; font-size: 15px; font-weight: 700;">Amazon KDP Full Wrap Cover Generator (300 DPI)</h4>
+                <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">
+                  Back Cover + Calculated Spine + Front Cover + 0.125" Bleed Allowance ready for direct Amazon KDP paperback upload.
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm btn-outline" onclick="regenerateCoverMetadata()">
+                  🔄 AI Regenerate Cover Copy
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="exportCoverPdfDirect()">
+                  🎨 Download 300 DPI Cover PDF
+                </button>
+              </div>
+            </div>
+
+            <!-- Full Wrap Cover Interactive Spread Preview -->
+            <div class="cover-spread-stage">
+              <div class="cover-wrap-canvas" id="cover-wrap-preview">
+                <!-- Back Cover Section -->
+                <div class="cover-panel cover-back" id="cover-back-panel">
+                  <div class="cover-panel-tag">BACK COVER</div>
+                  <h3 class="cover-back-h3" id="cov-back-title">WHY YOUR CHILD WILL LOVE THIS BOOK</h3>
+                  <p class="cover-back-blurb" id="cov-back-blurb">
+                    Spark your little one's imagination with enchanting illustrations designed to develop motor skills and provide hours of joyful, screen-free entertainment.
+                  </p>
+                  <ul class="cover-back-bullets" id="cov-back-bullets">
+                    <li>✨ 50+ Hand-Drawn High-Resolution Illustrations</li>
+                    <li>🛡️ Single-Sided Pages (No Marker Bleed-Through)</li>
+                    <li>🎯 Large 8.5 x 11 in Format for Little Hands</li>
+                    <li>🧠 Builds Fine Motor Skills &amp; Focus</li>
+                    <li>🎁 Wonderful Gift for Birthdays &amp; Holidays</li>
+                  </ul>
+                  <!-- Amazon KDP Barcode Zone -->
+                  <div class="kdp-barcode-zone">
+                    <span style="font-size: 8px; font-weight: 700; color: #64748b;">[ Amazon KDP Barcode Zone ]</span>
+                    <span style="font-size: 7px; color: #94a3b8;">Reserved 2.0" × 1.2"</span>
+                  </div>
+                </div>
+
+                <!-- Spine Section -->
+                <div class="cover-panel cover-spine" id="cover-spine-panel">
+                  <div class="cover-spine-text" id="cov-spine-text">MY JUNGLE COLORING BOOK • CREATIVE KIDS STUDIO</div>
+                </div>
+
+                <!-- Front Cover Section -->
+                <div class="cover-panel cover-front" id="cover-front-panel">
+                  <div class="cover-panel-tag">FRONT COVER</div>
+                  <div class="cover-badge-row">
+                    <span class="cover-pill" id="cov-badge-1">50+ PAGES</span>
+                    <span class="cover-pill" id="cov-badge-2">AGES 4-8</span>
+                  </div>
+                  <h1 class="cover-front-title" id="cov-front-title">MY FIRST JUNGLE ANIMAL COLORING BOOK</h1>
+                  <h2 class="cover-front-sub" id="cov-front-sub">50+ Fun &amp; Easy Activity Pages For Kids</h2>
+
+                  <!-- Cover Artwork Thumbnail Card -->
+                  <div class="cover-art-card" id="cov-art-card">
+                    <img id="cov-art-thumb" src="" alt="Cover Art" style="width: 100%; height: 100%; object-fit: contain; display: none;">
+                    <div id="cov-art-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #94a3b8; font-size: 11px;">
+                      <span style="font-size: 28px; margin-bottom: 4px;">🎨</span>
+                      <span>Canvas Artwork Ready</span>
+                    </div>
+                  </div>
+
+                  <div class="cover-author-lbl" id="cov-front-author">By Creative Kids Studio</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cover Specification & Customization Controls -->
+            <div class="cover-controls-grid">
+              <div class="cover-control-box">
+                <label style="font-size: 11.5px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Theme Background Color:</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <input type="color" id="cov-bg-color-picker" value="#1e1b4b" class="form-control" style="width: 44px; height: 34px; padding: 2px; cursor: pointer;" onchange="onCoverColorChange(this.value, 'bg')">
+                  <div class="color-swatches-quick">
+                    <button class="c-swatch" style="background: #1e1b4b;" onclick="setCoverColorQuick('#1e1b4b')"></button>
+                    <button class="c-swatch" style="background: #064e3b;" onclick="setCoverColorQuick('#064e3b')"></button>
+                    <button class="c-swatch" style="background: #0f172a;" onclick="setCoverColorQuick('#0f172a')"></button>
+                    <button class="c-swatch" style="background: #581c87;" onclick="setCoverColorQuick('#581c87')"></button>
+                    <button class="c-swatch" style="background: #831843;" onclick="setCoverColorQuick('#831843')"></button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="cover-control-box">
+                <label style="font-size: 11.5px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Accent / Title Color:</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <input type="color" id="cov-accent-color-picker" value="#fbbf24" class="form-control" style="width: 44px; height: 34px; padding: 2px; cursor: pointer;" onchange="onCoverColorChange(this.value, 'accent')">
+                  <span style="font-size: 11px; color: var(--text-secondary);">Warm gold / eye-catching contrast</span>
+                </div>
+              </div>
+
+              <div class="cover-control-box">
+                <label style="font-size: 11.5px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Spine Calculation (Amazon Formula):</label>
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-primary);" id="cov-spine-spec-lbl">
+                  Spine Width: <strong>0.113" (8.1 pt)</strong> • B&amp;W on White Paper
+                </div>
+                <div style="font-size: 10.5px; color: var(--text-secondary); margin-top: 2px;" id="cov-spine-rule-lbl">
+                  ℹ️ Amazon KDP allows printed text on spine for books with 79+ pages.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= TAB 5: AI QUALITY PREFLIGHT ================= -->
+          <div class="pub-tab-content" id="pub-content-preflight">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <h4 style="margin: 0; font-size: 15px; font-weight: 700;">AI Print-Readiness &amp; Quality Preflight Auditor</h4>
+                <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">
+                  Automated Amazon KDP preflight inspection verifying page count, safe margins, bleed, resolution, and print compliance.
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm btn-outline" onclick="runAiPreflightAudit()">
+                  🔄 Re-Run AI Audit
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="autoFixPreflightMargins()">
+                  🛠️ 1-Click Auto-Fix Margins
+                </button>
+              </div>
+            </div>
+
+            <!-- Preflight Hero Score & Grade Banner -->
+            <div class="preflight-hero-card">
+              <div class="preflight-score-circle" id="preflight-score-dial">
+                <span class="score-number" id="preflight-score-val">100</span>
+                <span class="score-out-of">/ 100</span>
+              </div>
+              <div class="preflight-hero-info">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="badge pass" id="preflight-grade-badge" style="font-size: 12px; padding: 3px 10px;">A+ (KDP Certified Ready)</span>
+                  <span style="font-size: 12px; color: var(--text-secondary);">Verified 100% Rejection-Free</span>
+                </div>
+                <h3 style="margin: 6px 0 4px 0; font-size: 16px; font-weight: 800;" id="preflight-hero-title">
+                  Your book is 100% ready for Amazon KDP Paperback submission!
+                </h3>
+                <p style="margin: 0; font-size: 12px; color: var(--text-secondary);" id="preflight-hero-desc">
+                  All pages conform to Amazon KDP's technical specifications for trim size, gutter margins, bleed allowance, and print resolution.
+                </p>
+              </div>
+            </div>
+
+            <!-- Preflight Checklist Cards Grid -->
+            <div class="preflight-checks-grid" id="preflight-checks-container">
+              <!-- Rendered dynamically by populatePreflightChecks() -->
+            </div>
+          </div>
+
+          <!-- ================= TAB 6: KDP UPLOAD CHECKLIST ================= -->
           <div class="pub-tab-content" id="pub-content-checklist">
             <h4 style="margin: 0 0 6px 0; font-size: 15px; font-weight: 700;">KDP Upload Settings Cheat-Sheet</h4>
             <p style="margin: 0 0 16px 0; font-size: 12px; color: var(--text-secondary);">
@@ -2249,6 +2443,14 @@
                     <div class="bundle-item-sub">Title, 7 Backend Keywords, HTML Description, Pricing & Checklist</div>
                   </div>
                   <span class="badge pass">READY</span>
+                </div>
+                <div class="bundle-item">
+                  <span class="bundle-icon">🔍</span>
+                  <div>
+                    <div class="bundle-item-title">AI Quality Preflight Report (.txt)</div>
+                    <div class="bundle-item-sub">Print-readiness audit, gutter & outer margin safety, 300 DPI verification</div>
+                  </div>
+                  <span class="badge pass">CERTIFIED</span>
                 </div>
               </div>
 

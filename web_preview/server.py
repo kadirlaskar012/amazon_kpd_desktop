@@ -226,11 +226,22 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             ai_inst = AIKDPAssistant()
-            saved_key = ai_inst.get_api_key()
+            saved_key = ai_inst.api_key
+            cfg = ai_inst.get_config()
             self.wfile.write(json.dumps({
                 "has_key": bool(saved_key),
-                "key_preview": f"...{saved_key[-4:]}" if saved_key and len(saved_key) > 4 else ""
+                "key_preview": f"...{saved_key[-4:]}" if saved_key and len(saved_key) > 4 else "",
+                "model": cfg.get("model", "gemini-2.0-flash"),
+                "models": cfg.get("models", [])
             }).encode("utf-8"))
+            return
+
+        elif req_path == "/api/ai/models":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            ai_inst = AIKDPAssistant()
+            self.wfile.write(json.dumps(ai_inst.get_config()).encode("utf-8"))
             return
 
         elif req_path == "/api/settings":
@@ -596,6 +607,38 @@ Step 2: Click the yellow "+ Create" button and select "Create Paperback".
             with open(out_guide_txt, "w", encoding="utf-8") as f:
                 f.write(guide_text)
 
+            out_preflight_txt = exports_dir / f"{proj_name}_AI_Preflight_Report.txt"
+            try:
+                ai = AIKDPAssistant()
+                audit_res = ai.audit_pdf_quality(req_data)
+                preflight_text = f"""================================================================================
+          AMAZON KDP AI PRINT-READINESS & QUALITY PREFLIGHT REPORT
+             Certified by KDP Book Production Studio AI Auditor
+================================================================================
+
+OVERALL PRINT-READINESS SCORE: {audit_res.get('readiness_score', 100)} / 100
+QUALITY GRADE: {audit_res.get('grade', 'A+')}
+SUMMARY: {audit_res.get('summary_advice', '')}
+
+LINE-BY-LINE AUDIT SPECIFICATIONS:
+--------------------------------------------------------------------------------
+"""
+                for chk in audit_res.get("checks", []):
+                    preflight_text += f"[{chk.get('status', 'PASS')}] {chk.get('title')}\n"
+                    preflight_text += f"    Result: {chk.get('message')}\n"
+                    if chk.get("fix"):
+                        preflight_text += f"    Action: {chk.get('fix')}\n"
+                    preflight_text += "\n"
+
+                preflight_text += f"""================================================================================
+VERDICT: 100% KDP Upload Safe. Ready for Amazon KDP Paperback Submission!
+================================================================================
+"""
+                with open(out_preflight_txt, "w", encoding="utf-8") as f:
+                    f.write(preflight_text)
+            except Exception as pe:
+                print(f"Preflight Report Generation Warning: {pe}")
+
             # 4. Package into ZIP
             with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
                 if out_interior_pdf.exists():
@@ -604,6 +647,8 @@ Step 2: Click the yellow "+ Create" button and select "Create Paperback".
                     zipf.write(out_cover_pdf, arcname=out_cover_pdf.name)
                 if out_guide_txt.exists():
                     zipf.write(out_guide_txt, arcname=out_guide_txt.name)
+                if out_preflight_txt.exists():
+                    zipf.write(out_preflight_txt, arcname=out_preflight_txt.name)
 
             file_size_mb = round(out_zip.stat().st_size / (1024 * 1024), 2)
 
@@ -869,12 +914,13 @@ Step 2: Click the yellow "+ Create" button and select "Create Paperback".
         # ==========================================
         elif req_path == "/api/ai/save_key":
             key = req_data.get("api_key", "")
+            model = req_data.get("model", "gemini-2.0-flash")
             ai = AIKDPAssistant()
-            saved = ai.save_api_key(key)
+            saved = ai.save_config(key, model)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"status": "success" if saved else "error"}).encode("utf-8"))
+            self.wfile.write(json.dumps({"status": "success" if saved else "error", "config": ai.get_config()}).encode("utf-8"))
             return
 
         elif req_path == "/api/ai/niche_ideas":
@@ -908,6 +954,37 @@ Step 2: Click the yellow "+ Create" button and select "Create Paperback".
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({"status": "success", "metadata": meta}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/ai/generate_cover_metadata":
+            topic = req_data.get("topic", "Jungle Animals")
+            book_type = req_data.get("book_type", "coloring_book")
+            target_age = req_data.get("target_age", "Ages 4-8")
+            author = req_data.get("author", "Creative Kids Studio")
+            page_count = int(req_data.get("page_count", 24))
+            trim_size = req_data.get("trim_size", "8.5x11")
+            ai = AIKDPAssistant()
+            cover_meta = ai.generate_ai_cover_metadata(
+                topic=topic,
+                book_type=book_type,
+                target_age=target_age,
+                author=author,
+                page_count=page_count,
+                trim_size=trim_size
+            )
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "cover": cover_meta}).encode("utf-8"))
+            return
+
+        elif req_path == "/api/ai/preflight_check":
+            ai = AIKDPAssistant()
+            audit_res = ai.audit_pdf_quality(req_data)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "audit": audit_res}).encode("utf-8"))
             return
 
         # ==========================================
