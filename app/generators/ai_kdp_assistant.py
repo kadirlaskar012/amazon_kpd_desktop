@@ -28,22 +28,107 @@ class AIKDPAssistant:
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
         self.model = model or "gemini-2.0-flash"
+        self.last_call_error: Optional[str] = None
+        self.last_source: str = "offline_template"
         
         if os.path.exists(CONFIG_FILE):
             try:
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                     cfg = json.load(f)
                     if not self.api_key:
-                        self.api_key = cfg.get("gemini_api_key", "")
+                        self.api_key = (cfg.get("gemini_api_key") or "").strip()
                     if not model and cfg.get("gemini_model"):
                         self.model = cfg.get("gemini_model")
             except Exception:
                 pass
 
-    def save_config(self, key: str, model: str = "gemini-2.0-flash") -> bool:
-        """Save Gemini API Key and selected model to local studio config."""
-        self.api_key = key.strip()
+    def verify_api_key(self, api_key: Optional[str] = None, model: Optional[str] = None) -> Dict[str, Any]:
+        """Directly verify if the provided or stored Gemini API key is active, valid and working."""
+        key = (api_key or self.api_key or "").strip()
+        if not key:
+            return {
+                "valid": False,
+                "status": "no_key",
+                "error": "No Google Gemini API key configured.",
+                "message": "Please enter a valid Google Gemini API key."
+            }
+
+        target_model = model or self.model or "gemini-2.0-flash"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model}:generateContent?key={key}"
+        payload = {
+            "contents": [{"parts": [{"text": "Reply with 'ok'"}]}],
+            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 5}
+        }
+
+        try:
+            data_bytes = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=data_bytes,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                if resp.status == 200:
+                    res_body = json.loads(resp.read().decode("utf-8"))
+                    candidates = res_body.get("candidates", [])
+                    if candidates:
+                        return {
+                            "valid": True,
+                            "status": "connected",
+                            "model": target_model,
+                            "message": f"Successfully connected to Google {target_model}!"
+                        }
+        except urllib.error.HTTPError as he:
+            err_msg = f"HTTP {he.code}: {he.reason}"
+            try:
+                err_body = json.loads(he.read().decode("utf-8"))
+                if "error" in err_body and "message" in err_body["error"]:
+                    err_msg = err_body["error"]["message"]
+            except Exception:
+                pass
+            return {
+                "valid": False,
+                "status": "api_error",
+                "error": err_msg,
+                "message": f"Gemini API verification failed: {err_msg}"
+            }
+        except urllib.error.URLError as ue:
+            return {
+                "valid": False,
+                "status": "network_error",
+                "error": str(ue.reason),
+                "message": f"Network connection failed: {ue.reason}"
+            }
+        except Exception as e:
+            return {
+                "valid": False,
+                "status": "error",
+                "error": str(e),
+                "message": f"API verification error: {str(e)}"
+            }
+
+        return {
+            "valid": False,
+            "status": "error",
+            "error": "Unexpected response from Gemini API.",
+            "message": "Could not verify API key response."
+        }
+
+    def save_config(self, key: str, model: str = "gemini-2.0-flash") -> Dict[str, Any]:
+        """Save Gemini API Key and selected model to local studio config, with real connection test."""
+        clean_key = key.strip()
+        self.api_key = clean_key
         self.model = model.strip() or "gemini-2.0-flash"
+
+        # Verify key if non-empty
+        verification = self.verify_api_key(self.api_key, self.model) if clean_key else {
+            "valid": False,
+            "status": "no_key",
+            "error": "No API key entered (switched to offline template mode).",
+            "message": "Switched to offline template mode."
+        }
+
         try:
             cfg = {}
             if os.path.exists(CONFIG_FILE):
@@ -56,21 +141,32 @@ class AIKDPAssistant:
             cfg["gemini_model"] = self.model
             with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(cfg, f, indent=2)
-            return True
+            
+            return {
+                "saved": True,
+                "verification": verification,
+                "config": self.get_config()
+            }
         except Exception as e:
             print(f"Failed to save AI config: {e}")
-            return False
+            return {
+                "saved": False,
+                "verification": verification,
+                "error": str(e),
+                "config": self.get_config()
+            }
 
     def get_config(self) -> Dict[str, Any]:
         return {
-            "has_api_key": bool(self.api_key),
+            "has_api_key": bool(self.api_key and len(self.api_key) > 5),
             "model": self.model,
             "models": SUPPORTED_MODELS
         }
 
     def _call_gemini(self, prompt: str, model: Optional[str] = None, use_search: bool = True) -> Optional[str]:
         """Call Gemini API via standard urllib with Gemini 2.0 Flash support & search grounding."""
-        if not self.api_key:
+        if not self.api_key or len(self.api_key) < 6:
+            self.last_call_error = "No Google Gemini API key configured."
             return None
 
         target_model = model or self.model or "gemini-2.0-flash"
@@ -109,14 +205,27 @@ class AIKDPAssistant:
                     text_parts = candidates[0].get("content", {}).get("parts", [])
                     texts = [p.get("text", "") for p in text_parts if "text" in p]
                     if texts:
+                        self.last_call_error = None
                         return "".join(texts)
         except urllib.error.HTTPError as he:
-            # If Google Search tool caused an error (e.g. unsupported in specific region), retry without tools
+            # If Google Search tool caused an error, retry without tools
             if use_search and he.code in (400, 404):
                 return self._call_gemini(prompt, model=target_model, use_search=False)
-            print(f"Gemini API HTTP Error ({he.code}): {he.reason}")
+            err_msg = f"HTTP {he.code}: {he.reason}"
+            try:
+                err_body = json.loads(he.read().decode("utf-8"))
+                if "error" in err_body and "message" in err_body["error"]:
+                    err_msg = err_body["error"]["message"]
+            except Exception:
+                pass
+            self.last_call_error = f"Gemini API Error: {err_msg}"
+            print(f"Gemini API HTTP Error ({he.code}): {err_msg}")
+        except urllib.error.URLError as ue:
+            self.last_call_error = f"Network Connection Error: {ue.reason}"
+            print(f"Gemini API URLError: {ue.reason}")
         except Exception as e:
-            print(f"Gemini API request failed (falling back to smart heuristic): {e}")
+            self.last_call_error = f"Gemini API Request Failed: {str(e)}"
+            print(f"Gemini API request failed: {e}")
 
         # If primary target model failed, attempt fallback to gemini-1.5-flash
         if target_model != "gemini-1.5-flash":
@@ -134,9 +243,10 @@ class AIKDPAssistant:
                     if candidates:
                         text_parts = candidates[0].get("content", {}).get("parts", [])
                         if text_parts:
+                            self.last_call_error = None
                             return text_parts[0].get("text", "")
-            except Exception:
-                pass
+            except Exception as fe:
+                self.last_call_error = f"Gemini Fallback Error: {str(fe)}"
 
         return None
 
@@ -352,8 +462,13 @@ class AIKDPAssistant:
                         "premium_royalty_profit": premium_profit,
                         "advice": f"For your {page_count}-page {trim_size} book, launch at $6.99 to capture rapid sales & reviews (earning ${launch_profit:.2f}/sale), then raise to $7.99 (earning ${regular_profit:.2f}/sale)."
                     }
+                    parsed["ai_source"] = "gemini_live"
+                    parsed["ai_status"] = "connected"
+                    parsed["ai_error"] = None
+                    parsed["ai_notice"] = "Live Gemini 2.0 Flash AI Grounding: Real-time Amazon search analysis and copy generated live!"
                     return parsed
             except Exception as e:
+                self.last_call_error = f"Error parsing Gemini metadata JSON: {e}"
                 print(f"Error parsing Gemini metadata response: {e}")
 
         # Smart Built-In Heuristic Fallback Engine
@@ -493,7 +608,11 @@ class AIKDPAssistant:
                 "recommended_premium_price": 8.99,
                 "premium_royalty_profit": premium_profit,
                 "advice": f"For your {page_count}-page {trim_size} book, launch at $6.99 to capture quick sales & reviews (earning ${launch_profit:.2f}/sale), then raise to $7.99 (earning ${regular_profit:.2f}/sale)."
-            }
+            },
+            "ai_source": "offline_template",
+            "ai_status": "no_key" if (not self.api_key or len(self.api_key) < 6) else "api_error",
+            "ai_error": self.last_call_error or ("No Google Gemini API key configured." if (not self.api_key or len(self.api_key) < 6) else "Gemini API unavailable."),
+            "ai_notice": "Offline Template Active: No API key connected." if (not self.api_key or len(self.api_key) < 6) else f"Offline Fallback: {self.last_call_error or 'API Error'}"
         }
 
     def generate_ai_cover_metadata(
@@ -564,9 +683,13 @@ class AIKDPAssistant:
                         "height_in": 1.2,
                         "position": "Bottom right of back cover with 0.25 in margin"
                     }
+                    parsed["ai_source"] = "gemini_live"
+                    parsed["ai_status"] = "connected"
+                    parsed["ai_error"] = None
+                    parsed["ai_notice"] = "Live Gemini 2.0 Flash AI Cover Generated"
                     return parsed
-            except Exception:
-                pass
+            except Exception as e:
+                self.last_call_error = f"Error parsing Gemini cover JSON: {e}"
 
         # Smart Heuristic Cover Design
         clean_topic = topic.strip().title() or "Jungle Animals"
@@ -596,7 +719,11 @@ class AIKDPAssistant:
                 "width_in": 2.0,
                 "height_in": 1.2,
                 "position": "Bottom right of back cover with 0.25 in margin"
-            }
+            },
+            "ai_source": "offline_template",
+            "ai_status": "no_key" if (not self.api_key or len(self.api_key) < 6) else "api_error",
+            "ai_error": self.last_call_error or ("No Google Gemini API key configured." if (not self.api_key or len(self.api_key) < 6) else "Gemini API unavailable."),
+            "ai_notice": "Offline Cover Template Active: No API key connected." if (not self.api_key or len(self.api_key) < 6) else f"Offline Cover Fallback: {self.last_call_error or 'API Error'}"
         }
 
     def audit_pdf_quality(self, project_data: dict) -> Dict[str, Any]:

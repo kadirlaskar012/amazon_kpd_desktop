@@ -1,3 +1,4 @@
 {
-  "gemini_api_key": "test_mock_gemini_key_12345"
+  "gemini_api_key": "",
+  "gemini_model": "gemini-2.0-flash"
 }

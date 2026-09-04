@@ -226,11 +226,12 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             ai_inst = AIKDPAssistant()
-            saved_key = ai_inst.api_key
+            saved_key = ai_inst.api_key.strip() if ai_inst.api_key else ""
             cfg = ai_inst.get_config()
+            has_real_key = bool(saved_key and len(saved_key) > 5)
             self.wfile.write(json.dumps({
-                "has_key": bool(saved_key),
-                "key_preview": f"...{saved_key[-4:]}" if saved_key and len(saved_key) > 4 else "",
+                "has_key": has_real_key,
+                "key_preview": f"...{saved_key[-4:]}" if has_real_key and len(saved_key) > 4 else "",
                 "model": cfg.get("model", "gemini-2.0-flash"),
                 "models": cfg.get("models", [])
             }).encode("utf-8"))
@@ -912,15 +913,26 @@ VERDICT: 100% KDP Upload Safe. Ready for Amazon KDP Paperback Submission!
         # ==========================================
         # AI KDP Research & Metadata Assistant Endpoints
         # ==========================================
+        elif req_path == "/api/ai/test_key":
+            key = req_data.get("api_key")
+            model = req_data.get("model", "gemini-2.0-flash")
+            ai = AIKDPAssistant()
+            res = ai.verify_api_key(api_key=key, model=model)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(res).encode("utf-8"))
+            return
+
         elif req_path == "/api/ai/save_key":
             key = req_data.get("api_key", "")
             model = req_data.get("model", "gemini-2.0-flash")
             ai = AIKDPAssistant()
-            saved = ai.save_config(key, model)
+            saved_res = ai.save_config(key, model)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"status": "success" if saved else "error", "config": ai.get_config()}).encode("utf-8"))
+            self.wfile.write(json.dumps(saved_res).encode("utf-8"))
             return
 
         elif req_path == "/api/ai/niche_ideas":

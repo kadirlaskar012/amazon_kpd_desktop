@@ -7478,41 +7478,88 @@ function updatePublishPricingView(listPrice) {
 // ===================================================
 let activeAiModel = "gemini-2.0-flash";
 
+let hasConnectedGeminiKey = false;
+
 function initAiEngineBar() {
-  fetch("/api/ai/models")
+  fetch("/api/ai/get_key")
     .then(r => r.json())
-    .then(cfg => {
+    .then(data => {
       const select = document.getElementById("pub-ai-model-select");
-      if (select && cfg.models) {
+      if (select && data.models) {
         select.innerHTML = "";
-        cfg.models.forEach(m => {
+        data.models.forEach(m => {
           const opt = document.createElement("option");
           opt.value = m.id;
           opt.innerText = m.name;
-          if (m.id === cfg.model) opt.selected = true;
+          if (m.id === data.model) opt.selected = true;
           select.appendChild(opt);
         });
       }
-      activeAiModel = cfg.model || "gemini-2.0-flash";
-      updateAiStatusBadge(cfg.has_api_key);
+      activeAiModel = data.model || "gemini-2.0-flash";
+      hasConnectedGeminiKey = Boolean(data.has_key);
+
+      const keyInput = document.getElementById("pub-gemini-key-input");
+      if (keyInput && data.key_preview) {
+        keyInput.placeholder = `Saved key (${data.key_preview}) - paste new to replace`;
+      }
+
+      if (hasConnectedGeminiKey) {
+        updateAiStatusBadge("connected", activeAiModel);
+        updateAiNoticeBanner(
+          "live",
+          "✨ Live Gemini 2.0 AI Connected",
+          "Real-time Amazon search grounding & bestselling market intelligence active."
+        );
+      } else {
+        updateAiStatusBadge("offline");
+        updateAiNoticeBanner(
+          "offline",
+          "No Gemini API Key Connected (Offline Template Mode)",
+          "Studio is running on smart offline templates. Click '🔑 API Key' to connect your free Gemini API key for live Amazon analysis."
+        );
+      }
     })
     .catch(() => {
-      updateAiStatusBadge(false);
+      hasConnectedGeminiKey = false;
+      updateAiStatusBadge("offline");
+      updateAiNoticeBanner(
+        "offline",
+        "No Gemini API Key Connected (Offline Template Mode)",
+        "Studio is running on smart offline templates."
+      );
     });
 }
 
-function updateAiStatusBadge(hasKey) {
+function updateAiStatusBadge(status, modelName) {
   const badge = document.getElementById("pub-ai-status-tag");
   if (!badge) return;
-  if (hasKey) {
-    badge.innerText = "🟢 Gemini 2.0 Connected";
+
+  if (status === "connected") {
+    badge.innerText = `🟢 Gemini 2.0 Connected (Live AI)`;
     badge.className = "ai-status-tag active";
-    badge.title = "Connected to Google Gemini AI Engine with Search Grounding";
+    badge.title = "Connected to Google Gemini AI Engine with Google Search Grounding";
+  } else if (status === "error") {
+    badge.innerText = "🔴 Gemini API Error";
+    badge.className = "ai-status-tag error";
+    badge.title = "Gemini API failed or returned an error. Click '🔑 API Key' to inspect or reconfigure.";
   } else {
-    badge.innerText = "🟡 Smart Heuristic Mode";
-    badge.className = "ai-status-tag";
-    badge.title = "Offline Smart Intelligence Active (Add API Key for live web grounding)";
+    badge.innerText = "⚪ Offline Template Mode";
+    badge.className = "ai-status-tag offline";
+    badge.title = "No API Key Connected - Built-in smart templates active";
   }
+}
+
+function updateAiNoticeBanner(type, title, desc) {
+  const banner = document.getElementById("pub-ai-notice-banner");
+  const icon = document.getElementById("pub-notice-icon");
+  const titleEl = document.getElementById("pub-notice-title");
+  const descEl = document.getElementById("pub-notice-desc");
+
+  if (!banner) return;
+  banner.className = `pub-ai-notice-banner ${type}`;
+  if (icon) icon.innerText = (type === "live") ? "✨" : (type === "error" ? "❌" : "ℹ️");
+  if (titleEl) titleEl.innerText = title;
+  if (descEl) descEl.innerText = desc;
 }
 
 function onAiModelChange(modelId) {
@@ -7525,6 +7572,9 @@ function onAiModelChange(modelId) {
   .then(r => r.json())
   .then(() => {
     showToast(`⚡ AI Engine switched to ${modelId}`, "info");
+    if (hasConnectedGeminiKey) {
+      updateAiStatusBadge("connected", modelId);
+    }
   })
   .catch(() => {});
 }
@@ -7536,12 +7586,75 @@ function toggleAiApiKeyDrawer() {
   }
 }
 
+function testGeminiKeyFromModal() {
+  const input = document.getElementById("pub-gemini-key-input");
+  const feedback = document.getElementById("pub-key-test-feedback");
+  const btn = document.getElementById("btn-test-gemini-key");
+  const key = input ? input.value.trim() : "";
+
+  if (feedback) feedback.style.display = "block";
+
+  if (!key) {
+    if (feedback) {
+      feedback.style.background = "rgba(245, 158, 11, 0.15)";
+      feedback.style.color = "#f59e0b";
+      feedback.innerText = "⚠️ Please enter or paste an API key first to test.";
+    }
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  if (feedback) {
+    feedback.style.background = "rgba(99, 102, 241, 0.15)";
+    feedback.style.color = "var(--primary)";
+    feedback.innerText = "⏳ Testing connection with Google Gemini API...";
+  }
+
+  fetch("/api/ai/test_key", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ api_key: key, model: activeAiModel })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (btn) btn.disabled = false;
+    if (res.valid) {
+      feedback.style.background = "rgba(16, 185, 129, 0.15)";
+      feedback.style.color = "#10b981";
+      feedback.innerText = `✅ Success! API Key is active & verified with Google Gemini!`;
+    } else {
+      feedback.style.background = "rgba(239, 68, 68, 0.15)";
+      feedback.style.color = "#ef4444";
+      feedback.innerText = `❌ Verification Failed: ${res.error || res.message}`;
+    }
+  })
+  .catch(err => {
+    if (btn) btn.disabled = false;
+    if (feedback) {
+      feedback.style.background = "rgba(239, 68, 68, 0.15)";
+      feedback.style.color = "#ef4444";
+      feedback.innerText = `❌ Connection Error: ${err.message}`;
+    }
+  });
+}
+
 function saveGeminiKeyFromModal() {
   const input = document.getElementById("pub-gemini-key-input");
+  const feedback = document.getElementById("pub-key-test-feedback");
+  const saveBtn = document.getElementById("btn-save-gemini-key");
   const key = input ? input.value.trim() : "";
+
   if (!key) {
-    showToast("⚠️ Please enter a valid Gemini API Key", "warning");
+    showToast("⚠️ Please enter a Google Gemini API Key or click Disconnect for Offline Mode", "warning");
     return;
+  }
+
+  if (saveBtn) saveBtn.disabled = true;
+  if (feedback) {
+    feedback.style.display = "block";
+    feedback.style.background = "rgba(99, 102, 241, 0.15)";
+    feedback.style.color = "var(--primary)";
+    feedback.innerText = "⏳ Saving and verifying API Key with Google...";
   }
 
   fetch("/api/ai/save_key", {
@@ -7551,17 +7664,70 @@ function saveGeminiKeyFromModal() {
   })
   .then(r => r.json())
   .then(res => {
-    if (res.status === "success") {
-      showToast("🎉 Google Gemini API Key saved & connected!", "success");
-      updateAiStatusBadge(true);
-      toggleAiApiKeyDrawer();
-      triggerFullAiMarketAnalysis();
+    if (saveBtn) saveBtn.disabled = false;
+    const isVerified = Boolean(res.verification && res.verification.valid);
+
+    if (isVerified) {
+      hasConnectedGeminiKey = true;
+      showToast("🎉 Google Gemini API Key verified & connected successfully!", "success");
+      updateAiStatusBadge("connected", activeAiModel);
+      updateAiNoticeBanner("live", "✨ Live Gemini 2.0 AI Connected", "Real-time Amazon search grounding & bestselling market intelligence active.");
+      if (feedback) {
+        feedback.style.background = "rgba(16, 185, 129, 0.15)";
+        feedback.style.color = "#10b981";
+        feedback.innerText = "✅ Saved and verified successfully!";
+      }
+      setTimeout(() => {
+        toggleAiApiKeyDrawer();
+        triggerFullAiMarketAnalysis();
+      }, 1000);
     } else {
-      showToast("⚠️ Failed to save API Key", "danger");
+      hasConnectedGeminiKey = false;
+      const errMsg = res.verification ? (res.verification.error || res.verification.message) : "Invalid key";
+      showToast(`⚠️ Gemini API Key could not be verified: ${errMsg}`, "danger");
+      updateAiStatusBadge("error");
+      updateAiNoticeBanner("error", "Gemini API Key Invalid / Error", `${errMsg}. Studio is in fallback mode until resolved.`);
+      if (feedback) {
+        feedback.style.background = "rgba(239, 68, 68, 0.15)";
+        feedback.style.color = "#ef4444";
+        feedback.innerText = `❌ Verification Warning: ${errMsg}`;
+      }
     }
   })
   .catch(err => {
+    if (saveBtn) saveBtn.disabled = false;
     showToast(`⚠️ Error saving API Key: ${err.message}`, "danger");
+  });
+}
+
+function clearGeminiKeyFromModal() {
+  const input = document.getElementById("pub-gemini-key-input");
+  const feedback = document.getElementById("pub-key-test-feedback");
+  if (input) {
+    input.value = "";
+    input.placeholder = "Paste Google Gemini API Key (AIzaSy...)";
+  }
+
+  fetch("/api/ai/save_key", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ api_key: "", model: activeAiModel })
+  })
+  .then(r => r.json())
+  .then(() => {
+    hasConnectedGeminiKey = false;
+    showToast("⚪ API Key disconnected. Studio switched to Offline Template Mode.", "info");
+    updateAiStatusBadge("offline");
+    updateAiNoticeBanner("offline", "No Gemini API Key Connected (Offline Template Mode)", "Studio is running on smart offline templates.");
+    if (feedback) {
+      feedback.style.display = "block";
+      feedback.style.background = "rgba(148, 163, 184, 0.15)";
+      feedback.style.color = "var(--text-muted)";
+      feedback.innerText = "⚪ Disconnected. Studio switched to offline template mode.";
+    }
+  })
+  .catch(err => {
+    showToast(`⚠️ Error disconnecting key: ${err.message}`, "danger");
   });
 }
 
@@ -7572,9 +7738,13 @@ function triggerFullAiMarketAnalysis() {
 
   if (btn) btn.disabled = true;
   if (icon) icon.innerText = "⏳";
-  if (txt) txt.innerText = "AI Searching Amazon & Analyzing Niche...";
+  if (txt) txt.innerText = hasConnectedGeminiKey ? "AI Searching Amazon & Analyzing Niche..." : "Generating Smart Template Data...";
 
-  showToast("🔍 Running Deep Amazon Search & Market Analysis with Gemini 2.0...", "info");
+  if (hasConnectedGeminiKey) {
+    showToast("🔍 Running Deep Amazon Search & Market Analysis with Gemini 2.0...", "info");
+  } else {
+    showToast("ℹ️ Offline Mode: Generating smart built-in template for your book...", "info");
+  }
 
   const topic = currentProject.name || "Jungle Animals";
   const author = currentProject.author || "Creative Kids Studio";
@@ -7620,6 +7790,23 @@ function triggerFullAiMarketAnalysis() {
       currentPublishMetadata = metaData.metadata;
       renderPublishMetadata(metaData.metadata);
 
+      const isLiveAi = (metaData.metadata.ai_source === "gemini_live");
+      const hasError = (metaData.metadata.ai_status === "api_error");
+
+      if (isLiveAi) {
+        showToast("🎉 Amazon Market Intelligence & Full Wrap Cover Auto-Filled by Gemini 2.0!", "success");
+        updateAiStatusBadge("connected", activeAiModel);
+        updateAiNoticeBanner("live", "✨ Live Gemini 2.0 AI Active", "Bestseller metadata & pricing grounded with live Amazon search.");
+      } else if (hasError) {
+        showToast(`⚠️ Gemini API Notice: ${metaData.metadata.ai_error || 'Offline fallback used'}`, "warning");
+        updateAiStatusBadge("error");
+        updateAiNoticeBanner("error", "Gemini API Call Failed", `${metaData.metadata.ai_error || 'API Error'}. Displaying offline template data.`);
+      } else {
+        showToast("ℹ️ Offline Smart Template Loaded Successfully!", "info");
+        updateAiStatusBadge("offline");
+        updateAiNoticeBanner("offline", "Offline Template Mode Active", "Displaying smart offline template. Connect a Gemini API key for live Amazon scraping.");
+      }
+
       // If competitor analysis present, update advice
       if (metaData.metadata.competitor_analysis) {
         const ca = metaData.metadata.competitor_analysis;
@@ -7636,14 +7823,14 @@ function triggerFullAiMarketAnalysis() {
 
     // Run Preflight Check
     runAiPreflightAudit();
-
-    showToast("🎉 Amazon Market Intelligence & Full Wrap Cover Auto-Filled!", "success");
   })
   .catch(err => {
     if (btn) btn.disabled = false;
     if (icon) icon.innerText = "✨";
     if (txt) txt.innerText = "Run Full Amazon AI Market Analysis";
-    showToast(`⚠️ AI Analysis Warning: ${err.message}`, "warning");
+    showToast(`⚠️ AI Service Notice: ${err.message}. Displaying offline data.`, "warning");
+    updateAiStatusBadge("error");
+    updateAiNoticeBanner("error", "AI Request Error", `${err.message}. Showing offline templates.`);
   });
 }
 
@@ -7657,39 +7844,6 @@ function loadPublishMetadata(forceRefresh = false) {
   const author = currentProject.author || "Creative Kids Studio";
   const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
   const trimSize = currentProject.settings?.trim_size || "8.5x11";
-
-  // Instant default render
-  if (!currentPublishMetadata) {
-    const instantMeta = {
-      title: `My First ${topic} Coloring Book`,
-      subtitle: `${pagesCount}+ Fun & Easy Coloring Pages for Kids Ages 4-8`,
-      backend_keywords: [
-        "preschool animal coloring pages for boys and girls",
-        "easy big simple bold outlines for tiny hands",
-        "cute toddler travel quiet time activity gifts",
-        "kindergarten fine motor skills practice workbook",
-        "relaxing mindful screen free art creative pad",
-        "single sided bleed safe illustrations gift idea",
-        "birthday holiday stocking stuffer for little kids"
-      ],
-      keyword_intents: [
-        "🎁 Gift & Holiday Intent",
-        "🧠 Fine Motor & Skill Building",
-        "🏫 Preschool & Kindergarten Prep",
-        "✈️ Travel & Screen-Free Fun",
-        "🎨 Creative Drawing & Outlines",
-        "🏡 Homeschool Supplemental",
-        "⭐ High Search Volume Phrase"
-      ],
-      recommended_categories: [
-        "Children's Books > Activities, Crafts & Games > Activity Books",
-        "Children's Books > Early Learning > Basic Concepts",
-        "Children's Books > Animals"
-      ],
-      html_description: `<h2>🎉 Spark Creativity & Endless Fun with the Ultimate ${topic}! 🌟</h2>\n\n<p>Looking for a fun, engaging, and screen-free way to boost your child's creativity and cognitive skills? <b>${topic}</b> is specially designed for little learners (Ages 4-8) to develop hand-eye coordination, focus, and artistic confidence!</p>\n\n<h3>⭐ What Makes This Book Special:</h3>\n<ul>\n  <li><b>${pagesCount}+ Unique & Fun Pages:</b> Carefully crafted with clean, bold lines and charming designs children adore.</li>\n  <li><b>Perfect for Little Hands:</b> Generous ${trimSize}" format provides ample drawing and activity space.</li>\n  <li><b>Single-Sided Bleed-Safe Pages:</b> Blank back pages prevent bleed-through from markers, pens, and crayons.</li>\n  <li><b>Builds Vital Early Skills:</b> Enhances fine motor control, pencil grip, cognitive focus, and creative imagination.</li>\n  <li><b>Ideal Screen-Free Gift:</b> Perfect for birthdays, holidays, road trips, rainy days, and homeschool activities!</li>\n</ul>\n\n<p><b>✨ Grab your copy today and watch your little one's creativity soar! 🚀</b></p>`
-    };
-    renderPublishMetadata(instantMeta);
-  }
 
   fetch("/api/ai/generate_metadata", {
     method: "POST",
@@ -7709,6 +7863,17 @@ function loadPublishMetadata(forceRefresh = false) {
     if (data.status === "success" && data.metadata) {
       currentPublishMetadata = data.metadata;
       renderPublishMetadata(data.metadata);
+
+      if (data.metadata.ai_source === "gemini_live") {
+        updateAiStatusBadge("connected", activeAiModel);
+        updateAiNoticeBanner("live", "✨ Live Gemini 2.0 AI Connected", "Real-time Amazon search grounding active.");
+      } else if (data.metadata.ai_status === "api_error") {
+        updateAiStatusBadge("error");
+        updateAiNoticeBanner("error", "Gemini API Notice", `${data.metadata.ai_error || 'API Error'}. Offline template loaded.`);
+      } else {
+        updateAiStatusBadge("offline");
+        updateAiNoticeBanner("offline", "No Gemini API Key Connected (Offline Template Mode)", "Studio is running on smart offline templates.");
+      }
     }
   })
   .catch(err => {
