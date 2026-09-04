@@ -503,6 +503,28 @@ html[data-active-tab="canvas"] #header-canvas-actions {
 }
 
 /* Immediate tab panel display matching active tab to prevent content flash */
+html[data-active-tab="dashboard"] #panel-dashboard,
+#panel-dashboard.active {
+  display: flex !important;
+  flex-direction: column;
+}
+
+html[data-active-tab="dashboard"] #panel-canvas,
+html[data-active-tab="dashboard"] #panel-settings,
+html[data-active-tab="dashboard"] #panel-preflight,
+html[data-active-tab="dashboard"] #panel-preview {
+  display: none !important;
+}
+
+html[data-active-tab="dashboard"] #header-canvas-actions {
+  display: none !important;
+}
+
+html[data-active-tab="dashboard"] .nav-btn[data-tab="dashboard"] {
+  background: var(--primary);
+  color: #ffffff;
+}
+
 html[data-active-tab="canvas"] #panel-canvas,
 html[data-active-tab="settings"] #panel-settings,
 html[data-active-tab="preflight"] #panel-preflight,

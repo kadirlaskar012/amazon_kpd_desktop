@@ -740,26 +740,44 @@ function clearActiveProject() {
 function loadInitialProject() {
   fetchDefaultLocation();
 
-  // Restore the last active tab from URL query params or sessionStorage
+  // URL query parameter determines tab if explicitly provided; otherwise ALWAYS default to dashboard on launch/refresh
   const urlParams = new URLSearchParams(window.location.search);
-  const queryTab = urlParams.get("tab");
-  const lastTab = queryTab || sessionStorage.getItem("kdp_active_tab") || localStorage.getItem("kdp_active_tab") || "dashboard";
+  const targetTab = urlParams.get("tab") || "dashboard";
 
-  // Hydrate UI state synchronously to prevent toolbar and content flash
-  document.documentElement.setAttribute("data-active-tab", lastTab);
+  // Clean up any stale tab memory so refreshing or pressing F5 always firmly keeps you on Dashboard
+  try {
+    sessionStorage.removeItem("kdp_active_tab");
+    localStorage.removeItem("kdp_active_tab");
+  } catch (e) {}
+
+  // Hydrate UI state synchronously to guarantee immediate solid render with ZERO flashing
+  document.documentElement.setAttribute("data-active-tab", targetTab);
   const headerCanvasActions = document.getElementById("header-canvas-actions");
   if (headerCanvasActions) {
-    headerCanvasActions.style.display = (lastTab === "canvas") ? "flex" : "none";
+    headerCanvasActions.style.display = (targetTab === "canvas") ? "flex" : "none";
   }
 
-  // Pre-hydrate cached project title to eliminate placeholder text flash
+  // Pre-hydrate cached project title, stats, and project list to eliminate placeholder jumping
   try {
+    const cachedStats = localStorage.getItem("kdp_dashboard_stats");
+    if (cachedStats) {
+      const parsedStats = JSON.parse(cachedStats);
+      if (parsedStats) updateHeroStats(parsedStats);
+    }
+    const cachedRecent = localStorage.getItem("kdp_recent_projects_cache");
+    if (cachedRecent) {
+      const parsedRecent = JSON.parse(cachedRecent);
+      if (Array.isArray(parsedRecent) && parsedRecent.length > 0) {
+        recentProjectsList = parsedRecent;
+        renderRecentProjects();
+      }
+    }
     const cachedData = localStorage.getItem("kdp_active_project_data");
     if (cachedData) {
       const parsed = JSON.parse(cachedData);
       if (parsed && parsed.name) {
-        const navProjName = document.getElementById("nav-project-name");
-        if (navProjName) navProjName.innerText = parsed.name;
+        currentProject = parsed;
+        syncActiveProjectUI();
       }
     }
   } catch (e) {}
@@ -767,16 +785,22 @@ function loadInitialProject() {
   // Synchronously activate correct tab nav and panel before async operations
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
-  const targetBtn = document.querySelector(`.nav-btn[data-tab="${lastTab}"]`);
-  const targetPanel = document.getElementById(`panel-${lastTab}`);
+  const targetBtn = document.querySelector(`.nav-btn[data-tab="${targetTab}"]`);
+  const targetPanel = document.getElementById(`panel-${targetTab}`);
   if (targetBtn) targetBtn.classList.add("active");
   if (targetPanel) targetPanel.classList.add("active");
+
+  updateNavigationTabsVisibility(targetTab);
 
   // Query real projects list from local disk
   fetch("/api/projects")
     .then(r => r.json())
     .then(data => {
       recentProjectsList = data.projects || [];
+      try {
+        localStorage.setItem("kdp_recent_projects_cache", JSON.stringify(recentProjectsList));
+        if (data.stats) localStorage.setItem("kdp_dashboard_stats", JSON.stringify(data.stats));
+      } catch (e) {}
       renderRecentProjects();
       updateHeroStats(data.stats);
 
@@ -804,6 +828,9 @@ function loadInitialProject() {
           .then(loadData => {
             if (loadData.project) {
               currentProject = loadData.project;
+              try {
+                localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
+              } catch (e) {}
             } else {
               currentProject.name = matchedProj.name;
               currentProject.project_dir = matchedProj.path;
@@ -818,19 +845,19 @@ function loadInitialProject() {
             renumberPages();
             syncActiveProjectUI();
 
-            if (lastTab === "canvas") {
+            if (targetTab === "canvas") {
               loadPageIntoCanvas(currentPageIndex);
               switchTab("canvas");
-            } else if (lastTab && lastTab !== "dashboard") {
-              switchTab(lastTab);
+            } else if (targetTab && targetTab !== "dashboard") {
+              switchTab(targetTab);
             } else {
-              // Default or dashboard: STAY ON DASHBOARD!
+              // Firmly remain on dashboard
               switchTab("dashboard");
             }
           })
           .catch(() => {
             syncActiveProjectUI();
-            switchTab(lastTab || "dashboard");
+            switchTab("dashboard");
           });
       } else {
         clearActiveProject();
@@ -2100,6 +2127,9 @@ function updateHeroStats(statsObj) {
   if (!totalProjectsEl) return;
 
   if (statsObj) {
+    try {
+      localStorage.setItem("kdp_dashboard_stats", JSON.stringify(statsObj));
+    } catch (e) {}
     totalProjectsEl.innerText = statsObj.total_projects ?? 0;
     if (pdfsExportedEl) pdfsExportedEl.innerText = statsObj.total_pdfs ?? 0;
     if (booksCompletedEl) booksCompletedEl.innerText = statsObj.books_completed ?? 0;
@@ -2266,8 +2296,7 @@ function setupNavigation() {
 }
 
 function switchTab(tabId) {
-  sessionStorage.setItem("kdp_active_tab", tabId);
-  localStorage.setItem("kdp_active_tab", tabId);
+  // Do NOT store in storage: refreshing or pressing F5 must always reliably land on Dashboard
   document.documentElement.setAttribute("data-active-tab", tabId);
 
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
@@ -2315,6 +2344,12 @@ function switchDrawerTab(tabKey) {
 // Sync UI with currentProject state
 function syncActiveProjectUI() {
   const hasProject = Boolean(currentProject && currentProject.name && !currentProject.is_empty && currentProject.project_dir);
+
+  if (hasProject) {
+    try {
+      localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
+    } catch (e) {}
+  }
 
   const navProjName = document.getElementById("nav-project-name");
   if (navProjName) {

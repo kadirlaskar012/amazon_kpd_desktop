@@ -19,7 +19,9 @@
         var theme = localStorage.getItem("kdp_studio_theme") || "light";
         document.documentElement.setAttribute("data-theme", theme);
         var urlParams = new URLSearchParams(window.location.search);
-        var tab = urlParams.get("tab") || sessionStorage.getItem("kdp_active_tab") || localStorage.getItem("kdp_active_tab") || "dashboard";
+        var tab = urlParams.get("tab") || "dashboard";
+        sessionStorage.removeItem("kdp_active_tab");
+        localStorage.removeItem("kdp_active_tab");
         document.documentElement.setAttribute("data-active-tab", tab);
       } catch (e) { }
     })();
@@ -30,7 +32,7 @@
   <div id="app">
     <!-- Top Navigation Workflow Ribbon -->
     <header class="top-nav">
-      <div class="brand">
+      <div class="brand" onclick="switchTab('dashboard')" style="cursor: pointer;" title="Go to Dashboard">
         <div class="logo-icon">📖</div>
         <div class="brand-text">
           <span class="brand-name">KDP Studio</span>
@@ -42,16 +44,16 @@
         <button class="nav-btn active" data-tab="dashboard" id="nav-tab-dashboard">
           <span class="step-num">1</span> Dashboard
         </button>
-        <button class="nav-btn" data-tab="settings" id="nav-tab-settings">
+        <button class="nav-btn" data-tab="settings" id="nav-tab-settings" style="display: none;">
           <span class="step-num">2</span> Book Settings
         </button>
         <button class="nav-btn" data-tab="canvas" id="nav-tab-canvas">
           <span class="step-num">3</span> Canvas Editor
         </button>
-        <button class="nav-btn" data-tab="preflight" id="nav-tab-preflight">
+        <button class="nav-btn" data-tab="preflight" id="nav-tab-preflight" style="display: none;">
           <span class="step-num">4</span> Quality Check
         </button>
-        <button class="nav-btn" data-tab="preview" id="nav-tab-preview">
+        <button class="nav-btn" data-tab="preview" id="nav-tab-preview" style="display: none;">
           <span class="step-num">5</span> Spread Preview
         </button>
       </nav>
