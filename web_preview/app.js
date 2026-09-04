@@ -113,6 +113,11 @@ function updateCanvasLayoutLockUI() {
     stage.classList.toggle("layout-locked", isCanvasLayoutLocked);
   }
 
+  // If locked and in box transform mode, exit transform mode cleanly
+  if (isCanvasLayoutLocked && isTransformMode) {
+    cancelTransform();
+  }
+
   const toolBtn = document.getElementById("tool-canvas-lock");
   if (toolBtn) {
     toolBtn.innerText = isCanvasLayoutLocked ? "🔒" : "🔓";
@@ -130,6 +135,33 @@ function updateCanvasLayoutLockUI() {
     pillBtn.classList.toggle("locked", isCanvasLayoutLocked);
     pillBtn.classList.toggle("unlocked", !isCanvasLayoutLocked);
     pillBtn.title = isCanvasLayoutLocked ? "Click to Unlock Canvas Layout Editing" : "Click to Lock Canvas Layout";
+  }
+
+  const layoutBadge = document.getElementById("canvas-layout-lock-badge");
+  if (layoutBadge) {
+    layoutBadge.innerText = isCanvasLayoutLocked ? "🔒 Locked" : "🔓 Unlocked";
+    layoutBadge.className = isCanvasLayoutLocked ? "badge badge-warning" : "badge badge-success";
+  }
+
+  const btnFreeTransform = document.getElementById("btn-free-transform");
+  if (btnFreeTransform) {
+    btnFreeTransform.disabled = isCanvasLayoutLocked;
+    btnFreeTransform.title = isCanvasLayoutLocked
+      ? "🔒 Canvas layout is locked. Click 🔓 in toolbar to resize or move boxes."
+      : "Free Transform: Resize & Move Layout Box on Canvas";
+  }
+
+  const lockedNotice = document.getElementById("layout-locked-notice");
+  if (lockedNotice) {
+    lockedNotice.style.display = isCanvasLayoutLocked ? "block" : "none";
+  }
+
+  const toolTransform = document.getElementById("tool-transform");
+  if (toolTransform) {
+    toolTransform.classList.toggle("disabled-tool", isCanvasLayoutLocked);
+    toolTransform.title = isCanvasLayoutLocked
+      ? "🔒 Canvas Layout Locked (Click 🔓 in toolbar to resize boxes)"
+      : "Canvas Layout Scaling: Resize & Move Slot Box (📐)";
   }
 
   updatePropertiesInspector();
@@ -1960,6 +1992,22 @@ function setupGlobalKeyboardShortcuts() {
       } else {
         openRenameModal("page");
       }
+      return;
+    }
+
+    if (e.key === "Enter" && isTransformMode) {
+      e.preventDefault();
+      commitTransform();
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "t") {
+      e.preventDefault();
+      if (isCanvasLayoutLocked) {
+        showToast("🔒 Canvas layout is locked. Click 🔓 in left toolbar to resize or move boxes.", "warning");
+        return;
+      }
+      toggleTransformMode();
       return;
     }
 
@@ -4883,8 +4931,11 @@ function loadPageIntoCanvas(index) {
 
     if (elem.type === "ref_image") {
       elDiv.classList.add("elem-ref-box");
+      if (isImageFocusMode && activeElementId === elem.id) {
+        elDiv.classList.add("interactive-focus-mode");
+      }
       if (elem.image_src) {
-        elDiv.innerHTML = `<img src="${elem.image_src}" draggable="false">`;
+        elDiv.innerHTML = renderCanvasArtworkHtml(elem);
       } else {
         elDiv.innerHTML = `
           <div class="placeholder-hint" onclick="event.stopPropagation(); handleCanvasPlaceholderClick('${elem.id}', 'ref');" style="cursor: pointer;" title="Click or Drag an image here">
@@ -4905,8 +4956,11 @@ function loadPageIntoCanvas(index) {
       };
     } else if (elem.type === "main_image") {
       elDiv.classList.add("elem-main-box");
+      if (isImageFocusMode && activeElementId === elem.id) {
+        elDiv.classList.add("interactive-focus-mode");
+      }
       if (elem.image_src) {
-        elDiv.innerHTML = `<img src="${elem.image_src}" draggable="false">`;
+        elDiv.innerHTML = renderCanvasArtworkHtml(elem);
       } else {
         elDiv.innerHTML = `
           <div class="placeholder-hint" onclick="event.stopPropagation(); handleCanvasPlaceholderClick('${elem.id}', 'drawing');" style="cursor: pointer;" title="Click or Drag artwork here">
@@ -5197,7 +5251,23 @@ function loadPageIntoCanvas(index) {
 }
 
 // ==========================================
-// Canvas Image Free Transform (Ctrl+T) Engine
+// Inner Artwork Rendering & Scaling Helper
+// ==========================================
+function renderCanvasArtworkHtml(elem) {
+  if (!elem || !elem.image_src) return "";
+  const zoom = typeof elem.image_zoom === "number" ? elem.image_zoom : 1.0;
+  const panX = typeof elem.image_pan_x === "number" ? elem.image_pan_x : 0;
+  const panY = typeof elem.image_pan_y === "number" ? elem.image_pan_y : 0;
+  const fit = elem.image_fit || "contain";
+  return `
+    <div class="canvas-image-wrap">
+      <img src="${elem.image_src}" class="inner-artwork-img" style="object-fit: ${fit}; transform: translate(${panX}%, ${panY}%) scale(${zoom});" draggable="false">
+    </div>
+  `;
+}
+
+// ==========================================
+// Canvas Layout Box Free Transform Engine (Slot Bounds)
 // ==========================================
 let isTransformMode = false;
 let transformElementId = null;
@@ -5210,12 +5280,12 @@ function isImageElement(elem) {
 
 function enterTransformMode(elemId = null) {
   if (isCanvasLayoutLocked) {
-    showToast("🔒 Canvas layout is locked. Click Unlock to transform elements.", "warning");
+    showToast("🔒 Canvas layout is locked. Click 🔓 in left toolbar to resize or move boxes.", "warning");
     return;
   }
   const targetId = elemId || activeElementId;
   if (!targetId) {
-    showToast("⚠️ Select an image on the canvas first to transform", "info");
+    showToast("⚠️ Select an element on the canvas first to scale layout box", "info");
     return;
   }
 
@@ -5235,7 +5305,7 @@ function enterTransformMode(elemId = null) {
   }
 
   updateTransformUI();
-  showToast("📐 Free Transform: Hold Shift for Uniform Scale | Drag to Move | Enter=Apply | Esc=Cancel", "info");
+  showToast("📐 Canvas Layout Scaling: Hold Shift for Uniform Scale | Drag Box to Move | Enter=Apply | Esc=Cancel", "info");
 }
 
 function commitTransform() {
@@ -5244,9 +5314,9 @@ function commitTransform() {
   const elem = getActiveElement();
   if (elem && preTransformState) {
     if (elem.x !== preTransformState.x || elem.y !== preTransformState.y || elem.w !== preTransformState.w || elem.h !== preTransformState.h) {
-      recordHistoryState("Transform Image");
+      recordHistoryState("Transform Layout Box");
       markProjectDirty();
-      showToast("✓ Image transform applied", "success");
+      showToast("✓ Canvas layout box size applied", "success");
     }
   }
 
@@ -5264,7 +5334,7 @@ function cancelTransform() {
     elem.h = preTransformState.h;
     applyElementStyles(elem);
     updatePropertiesInspector();
-    showToast("✕ Transform cancelled (reverted)", "info");
+    showToast("✕ Layout transform cancelled (reverted)", "info");
   }
 
   exitTransformModeClean();
@@ -5282,6 +5352,10 @@ function exitTransformModeClean() {
 }
 
 function toggleTransformMode(force = null) {
+  if (isCanvasLayoutLocked) {
+    showToast("🔒 Canvas layout is locked. Click 🔓 in left toolbar to resize or move boxes.", "warning");
+    return;
+  }
   const targetState = force !== null ? force : !isTransformMode;
   if (targetState) {
     enterTransformMode();
@@ -5294,9 +5368,18 @@ function updateTransformUI() {
   const inactiveControls = document.getElementById("transform-controls-inactive");
   const activeControls = document.getElementById("transform-controls-active");
   const toolBtn = document.getElementById("tool-transform");
+  const btnFreeTransform = document.getElementById("btn-free-transform");
+  const lockedNotice = document.getElementById("layout-locked-notice");
 
   if (toolBtn) {
     toolBtn.classList.toggle("active", isTransformMode);
+    toolBtn.classList.toggle("disabled-tool", isCanvasLayoutLocked);
+  }
+  if (btnFreeTransform) {
+    btnFreeTransform.disabled = isCanvasLayoutLocked;
+  }
+  if (lockedNotice) {
+    lockedNotice.style.display = isCanvasLayoutLocked ? "block" : "none";
   }
   if (inactiveControls) {
     inactiveControls.style.display = isTransformMode ? "none" : "block";
@@ -5306,10 +5389,172 @@ function updateTransformUI() {
   }
 }
 
+// ==========================================
+// Image Artwork Scaling, Zoom & Focus Engine
+// ==========================================
+let isImageFocusMode = false;
+
+function toggleInteractiveImageFocusMode(force = null) {
+  const elem = getActiveElement();
+  if (!elem || !isImageElement(elem)) {
+    showToast("⚠️ Select an image on canvas first to adjust artwork scaling & focus", "info");
+    return;
+  }
+  isImageFocusMode = force !== null ? force : !isImageFocusMode;
+
+  // If Box Transform is active, exit it cleanly
+  if (isImageFocusMode && isTransformMode) {
+    commitTransform();
+  }
+
+  document.querySelectorAll(".canvas-element").forEach(el => {
+    el.classList.toggle("interactive-focus-mode", Boolean(isImageFocusMode && el.id === elem.id));
+  });
+
+  updateImageScalingInspectorUI(elem);
+  if (isImageFocusMode) {
+    showToast("✋ Artwork Focus Mode: Drag inside the image to pan | Scroll wheel to zoom", "info");
+  }
+}
+
+function onImageZoomSliderInput(val) {
+  const elem = getActiveElement();
+  if (!elem || !isImageElement(elem)) return;
+  const zoom = Math.max(0.5, Math.min(3.0, parseFloat(val) || 1.0));
+  elem.image_zoom = Math.round(zoom * 100) / 100;
+  applyElementStyles(elem);
+  const zoomVal = document.getElementById("prop-image-zoom-val");
+  if (zoomVal) zoomVal.innerText = `${Math.round(elem.image_zoom * 100)}%`;
+  markProjectDirty();
+}
+
+function stepImageZoom(delta) {
+  const elem = getActiveElement();
+  if (!elem || !isImageElement(elem)) return;
+  const current = typeof elem.image_zoom === "number" ? elem.image_zoom : 1.0;
+  const newZoom = Math.max(0.5, Math.min(3.0, Math.round((current + delta) * 100) / 100));
+  elem.image_zoom = newZoom;
+  applyElementStyles(elem);
+  const zoomRange = document.getElementById("prop-image-zoom-range");
+  const zoomVal = document.getElementById("prop-image-zoom-val");
+  if (zoomRange) zoomRange.value = newZoom;
+  if (zoomVal) zoomVal.innerText = `${Math.round(newZoom * 100)}%`;
+  recordHistoryState("Zoom Artwork");
+  markProjectDirty();
+}
+
+function resetImageZoomOnly() {
+  const elem = getActiveElement();
+  if (!elem || !isImageElement(elem)) return;
+  elem.image_zoom = 1.0;
+  applyElementStyles(elem);
+  const zoomRange = document.getElementById("prop-image-zoom-range");
+  const zoomVal = document.getElementById("prop-image-zoom-val");
+  if (zoomRange) zoomRange.value = 1.0;
+  if (zoomVal) zoomVal.innerText = "100%";
+  recordHistoryState("Reset Artwork Zoom");
+  markProjectDirty();
+  showToast("↺ Artwork zoom reset to 100%", "info");
+}
+
+function setImageFitMode(fit) {
+  const elem = getActiveElement();
+  if (!elem || !isImageElement(elem)) return;
+  elem.image_fit = fit;
+  applyElementStyles(elem);
+  updateImageScalingInspectorUI(elem);
+  recordHistoryState("Set Image Fit Mode");
+  markProjectDirty();
+  showToast(fit === "cover" ? "📐 Fit mode: Fill Box (Cover)" : "🖼️ Fit mode: Fit to Box (Contain)", "info");
+}
+
+function nudgeImagePan(dx, dy) {
+  const elem = getActiveElement();
+  if (!elem || !isImageElement(elem)) return;
+  const curX = typeof elem.image_pan_x === "number" ? elem.image_pan_x : 0;
+  const curY = typeof elem.image_pan_y === "number" ? elem.image_pan_y : 0;
+  elem.image_pan_x = Math.max(-50, Math.min(50, curX + dx));
+  elem.image_pan_y = Math.max(-50, Math.min(50, curY + dy));
+  applyElementStyles(elem);
+  updateImageScalingInspectorUI(elem);
+  recordHistoryState("Pan Artwork");
+  markProjectDirty();
+}
+
+function centerImagePan() {
+  const elem = getActiveElement();
+  if (!elem || !isImageElement(elem)) return;
+  elem.image_pan_x = 0;
+  elem.image_pan_y = 0;
+  applyElementStyles(elem);
+  updateImageScalingInspectorUI(elem);
+  recordHistoryState("Center Artwork Focus");
+  markProjectDirty();
+  showToast("🎯 Artwork focus centered", "info");
+}
+
+function resetImageScalingAndFocus() {
+  const elem = getActiveElement();
+  if (!elem || !isImageElement(elem)) return;
+  elem.image_zoom = 1.0;
+  elem.image_pan_x = 0;
+  elem.image_pan_y = 0;
+  elem.image_fit = "contain";
+  applyElementStyles(elem);
+  updateImageScalingInspectorUI(elem);
+  recordHistoryState("Reset Image Scaling & Focus");
+  markProjectDirty();
+  showToast("↺ Artwork zoom & focus reset", "info");
+}
+
+function updateImageScalingInspectorUI(elem) {
+  if (!elem) return;
+  const zoom = typeof elem.image_zoom === "number" ? elem.image_zoom : 1.0;
+  const panX = typeof elem.image_pan_x === "number" ? elem.image_pan_x : 0;
+  const panY = typeof elem.image_pan_y === "number" ? elem.image_pan_y : 0;
+  const fit = elem.image_fit || "contain";
+
+  const zoomRange = document.getElementById("prop-image-zoom-range");
+  const zoomVal = document.getElementById("prop-image-zoom-val");
+  if (zoomRange) zoomRange.value = zoom;
+  if (zoomVal) zoomVal.innerText = `${Math.round(zoom * 100)}%`;
+
+  const btnFitContain = document.getElementById("btn-fit-contain");
+  const btnFitCover = document.getElementById("btn-fit-cover");
+  if (btnFitContain && btnFitCover) {
+    btnFitContain.classList.toggle("active", fit !== "cover");
+    btnFitCover.classList.toggle("active", fit === "cover");
+  }
+
+  const panVal = document.getElementById("prop-image-pan-val");
+  if (panVal) {
+    if (panX === 0 && panY === 0) {
+      panVal.innerText = "Center (0%, 0%)";
+    } else {
+      panVal.innerText = `X: ${panX > 0 ? '+' : ''}${panX}% | Y: ${panY > 0 ? '+' : ''}${panY}%`;
+    }
+  }
+
+  const btnInteractivePan = document.getElementById("btn-interactive-pan");
+  if (btnInteractivePan) {
+    btnInteractivePan.classList.toggle("active", Boolean(isImageFocusMode && activeElementId === elem.id));
+    btnInteractivePan.innerText = (isImageFocusMode && activeElementId === elem.id)
+      ? "✋ Focus Mode Active (Drag Art on Canvas)"
+      : "✋ Interactive Focus & Pan on Canvas";
+  }
+  const toolFocus = document.getElementById("tool-image-focus");
+  if (toolFocus) {
+    toolFocus.classList.toggle("active", Boolean(isImageFocusMode && activeElementId === elem.id));
+  }
+}
+
 // Drag & Resize Canvas Interactions with Free Transform Engine (Ctrl+T)
 function setupCanvasInteractions() {
   let isDragging = false;
   let isResizing = false;
+  let isPanningArt = false;
+  let artStartX = 0, artStartY = 0;
+  let artStartPanX = 0, artStartPanY = 0;
   let activeHandle = null;
   let startX = 0, startY = 0;
   let elemStart = { x: 0, y: 0, w: 0, h: 0 };
@@ -5385,6 +5630,25 @@ function setupCanvasInteractions() {
           cachedReadout.innerText = "";
         }
       }
+    }
+
+    if (isPanningArt) {
+      const elem = getActiveElement();
+      if (elem && isImageElement(elem)) {
+        const dx = (lastClientX - artStartX) / currentZoom;
+        const dy = (lastClientY - artStartY) / currentZoom;
+        const pctX = (dx / (elem.w || 400)) * 100;
+        const pctY = (dy / (elem.h || 400)) * 100;
+        elem.image_pan_x = Math.max(-50, Math.min(50, Math.round(artStartPanX + pctX)));
+        elem.image_pan_y = Math.max(-50, Math.min(50, Math.round(artStartPanY + pctY)));
+        applyElementStyles(elem);
+        const panVal = document.getElementById("prop-image-pan-val");
+        if (panVal) {
+          panVal.innerText = `X: ${elem.image_pan_x > 0 ? '+' : ''}${elem.image_pan_x}% | Y: ${elem.image_pan_y > 0 ? '+' : ''}${elem.image_pan_y}%`;
+        }
+        hasMoved = true;
+      }
+      return;
     }
 
     const elem = getActiveElement();
@@ -5496,7 +5760,7 @@ function setupCanvasInteractions() {
 
     if (e.target.classList.contains("handle")) {
       if (isCanvasLayoutLocked) {
-        showToast("🔒 Canvas layout is locked. Click Unlock to resize elements.", "warning");
+        showToast("🔒 Canvas layout is locked. Click 🔓 in left toolbar to resize elements.", "warning");
         return;
       }
       const elem = getActiveElement();
@@ -5504,7 +5768,7 @@ function setupCanvasInteractions() {
 
       // If element is an image, scaling handles ONLY work in Ctrl+T Transform Mode!
       if (isImg && (!isTransformMode || elem.id !== transformElementId)) {
-        showToast("💡 Press Ctrl+T or click 'Free Transform' to scale this image", "info");
+        showToast("💡 Press Ctrl+T or click 'Canvas Layout Scaling' to scale this box", "info");
         return;
       }
 
@@ -5527,13 +5791,27 @@ function setupCanvasInteractions() {
       const elem = getActiveElement();
       const isImg = elem && isImageElement(elem);
 
+      // If interactive focus mode is active on this image, allow dragging artwork inside slot!
+      if (isImg && isImageFocusMode) {
+        isPanningArt = true;
+        artStartX = e.clientX;
+        artStartY = e.clientY;
+        artStartPanX = typeof elem.image_pan_x === "number" ? elem.image_pan_x : 0;
+        artStartPanY = typeof elem.image_pan_y === "number" ? elem.image_pan_y : 0;
+        hasMoved = false;
+        isDragging = false;
+        isResizing = false;
+        e.preventDefault();
+        return;
+      }
+
       if (isCanvasLayoutLocked) {
         isDragging = false;
         isResizing = false;
         return;
       }
 
-      // If this is an image, it can ONLY be moved if in Ctrl+T Transform Mode!
+      // If this is an image, its layout box can ONLY be moved if in Ctrl+T Transform Mode!
       if (isImg) {
         if (isTransformMode && clickedId === transformElementId) {
           isDragging = true;
@@ -5567,6 +5845,15 @@ function setupCanvasInteractions() {
     }
   });
 
+  stage.addEventListener("wheel", (e) => {
+    const elem = getActiveElement();
+    if (elem && isImageElement(elem) && (isImageFocusMode || e.altKey)) {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.05 : -0.05;
+      stepImageZoom(delta);
+    }
+  }, { passive: false });
+
   window.addEventListener("mousemove", (e) => {
     lastClientX = e.clientX;
     lastClientY = e.clientY;
@@ -5577,6 +5864,15 @@ function setupCanvasInteractions() {
   }, { passive: true });
 
   window.addEventListener("mouseup", () => {
+    if (isPanningArt) {
+      isPanningArt = false;
+      if (hasMoved) {
+        recordHistoryState("Pan Artwork");
+        markProjectDirty();
+      }
+      return;
+    }
+
     if (isDragging || isResizing) {
       if (hasMoved) {
         if (!isTransformMode) {
@@ -5642,6 +5938,7 @@ function setActiveElement(elemId) {
     if (el.id !== transformElementId) {
       el.classList.remove("transform-mode");
     }
+    el.classList.toggle("interactive-focus-mode", Boolean(isImageFocusMode && el.id === elemId));
   });
   updatePropertiesInspector();
   updateTransformUI();
@@ -5662,6 +5959,19 @@ function applyElementStyles(elem) {
   activeElementNode.style.top = `${elem.y}px`;
   activeElementNode.style.width = `${elem.w}px`;
   activeElementNode.style.height = `${elem.h}px`;
+
+  // Update inner artwork transform & fit for image elements
+  if (isImageElement(elem)) {
+    const imgNode = activeElementNode.querySelector(".inner-artwork-img, img");
+    if (imgNode) {
+      const zoom = typeof elem.image_zoom === "number" ? elem.image_zoom : 1.0;
+      const panX = typeof elem.image_pan_x === "number" ? elem.image_pan_x : 0;
+      const panY = typeof elem.image_pan_y === "number" ? elem.image_pan_y : 0;
+      const fit = elem.image_fit || "contain";
+      imgNode.style.objectFit = fit;
+      imgNode.style.transform = `translate(${panX}%, ${panY}%) scale(${zoom})`;
+    }
+  }
 }
 
 // Properties Inspector Data Binding with Font Selector
@@ -5671,6 +5981,20 @@ function updatePropertiesInspector() {
   const textGroup = document.getElementById("prop-text-group");
   const imgGroup = document.getElementById("prop-image-group");
   const dotGroup = document.getElementById("prop-dot-group");
+
+  const layoutBadge = document.getElementById("canvas-layout-lock-badge");
+  if (layoutBadge) {
+    layoutBadge.innerText = isCanvasLayoutLocked ? "🔒 Locked" : "🔓 Unlocked";
+    layoutBadge.className = isCanvasLayoutLocked ? "badge badge-warning" : "badge badge-success";
+  }
+  const btnFreeTransform = document.getElementById("btn-free-transform");
+  if (btnFreeTransform) {
+    btnFreeTransform.disabled = isCanvasLayoutLocked;
+  }
+  const lockedNotice = document.getElementById("layout-locked-notice");
+  if (lockedNotice) {
+    lockedNotice.style.display = isCanvasLayoutLocked ? "block" : "none";
+  }
 
   if (!elem) {
     if (titleBadge) titleBadge.innerText = "No Selection";
@@ -5749,7 +6073,10 @@ function updatePropertiesInspector() {
     }
   } else if (elem.type === "main_image" || elem.type === "ref_image") {
     if (textGroup) textGroup.style.display = "none";
-    if (imgGroup) imgGroup.style.display = "block";
+    if (imgGroup) {
+      imgGroup.style.display = "block";
+      updateImageScalingInspectorUI(elem);
+    }
     if (dotGroup) dotGroup.style.display = "none";
   } else {
     if (textGroup) textGroup.style.display = "none";

@@ -2009,6 +2009,119 @@ kbd {
   box-shadow: 0 0 10px rgba(37, 99, 235, 0.4) !important;
 }
 
+/* Image Focus & Pan Tool Active */
+#tool-image-focus.active,
+#btn-interactive-pan.active {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+  border-color: #d97706 !important;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4) !important;
+  font-weight: 700 !important;
+}
+
+/* Interactive Image Focus Mode on Canvas Element */
+.canvas-element.interactive-focus-mode {
+  cursor: grab !important;
+  box-shadow: 0 0 0 2px #f59e0b, 0 4px 16px rgba(245, 158, 11, 0.3) !important;
+}
+
+.canvas-element.interactive-focus-mode:active {
+  cursor: grabbing !important;
+}
+
+.canvas-element.interactive-focus-mode::after {
+  content: '✋ Drag to Pan Artwork | Scroll to Zoom';
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.88);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Inner artwork wrapper & image */
+.canvas-image-wrap {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.inner-artwork-img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+  transition: transform 0.05s ease;
+  will-change: transform;
+}
+
+/* Fit Mode Selector Group */
+.fit-mode-toggle-group .fit-btn {
+  background: var(--bg-surface, #ffffff);
+  border: 1.5px solid var(--border, #cbd5e1);
+  color: var(--text-main, #0f172a);
+  font-weight: 600;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.fit-mode-toggle-group .fit-btn.active {
+  background: var(--primary, #4f46e5) !important;
+  border-color: var(--primary, #4f46e5) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+/* Image Pan Directional Grid */
+.image-pan-grid .pan-btn {
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-main, #0f172a);
+  border: 1px solid var(--border, #cbd5e1);
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.image-pan-grid .pan-btn:hover {
+  background: var(--primary-light, #e0e7ff);
+  color: var(--primary, #4f46e5);
+  border-color: var(--primary, #4f46e5);
+}
+
+.image-pan-grid .pan-center-btn {
+  background: var(--bg-subtle, #f1f5f9);
+}
+
+#btn-free-transform:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--bg-subtle, #f1f5f9);
+  color: var(--text-muted, #94a3b8);
+  border-color: var(--border, #cbd5e1);
+}
+
 /* Properties Panel Transform Hint Box */
 .transform-hint-box {
   background: var(--bg-surface, #f8fafc);

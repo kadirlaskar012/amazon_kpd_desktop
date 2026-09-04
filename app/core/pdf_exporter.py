@@ -519,6 +519,46 @@ class KDPPdfExporter:
                                     enhancer = ImageEnhance.Contrast(gray)
                                     img = enhancer.enhance(2.8).convert("RGB")
 
+                                # Apply inner image zoom, pan, and fit mode
+                                zoom = float(elem.get("image_zoom") or 1.0)
+                                pan_x = float(elem.get("image_pan_x") or 0.0)
+                                pan_y = float(elem.get("image_pan_y") or 0.0)
+                                fit_mode = elem.get("image_fit", "contain")
+
+                                if zoom != 1.0 or pan_x != 0.0 or pan_y != 0.0 or fit_mode == "cover":
+                                    orig_w, orig_h = img.size
+                                    if fit_mode == "cover":
+                                        target_ratio = (w / h) if h > 0 else 1.0
+                                        current_ratio = orig_w / orig_h if orig_h > 0 else 1.0
+                                        if current_ratio > target_ratio:
+                                            new_w = int(orig_h * target_ratio)
+                                            crop_x = int((orig_w - new_w) / 2)
+                                            img = img.crop((crop_x, 0, crop_x + new_w, orig_h))
+                                        else:
+                                            new_h = int(orig_w / target_ratio)
+                                            crop_y = int((orig_h - new_h) / 2)
+                                            img = img.crop((0, crop_y, orig_w, crop_y + new_h))
+                                        orig_w, orig_h = img.size
+
+                                    if zoom > 1.0:
+                                        crop_w = int(orig_w / zoom)
+                                        crop_h = int(orig_h / zoom)
+                                        offset_x = int((pan_x / 100.0) * (orig_w - crop_w))
+                                        offset_y = int((pan_y / 100.0) * (orig_h - crop_h))
+                                        cx = int((orig_w - crop_w) / 2) - offset_x
+                                        cy = int((orig_h - crop_h) / 2) - offset_y
+                                        cx = max(0, min(orig_w - crop_w, cx))
+                                        cy = max(0, min(orig_h - crop_h, cy))
+                                        img = img.crop((cx, cy, cx + crop_w, cy + crop_h))
+                                    elif zoom < 1.0:
+                                        scaled_w = max(10, int(orig_w * zoom))
+                                        scaled_h = max(10, int(orig_h * zoom))
+                                        resized = img.resize((scaled_w, scaled_h), Image.Resampling.LANCZOS)
+                                        new_bg = Image.new("RGB", (orig_w, orig_h), (255, 255, 255))
+                                        paste_x = int((orig_w - scaled_w) / 2)
+                                        paste_y = int((orig_h - scaled_h) / 2)
+                                        new_bg.paste(resized, (paste_x, paste_y))
+                                        img = new_bg
 
                                 img_buffer = io.BytesIO()
                                 img.save(img_buffer, format="JPEG", quality=95, dpi=(300, 300))
