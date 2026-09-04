@@ -2290,8 +2290,10 @@ function switchTab(tabId) {
     loadPageIntoCanvas(currentPageIndex);
     renderTimeline();
     renderMediaLibrary();
-    // Auto-fit canvas to available viewport height and width
-    setTimeout(() => { fitCanvasView(); }, 60);
+    // Auto-fit canvas to available viewport height and width immediately with zero flash
+    requestAnimationFrame(() => {
+      fitCanvasView();
+    });
   } else if (tabId === "preview") {
     renderSpreadPreview();
   } else if (tabId === "preflight") {
@@ -5063,25 +5065,43 @@ function setupCanvasInteractions() {
     viewport.addEventListener("scroll", () => { cachedPageRect = null; }, { passive: true });
   }
 
+  let cachedPageNode = null;
+  let cachedReadout = null;
+  let cachedPropInputs = null;
+  let activeElementNode = null;
+
+  function getPropInputs() {
+    if (!cachedPropInputs) {
+      cachedPropInputs = {
+        px: document.getElementById("prop-x"),
+        py: document.getElementById("prop-y"),
+        pw: document.getElementById("prop-w"),
+        ph: document.getElementById("prop-h")
+      };
+    }
+    return cachedPropInputs;
+  }
+
   function updateInspectorCoordsFast(elem) {
-    const px = document.getElementById("prop-x");
-    const py = document.getElementById("prop-y");
-    const pw = document.getElementById("prop-w");
-    const ph = document.getElementById("prop-h");
-    if (px) px.value = (elem.x / 60.0).toFixed(2);
-    if (py) py.value = (elem.y / 60.0).toFixed(2);
-    if (pw) pw.value = (elem.w / 60.0).toFixed(2);
-    if (ph) ph.value = (elem.h / 60.0).toFixed(2);
+    const inp = getPropInputs();
+    if (inp.px) inp.px.value = (elem.x / 60.0).toFixed(2);
+    if (inp.py) inp.py.value = (elem.y / 60.0).toFixed(2);
+    if (inp.pw) inp.pw.value = (elem.w / 60.0).toFixed(2);
+    if (inp.ph) inp.ph.value = (elem.h / 60.0).toFixed(2);
   }
 
   function processCanvasMouseMove() {
     mouseMoveRaf = null;
 
-    // Coordinate readout - strictly when mouse is inside the white canvas page
-    const pageNode = document.getElementById("paper-page");
-    const readout = document.getElementById("coord-readout");
-    if (pageNode && readout) {
-      const rect = pageNode.getBoundingClientRect();
+    if (!cachedPageNode) cachedPageNode = document.getElementById("paper-page");
+    if (!cachedReadout) cachedReadout = document.getElementById("coord-readout");
+
+    // Coordinate readout - cached rect eliminates forced synchronous layout reflows for 120 FPS
+    if (cachedPageNode && cachedReadout) {
+      if (!cachedPageRect) {
+        cachedPageRect = cachedPageNode.getBoundingClientRect();
+      }
+      const rect = cachedPageRect;
       const isInside = (
         rect.width > 0 &&
         lastClientX >= rect.left &&
@@ -5094,11 +5114,15 @@ function setupCanvasInteractions() {
         const pixelY = (lastClientY - rect.top) / currentZoom;
         const curX = Math.max(0, pixelX / 60.0).toFixed(2);
         const curY = Math.max(0, pixelY / 60.0).toFixed(2);
-        readout.style.display = "inline-flex";
-        readout.innerText = `X: ${curX} in | Y: ${curY} in`;
+        if (cachedReadout.style.display !== "inline-flex") {
+          cachedReadout.style.display = "inline-flex";
+        }
+        cachedReadout.innerText = `X: ${curX} in | Y: ${curY} in`;
       } else {
-        readout.style.display = "none";
-        readout.innerText = "";
+        if (cachedReadout.style.display !== "none") {
+          cachedReadout.style.display = "none";
+          cachedReadout.innerText = "";
+        }
       }
     }
 
@@ -5351,6 +5375,7 @@ function setActiveElement(elemId) {
     commitTransform();
   }
   activeElementId = elemId;
+  activeElementNode = elemId ? document.getElementById(elemId) : null;
   document.querySelectorAll(".canvas-element").forEach(el => {
     el.classList.toggle("selected", el.id === elemId);
     if (el.id !== transformElementId) {
@@ -5368,12 +5393,14 @@ function getActiveElement() {
 }
 
 function applyElementStyles(elem) {
-  const elNode = document.getElementById(elem.id);
-  if (!elNode) return;
-  elNode.style.left = `${elem.x}px`;
-  elNode.style.top = `${elem.y}px`;
-  elNode.style.width = `${elem.w}px`;
-  elNode.style.height = `${elem.h}px`;
+  if (!activeElementNode || activeElementNode.id !== elem.id) {
+    activeElementNode = document.getElementById(elem.id);
+  }
+  if (!activeElementNode) return;
+  activeElementNode.style.left = `${elem.x}px`;
+  activeElementNode.style.top = `${elem.y}px`;
+  activeElementNode.style.width = `${elem.w}px`;
+  activeElementNode.style.height = `${elem.h}px`;
 }
 
 // Properties Inspector Data Binding with Font Selector
@@ -6946,9 +6973,9 @@ function fitCanvasView() {
   const vpH = viewport.clientHeight;
   if (vpW < 50 || vpH < 50) return;
 
-  // Actual paper dimensions (510 x 660 standard)
-  const paperW = paper.offsetWidth || 510;
-  const paperH = paper.offsetHeight || 660;
+  // Fixed paper dimensions (510 x 660 standard) - avoids forced layout thrashing
+  const paperW = 510;
+  const paperH = 660;
 
   // Safe padding around canvas for bleed envelope, shadow, and status bar
   const padW = 40;

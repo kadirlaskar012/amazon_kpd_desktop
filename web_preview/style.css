@@ -152,6 +152,13 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.workflow-ribbon::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-btn {
@@ -166,7 +173,8 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
-  transition: all 0.18s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  white-space: nowrap;
 }
 
 .nav-btn .step-num {
@@ -181,7 +189,7 @@ body {
   font-size: 10px;
   font-weight: 700;
   border: 1px solid var(--border);
-  transition: all 0.18s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .nav-btn:hover {
@@ -215,7 +223,7 @@ body {
   cursor: pointer;
   font-size: 11.5px;
   font-weight: 700;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   box-shadow: var(--shadow-sm);
   user-select: none;
 }
@@ -234,7 +242,7 @@ body {
 }
 
 .theme-toggle-btn:hover .theme-icon {
-  transform: rotate(20deg) scale(1.15);
+  transform: rotate(20deg);
 }
 
 .theme-toggle-btn .theme-label {
@@ -315,7 +323,7 @@ html[data-active-tab="canvas"] #header-canvas-actions {
   font-weight: 700;
   color: var(--text-primary);
   cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   user-select: none;
 }
 
@@ -348,7 +356,7 @@ html[data-active-tab="canvas"] #header-canvas-actions {
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -632,7 +640,7 @@ html[data-active-tab]:not([data-active-tab="dashboard"]) .nav-btn[data-tab="dash
   color: var(--text-secondary);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -895,7 +903,7 @@ html[data-active-tab]:not([data-active-tab="dashboard"]) .nav-btn[data-tab="dash
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 12px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   box-shadow: var(--shadow-sm);
 }
 
@@ -1167,7 +1175,7 @@ kbd {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .drawer-tab-btn:hover {
@@ -1226,7 +1234,7 @@ kbd {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 
 .layout-card:hover {
@@ -1467,7 +1475,7 @@ kbd {
   padding: 16px 12px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .media-upload-dropzone:hover {
@@ -1517,7 +1525,7 @@ kbd {
   flex-direction: column;
   gap: 8px;
   position: relative;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .media-card:hover {
@@ -1593,7 +1601,7 @@ kbd {
   padding: 3px 6px;
   font-size: 11px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
   flex-shrink: 0;
 }
 
@@ -1620,7 +1628,7 @@ kbd {
   border-radius: 4px;
   cursor: pointer;
   text-align: center;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1682,7 +1690,7 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .tool-btn:hover {
@@ -1719,7 +1727,8 @@ kbd {
   margin: auto;
   padding: 16px 20px;
   transform-origin: center center;
-  transition: transform 0.1s ease;
+  transition: none;
+  will-change: transform;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1848,6 +1857,7 @@ kbd {
   overflow: hidden;
   background-color: #ffffff;
   will-change: left, top, width, height;
+  contain: layout style;
   user-select: none;
 }
 
@@ -2076,7 +2086,7 @@ kbd {
   font-family: var(--font-main);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   user-select: none;
 }
 
@@ -2348,6 +2358,10 @@ kbd {
   overflow-x: auto;
   overflow-y: hidden;
   padding: 4px 6px 8px 6px;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  contain: content;
+  will-change: scroll-position;
 }
 
 .thumbnails-container::-webkit-scrollbar {
@@ -2386,6 +2400,8 @@ kbd {
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   box-shadow: var(--shadow-sm);
   box-sizing: border-box;
+  contain: content;
+  will-change: transform;
 }
 
 .thumb-card:hover {
@@ -2555,7 +2571,7 @@ kbd {
   justify-content: center;
   cursor: pointer;
   z-index: 5;
-  transition: all 0.18s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
   opacity: 0.6;
 }
 
@@ -2611,7 +2627,7 @@ kbd {
   background: transparent;
   border: none;
   text-align: left;
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .insert-popup-item:hover {
@@ -3000,7 +3016,7 @@ kbd {
   border-radius: 8px;
   padding: 12px 14px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .pick-item:hover {
@@ -3326,7 +3342,7 @@ kbd {
   align-items: center;
   gap: 5px;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
 .fm-tab-btn:hover {
@@ -3739,7 +3755,7 @@ kbd {
   align-items: center;
   justify-content: center;
   overflow: visible !important;
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .elem-dot-to-dot-box:hover {
@@ -4029,7 +4045,7 @@ kbd {
   font-weight: 700;
   padding: 12px 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
 .ai-tab-btn:hover {
@@ -4055,7 +4071,7 @@ kbd {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .niche-card:hover {
@@ -4241,7 +4257,7 @@ kbd {
   flex-direction: column;
   align-items: center;
   position: relative;
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
 .upload-preview-card:hover {
@@ -4361,7 +4377,7 @@ kbd {
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 8px;
   padding: 14px 18px;
-  transition: all 0.25s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .upload-step-card.active-step {
@@ -4542,7 +4558,7 @@ kbd {
   border: none;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
-  transition: all 0.2s ease;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-accent:hover {
@@ -4575,7 +4591,7 @@ kbd {
   border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -4652,7 +4668,7 @@ kbd {
   border-radius: 10px;
   padding: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   display: flex;
   flex-direction: column;
 }
@@ -5118,7 +5134,7 @@ kbd {
   font-weight: 800 !important;
   border: none !important;
   box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4) !important;
-  transition: all 0.25s ease !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
 }
 
 .ai-supercharge-btn:hover {
@@ -5136,7 +5152,7 @@ kbd {
   padding: 8px 18px;
   font-size: 12px;
   border-bottom: 1px solid var(--border);
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
   flex-shrink: 0;
 }
 
@@ -5533,7 +5549,41 @@ kbd {
 /* ===================================================
    Responsive Mobile & Small Screen Optimizations
    =================================================== */
-@media (max-width: 992px) {
+@media (max-width: 1100px) {
+  .left-studio-drawer {
+    width: 270px;
+  }
+  .properties-sidebar {
+    width: 250px;
+  }
+  .hero-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 290px;
+  }
+}
+
+@media (max-width: 900px) {
+  .top-nav {
+    padding: 0 12px;
+    height: 52px;
+    gap: 8px;
+  }
+  .badge-tag {
+    display: none;
+  }
+  .workflow-ribbon {
+    max-width: calc(100vw - 210px);
+  }
+  .dash-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+  }
+  .left-studio-drawer {
+    width: 240px;
+  }
+  .properties-sidebar {
+    width: 230px;
+  }
   .publish-helper-dialog {
     width: 96vw !important;
     max-height: 92vh !important;
@@ -5550,6 +5600,59 @@ kbd {
 }
 
 @media (max-width: 768px) {
+  .top-nav {
+    padding: 0 8px;
+    height: 50px;
+  }
+  .brand-text .brand-name {
+    display: none;
+  }
+  .workflow-ribbon {
+    max-width: calc(100vw - 120px);
+    gap: 4px;
+  }
+  .nav-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+    gap: 4px;
+  }
+  .nav-btn .step-num {
+    width: 17px;
+    height: 17px;
+    font-size: 9px;
+  }
+  .dashboard-hero {
+    padding: 16px 18px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .hero-stats-grid {
+    grid-template-columns: 1fr;
+    min-width: 0;
+    width: 100%;
+  }
+  .canvas-toolbar {
+    width: 38px;
+    padding: 6px 0;
+    gap: 5px;
+  }
+  .tool-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+  .left-studio-drawer {
+    width: 200px;
+  }
+  .properties-sidebar {
+    width: 200px;
+  }
+  .modal-card, .modal-box {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    border-radius: 12px;
+  }
   .publish-helper-dialog {
     width: 98vw !important;
     max-height: 94vh !important;
@@ -5599,5 +5702,45 @@ kbd {
   .cover-wrap-canvas {
     transform: scale(0.65);
     transform-origin: top center;
+  }
+}
+
+@media (max-width: 600px) {
+  .left-studio-drawer {
+    display: none !important;
+  }
+  .properties-sidebar {
+    display: none !important;
+  }
+  .canvas-workspace {
+    flex-direction: row;
+  }
+  .canvas-toolbar {
+    width: 34px;
+    padding: 4px 0;
+  }
+  .tool-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+  .canvas-stage {
+    padding: 8px;
+  }
+  .timeline-bar {
+    padding: 6px 8px;
+    height: auto;
+  }
+  .timeline-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .timeline-actions {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .timeline-actions .btn {
+    padding: 4px 8px;
+    font-size: 11px;
   }
 }
