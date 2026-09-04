@@ -842,7 +842,7 @@ function loadInitialProject() {
             if (loadData.project) {
               currentProject = loadData.project;
               try {
-                localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
+                safeSaveProjectToStorage(currentProject);
               } catch (e) {}
             } else {
               currentProject.name = matchedProj.name;
@@ -903,6 +903,82 @@ function updateAutoSaveIndicator(saving) {
   }
 }
 
+// Safe Storage Helper to prevent QuotaExceededError from large base64 media
+function getSanitizedProjectForStorage(project) {
+  if (!project) return null;
+  try {
+    const sanitized = { ...project };
+
+    // In media array, strip huge raw dataUrl base64 strings so localStorage never exceeds 5MB
+    if (Array.isArray(sanitized.media)) {
+      sanitized.media = sanitized.media.map(item => {
+        const copy = { ...item };
+        if (copy.dataUrl && copy.dataUrl.length > 2048 && copy.dataUrl.startsWith("data:")) {
+          copy.dataUrl = `/api/projects/asset?project_dir=${encodeURIComponent(sanitized.project_dir || "")}&filename=${encodeURIComponent(copy.fileName || copy.name || "")}`;
+        }
+        return copy;
+      });
+    }
+
+    // In pages elements, sanitize if image_src is huge base64
+    if (Array.isArray(sanitized.pages)) {
+      sanitized.pages = sanitized.pages.map(page => {
+        if (!page.elements) return page;
+        const pCopy = { ...page };
+        pCopy.elements = pCopy.elements.map(el => {
+          if (el.image_src && el.image_src.length > 2048 && el.image_src.startsWith("data:")) {
+            const elCopy = { ...el };
+            if (el.text) {
+              elCopy.image_src = `/api/projects/asset?project_dir=${encodeURIComponent(sanitized.project_dir || "")}&filename=${encodeURIComponent(el.text + ".png")}`;
+            }
+            return elCopy;
+          }
+          return el;
+        });
+        return pCopy;
+      });
+    }
+
+    return sanitized;
+  } catch (e) {
+    console.warn("Error sanitizing project for storage:", e);
+    return project;
+  }
+}
+
+function safeSaveProjectToStorage(project) {
+  if (!project) return;
+  try {
+    if (project.project_dir) {
+      localStorage.setItem("kdp_active_project_path", project.project_dir);
+    }
+    const cleanProj = getSanitizedProjectForStorage(project);
+    const jsonStr = JSON.stringify(cleanProj);
+
+    try {
+      localStorage.setItem("kdp_active_project_data", jsonStr);
+      localStorage.setItem("kdp_autosave_current_project", jsonStr);
+      if (project.folder_name) {
+        localStorage.setItem(`kdp_project_${project.folder_name}`, jsonStr);
+      }
+    } catch (quotaErr) {
+      console.warn("Storage quota exceeded, storing minimal metadata:", quotaErr);
+      const minimal = {
+        name: project.name,
+        folder_name: project.folder_name,
+        project_dir: project.project_dir,
+        book_type: project.book_type,
+        pages_count: project.pages?.length || 0,
+        settings: project.settings,
+        is_locked: project.is_locked
+      };
+      localStorage.setItem("kdp_active_project_data", JSON.stringify(minimal));
+    }
+  } catch (e) {
+    console.warn("safeSaveProjectToStorage failed:", e);
+  }
+}
+
 function saveProject(isManual = false) {
   if (currentProject.is_locked) {
     if (isManual) showToast("🔒 Project is locked (Read-Only)!", "warning");
@@ -910,17 +986,7 @@ function saveProject(isManual = false) {
   }
 
   currentProject.updated_at = new Date().toISOString();
-  
-  try {
-    localStorage.setItem("kdp_active_project_path", currentProject.project_dir);
-    localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
-    localStorage.setItem("kdp_autosave_current_project", JSON.stringify(currentProject));
-    if (currentProject.folder_name) {
-      localStorage.setItem(`kdp_project_${currentProject.folder_name}`, JSON.stringify(currentProject));
-    }
-  } catch (e) {
-    console.warn("LocalStorage save error:", e);
-  }
+  safeSaveProjectToStorage(currentProject);
 
   fetch("/api/projects/save", {
     method: "POST",
@@ -1716,7 +1782,7 @@ function toggleActiveProjectLock() {
     fetchRecentProjects();
   }).catch(() => {});
 
-  localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
+  safeSaveProjectToStorage(currentProject);
   showToast(currentProject.is_locked ? `🔒 Locked "${currentProject.name}"!` : `🔓 Unlocked "${currentProject.name}"!`, "info");
 }
 
@@ -1731,7 +1797,7 @@ function toggleProjectLock(path) {
     if (currentProject.project_dir === path) {
       currentProject.is_locked = Boolean(data.is_locked);
       syncActiveProjectUI();
-      localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
+      safeSaveProjectToStorage(currentProject);
     }
     fetchRecentProjects();
     showToast(data.is_locked ? "🔒 Project Locked!" : "🔓 Project Unlocked!", "info");
@@ -2355,9 +2421,7 @@ function syncActiveProjectUI() {
   const hasProject = Boolean(currentProject && currentProject.name && !currentProject.is_empty && currentProject.project_dir);
 
   if (hasProject) {
-    try {
-      localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
-    } catch (e) {}
+    safeSaveProjectToStorage(currentProject);
   }
 
   const navProjName = document.getElementById("nav-project-name");
@@ -3075,8 +3139,7 @@ function finishProjectSetup(proj) {
   redoStack = [];
 
   renumberPages();
-  localStorage.setItem("kdp_active_project_path", currentProject.project_dir);
-  localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
+  safeSaveProjectToStorage(currentProject);
 
   closeModal("new-project-modal");
   syncActiveProjectUI();
@@ -3108,8 +3171,7 @@ function openProjectByPath(path) {
       redoStack = [];
 
       renumberPages();
-      localStorage.setItem("kdp_active_project_path", currentProject.project_dir);
-      localStorage.setItem("kdp_active_project_data", JSON.stringify(currentProject));
+      safeSaveProjectToStorage(currentProject);
 
       closeModal("open-folder-modal");
       syncActiveProjectUI();
@@ -4057,32 +4119,37 @@ function renderMediaLibrary() {
     const isSelected = selectedMediaIds.has(item.id);
     const card = document.createElement("div");
     card.className = `media-card ${isSelected ? 'selected' : ''}`;
+    card.setAttribute("draggable", "true");
+    card.ondragstart = (e) => handleMediaDragStart(e, item.id);
+    card.ondragend = (e) => card.classList.remove("dragging");
+
+    const assetUrl = item.dataUrl || `/api/projects/asset?project_dir=${encodeURIComponent(currentProject.project_dir || "")}&filename=${encodeURIComponent(item.fileName || item.name || "")}`;
 
     card.innerHTML = `
       <div class="media-card-top">
         <input type="checkbox" class="media-card-checkbox" data-id="${item.id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleMediaSelection('${item.id}', this.checked)">
-        <div class="media-card-thumb" onclick="handleMediaCardClick('${item.id}')" style="cursor: pointer;">
-          <img src="${item.dataUrl}">
+        <div class="media-card-thumb" onclick="handleMediaCardClick('${item.id}')" style="cursor: pointer;" title="Click or Drag onto any canvas box">
+          <img src="${assetUrl}" draggable="false">
         </div>
-        <div class="media-card-meta" onclick="handleMediaCardClick('${item.id}')" style="cursor: pointer;">
+        <div class="media-card-meta" onclick="handleMediaCardClick('${item.id}')" style="cursor: pointer;" title="Click or Drag onto any canvas box">
           <div class="media-name" title="${item.name}">${item.name}</div>
-          <div class="media-tag">${item.sizeKb} KB • ${currentProject.folder_name}</div>
+          <div class="media-tag">${item.sizeKb || 0} KB • ${currentProject.folder_name}</div>
         </div>
         <button class="media-card-delete-btn" onclick="event.stopPropagation(); deleteSingleMedia('${item.id}')" title="Delete this image">
           🗑
         </button>
       </div>
       <div class="media-action-buttons">
-        <button class="btn-action-pill ref-btn" onclick="applyMediaToSlot('${item.id}', 'ref')">
+        <button class="btn-action-pill ref-btn" onclick="applyMediaToSlot('${item.id}', 'ref')" title="Set as Color Reference Guide">
           🎯 1. Reference
         </button>
-        <button class="btn-action-pill drawing-btn" onclick="applyMediaToSlot('${item.id}', 'drawing')">
+        <button class="btn-action-pill drawing-btn" onclick="applyMediaToSlot('${item.id}', 'drawing')" title="Set as Coloring Drawing Area">
           🎨 2. Drawing
         </button>
-        <button class="btn-action-pill" onclick="applyMediaToSlot('${item.id}', 'title')">
+        <button class="btn-action-pill" onclick="applyMediaToSlot('${item.id}', 'title')" title="Set page title to image name">
           🔤 3. Title Text
         </button>
-        <button class="btn-action-pill all-btn" onclick="applyMediaToSlot('${item.id}', 'all')">
+        <button class="btn-action-pill all-btn" onclick="applyMediaToSlot('${item.id}', 'all')" title="Fill Reference, Drawing & Title together">
           ⚡ Apply All 3 (Ref + Draw + Title)
         </button>
       </div>
@@ -4096,15 +4163,94 @@ function renderMediaLibrary() {
   populateQuickMediaPicker();
 }
 
+function handleMediaDragStart(e, mediaId) {
+  e.dataTransfer.setData("application/kdp-media-id", mediaId);
+  e.dataTransfer.setData("text/plain", mediaId);
+  e.dataTransfer.effectAllowed = "copy";
+  const target = e.target.closest(".media-card");
+  if (target) target.classList.add("dragging");
+}
+
 function handleMediaCardClick(mediaId) {
   const activeElem = getActiveElement();
-  if (activeElem && activeElem.type === "ref_image") {
-    applyMediaToSlot(mediaId, "ref");
-  } else if (activeElem && activeElem.type === "main_image") {
-    applyMediaToSlot(mediaId, "drawing");
-  } else {
-    applyMediaToSlot(mediaId, "drawing");
+  if (activeElem) {
+    if (activeElem.type === "ref_image") {
+      applyMediaToSlot(mediaId, "ref");
+      return;
+    } else if (activeElem.type === "main_image") {
+      applyMediaToSlot(mediaId, "drawing");
+      return;
+    }
   }
+
+  // If no element is actively selected, intelligently detect empty slots on the page
+  const page = currentProject.pages ? currentProject.pages[currentPageIndex] : null;
+  if (page && page.elements) {
+    const emptyRef = page.elements.find(e => e.type === "ref_image" && !e.image_src);
+    const emptyMain = page.elements.find(e => e.type === "main_image" && !e.image_src);
+
+    const item = (currentProject.media || []).find(m => m.id === mediaId);
+    const isColorRef = item && (
+      (item.name && /color|ref|guide/i.test(item.name)) || 
+      (item.fileName && /color|ref|guide/i.test(item.fileName))
+    );
+
+    if (emptyRef && !emptyMain) {
+      applyMediaToSlot(mediaId, "ref");
+      return;
+    }
+    if (emptyMain && !emptyRef) {
+      applyMediaToSlot(mediaId, "drawing");
+      return;
+    }
+    if (emptyRef && emptyMain) {
+      if (isColorRef) {
+        applyMediaToSlot(mediaId, "ref");
+      } else {
+        applyMediaToSlot(mediaId, "drawing");
+      }
+      return;
+    }
+  }
+
+  // Default fallback to drawing
+  applyMediaToSlot(mediaId, "drawing");
+}
+
+function applyMediaToElement(mediaId, elementId) {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    return;
+  }
+  const item = (currentProject.media || []).find(m => m.id === mediaId);
+  if (!item) return;
+
+  const page = currentProject.pages ? currentProject.pages[currentPageIndex] : null;
+  if (!page || page.page_type === "blank_verso") return;
+
+  const imgSrc = item.dataUrl || `/api/projects/asset?project_dir=${encodeURIComponent(currentProject.project_dir || "")}&filename=${encodeURIComponent(item.fileName || item.name || "")}`;
+  const labelText = item.name;
+
+  let targetElem = (page.elements || []).find(e => e.id === elementId);
+  if (!targetElem && activeElementId) {
+    targetElem = (page.elements || []).find(e => e.id === activeElementId);
+  }
+
+  if (targetElem) {
+    recordHistoryState(`Apply Media to ${targetElem.type}`);
+    targetElem.image_src = imgSrc;
+    targetElem.text = labelText;
+    setActiveElement(targetElem.id);
+    showToast(`✨ Applied "${item.name}" to canvas slot!`, "success");
+  } else {
+    handleMediaCardClick(mediaId);
+    return;
+  }
+
+  renumberPages();
+  markProjectDirty();
+  loadPageIntoCanvas(currentPageIndex);
+  renderTimeline();
 }
 
 async function applyMediaToSlot(mediaId, slotType) {
@@ -4119,7 +4265,7 @@ async function applyMediaToSlot(mediaId, slotType) {
   const page = currentProject.pages[currentPageIndex];
   if (!page || page.page_type === "blank_verso") return;
 
-  const imgSrc = item.dataUrl;
+  const imgSrc = item.dataUrl || `/api/projects/asset?project_dir=${encodeURIComponent(currentProject.project_dir || "")}&filename=${encodeURIComponent(item.fileName || item.name || "")}`;
   const labelText = item.name;
   const isDotProject = (currentProject.book_type === "dot_to_dot" || page.layout === "dot_to_dot");
 
@@ -4192,7 +4338,13 @@ async function applyMediaToSlot(mediaId, slotType) {
   recordHistoryState(`Apply Media (${slotType})`);
 
   if (slotType === "ref") {
-    let refElem = page.elements.find(e => e.type === "ref_image");
+    let refElem = null;
+    if (activeElementId) {
+      refElem = page.elements.find(e => e.id === activeElementId && (e.type === "ref_image" || e.type === "main_image"));
+    }
+    if (!refElem) {
+      refElem = page.elements.find(e => e.type === "ref_image");
+    }
     if (!refElem) {
       refElem = { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: labelText, image_src: null };
       page.elements.push(refElem);
@@ -4203,7 +4355,18 @@ async function applyMediaToSlot(mediaId, slotType) {
     showToast(`🎯 Set "${item.name}" as Reference Image!`, "success");
   } 
   else if (slotType === "drawing") {
-    let mainElem = page.elements.find(e => e.type === "main_image");
+    let mainElem = null;
+    if (activeElementId) {
+      mainElem = page.elements.find(e => e.id === activeElementId && (e.type === "main_image" || e.type === "ref_image"));
+    }
+    if (!mainElem) {
+      // Find first empty main_image slot
+      mainElem = page.elements.find(e => e.type === "main_image" && !e.image_src);
+    }
+    if (!mainElem) {
+      // Fallback to any main_image slot
+      mainElem = page.elements.find(e => e.type === "main_image");
+    }
     if (!mainElem) {
       mainElem = { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: labelText, image_src: null };
       page.elements.push(mainElem);
@@ -4619,6 +4782,17 @@ function deleteCustomLayout(layoutId, event) {
 // ==========================================
 // Page Canvas Loader & Elements
 // ==========================================
+function handleCanvasPlaceholderClick(elemId, slotType) {
+  setActiveElement(elemId);
+  const mediaCount = (currentProject.media || []).length;
+  if (mediaCount > 0) {
+    switchDrawerTab("media");
+    showToast(`🎯 Selected ${slotType === 'ref' ? 'Reference Image' : 'Drawing Area'} box! Click or drag an image from the Project Media panel on the left.`, "info");
+  } else {
+    triggerMediaUpload();
+  }
+}
+
 function loadPageIntoCanvas(index) {
   if (!currentProject.pages || currentProject.pages.length === 0) return;
   
@@ -4636,6 +4810,26 @@ function loadPageIntoCanvas(index) {
 
   updateLayoutCardsActiveState(page.layout || "kdp_top_ref");
   updateCanvasLayoutLockUI();
+
+  // Setup paper-page drop listener if not attached
+  const paper = document.getElementById("paper-page");
+  if (paper && !paper.__hasMediaDropListeners) {
+    paper.__hasMediaDropListeners = true;
+    paper.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    });
+    paper.addEventListener("drop", (e) => {
+      // If dropped directly on paper rather than an element
+      if (e.target === paper || e.target.id === "elements-layer" || e.target.id === "guides-layer") {
+        e.preventDefault();
+        const mediaId = e.dataTransfer.getData("application/kdp-media-id") || e.dataTransfer.getData("text/plain");
+        if (mediaId) {
+          handleMediaCardClick(mediaId);
+        }
+      }
+    });
+  }
 
   // If this is a Blank Back Page (Verso)
   if (page.page_type === "blank_verso") {
@@ -4664,16 +4858,39 @@ function loadPageIntoCanvas(index) {
     elDiv.style.width = `${elem.w}px`;
     elDiv.style.height = `${elem.h}px`;
 
+    // Drag-and-drop drop zone on image elements
+    if (elem.type === "ref_image" || elem.type === "main_image" || elem.type === "dot_to_dot") {
+      elDiv.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = "copy";
+        elDiv.classList.add("drop-target-active");
+      });
+      elDiv.addEventListener("dragleave", (e) => {
+        e.stopPropagation();
+        elDiv.classList.remove("drop-target-active");
+      });
+      elDiv.addEventListener("drop", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        elDiv.classList.remove("drop-target-active");
+        const mediaId = e.dataTransfer.getData("application/kdp-media-id") || e.dataTransfer.getData("text/plain");
+        if (mediaId) {
+          applyMediaToElement(mediaId, elem.id);
+        }
+      });
+    }
+
     if (elem.type === "ref_image") {
       elDiv.classList.add("elem-ref-box");
       if (elem.image_src) {
-        elDiv.innerHTML = `<img src="${elem.image_src}">`;
+        elDiv.innerHTML = `<img src="${elem.image_src}" draggable="false">`;
       } else {
         elDiv.innerHTML = `
-          <div class="placeholder-hint" onclick="event.stopPropagation(); setActiveElement('${elem.id}'); triggerMediaUpload();" style="cursor: pointer;" title="Click to Upload Reference Image">
+          <div class="placeholder-hint" onclick="event.stopPropagation(); handleCanvasPlaceholderClick('${elem.id}', 'ref');" style="cursor: pointer;" title="Click or Drag an image here">
             <span class="icon">📷</span>
             <span class="txt">Ref Image</span>
-            <span class="sub">➕ Click to Upload</span>
+            <span class="sub">➕ Click or Drag Image Here</span>
           </div>
         `;
       }
@@ -4689,13 +4906,13 @@ function loadPageIntoCanvas(index) {
     } else if (elem.type === "main_image") {
       elDiv.classList.add("elem-main-box");
       if (elem.image_src) {
-        elDiv.innerHTML = `<img src="${elem.image_src}">`;
+        elDiv.innerHTML = `<img src="${elem.image_src}" draggable="false">`;
       } else {
         elDiv.innerHTML = `
-          <div class="placeholder-hint" onclick="event.stopPropagation(); setActiveElement('${elem.id}'); triggerMediaUpload();" style="cursor: pointer;" title="Click to Upload Drawing Artwork">
+          <div class="placeholder-hint" onclick="event.stopPropagation(); handleCanvasPlaceholderClick('${elem.id}', 'drawing');" style="cursor: pointer;" title="Click or Drag artwork here">
             <span class="icon">🎨</span>
-            <span class="txt">Drawing Area (75%)</span>
-            <span class="sub">➕ Click to Upload Artwork</span>
+            <span class="txt">Drawing Area</span>
+            <span class="sub">➕ Click or Drag Artwork Here</span>
           </div>
         `;
       }
@@ -4715,10 +4932,10 @@ function loadPageIntoCanvas(index) {
         elDiv.innerHTML = renderDotToDotSvgHtml(pData, elem.w, elem.h, page);
       } else {
         elDiv.innerHTML = `
-          <div class="placeholder-hint" onclick="event.stopPropagation(); setActiveElement('${elem.id}'); triggerMediaUpload();" style="cursor: pointer;" title="Click to Upload Reference Image to Convert to Dot-to-Dot">
+          <div class="placeholder-hint" onclick="event.stopPropagation(); handleCanvasPlaceholderClick('${elem.id}', 'drawing');" style="cursor: pointer;" title="Click or Drag image to convert to Dot-to-Dot">
             <span class="icon">🔢</span>
             <span class="txt">Dot-to-Dot Puzzle Area</span>
-            <span class="sub">➕ Click to Upload Artwork to Convert</span>
+            <span class="sub">➕ Click or Drag Image Here</span>
           </div>
         `;
       }

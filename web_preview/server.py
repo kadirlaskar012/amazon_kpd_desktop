@@ -192,6 +192,36 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                 data["project_dir"] = str(json_file.parent)
                 data["folder_name"] = json_file.parent.name
                 
+                # Auto-discover any media files in project_dir/media and project_dir/assets
+                media_list = data.get("media", [])
+                existing_names = {m.get("fileName") or m.get("name") for m in media_list if isinstance(m, dict)}
+                
+                proj_dir = json_file.parent
+                search_dirs = [proj_dir / "media", proj_dir / "assets"]
+                for s_dir in search_dirs:
+                    if s_dir.exists():
+                        for img_file in s_dir.iterdir():
+                            if img_file.is_file() and img_file.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp', '.svg'):
+                                if img_file.name not in existing_names:
+                                    try:
+                                        with open(img_file, "rb") as im_f:
+                                            b64_data = base64.b64encode(im_f.read()).decode("utf-8")
+                                        ext = img_file.suffix.lower().lstrip(".")
+                                        if ext == "jpg": ext = "jpeg"
+                                        elif ext == "svg": ext = "svg+xml"
+                                        data_uri = f"data:image/{ext};base64,{b64_data}"
+                                        media_list.append({
+                                            "id": f"med_disk_{int(img_file.stat().st_mtime * 1000)}_{img_file.stem}",
+                                            "name": img_file.stem.replace("_", " ").title(),
+                                            "fileName": img_file.name,
+                                            "dataUrl": data_uri,
+                                            "sizeKb": round(img_file.stat().st_size / 1024, 1)
+                                        })
+                                        existing_names.add(img_file.name)
+                                    except Exception:
+                                        pass
+                data["media"] = media_list
+
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
@@ -202,6 +232,39 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": f"Project not found at {json_file}"}).encode("utf-8"))
+                return
+
+        elif req_path == "/api/projects/asset":
+            query_params = urllib.parse.parse_qs(parsed.query)
+            raw_path = query_params.get("path", [""])[0]
+            proj_dir = query_params.get("project_dir", [""])[0]
+            filename = query_params.get("filename", [""])[0]
+            
+            target_file = None
+            if raw_path and Path(raw_path).exists():
+                target_file = Path(raw_path)
+            elif proj_dir and filename:
+                p = Path(proj_dir) / "media" / filename
+                if not p.exists():
+                    p = Path(proj_dir) / "assets" / filename
+                if p.exists():
+                    target_file = p
+
+            if target_file and target_file.exists():
+                mime_type, _ = mimetypes.guess_type(target_file.name)
+                if not mime_type:
+                    mime_type = "image/png"
+                self.send_response(200)
+                self.send_header("Content-Type", mime_type)
+                self.send_header("Content-Length", str(target_file.stat().st_size))
+                self.send_header("Cache-Control", "public, max-age=3600")
+                self.end_headers()
+                with open(target_file, "rb") as f:
+                    shutil.copyfileobj(f, self.wfile)
+                return
+            else:
+                self.send_response(404)
+                self.end_headers()
                 return
 
         elif req_path.startswith("/api/exports/") or req_path == "/api/exports":
