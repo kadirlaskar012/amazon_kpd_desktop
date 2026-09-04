@@ -2098,7 +2098,6 @@ kbd {
 .elem-title-box.outline-style {
   color: #ffffff !important;
   -webkit-text-stroke: 2.5px #0f172a !important;
-  text-stroke: 2.5px #0f172a !important;
   font-weight: 900 !important;
   letter-spacing: 3px !important;
   text-shadow: 0 0 1px rgba(0,0,0,0.2);
