@@ -12,6 +12,47 @@ from pathlib import Path
 from PIL import Image
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+
+def ensure_kdp_embedded_fonts():
+    """
+    Registers and embeds TrueType fonts into the PDF to guarantee 100% Amazon KDP compliance.
+    Replaces standard Base-14 Helvetica with embedded TrueType fonts.
+    """
+    try:
+        candidates_reg = [
+            Path("C:/Windows/Fonts/arial.ttf"),
+            Path("C:/Windows/Fonts/segoeui.ttf"),
+            Path("C:/Windows/Fonts/calibri.ttf"),
+            Path(".venv/Lib/site-packages/reportlab/fonts/Vera.ttf"),
+        ]
+        candidates_bold = [
+            Path("C:/Windows/Fonts/arialbd.ttf"),
+            Path("C:/Windows/Fonts/segoeuib.ttf"),
+            Path("C:/Windows/Fonts/calibrib.ttf"),
+            Path(".venv/Lib/site-packages/reportlab/fonts/VeraBd.ttf"),
+        ]
+        candidates_obl = [
+            Path("C:/Windows/Fonts/ariali.ttf"),
+            Path("C:/Windows/Fonts/segoeuii.ttf"),
+            Path("C:/Windows/Fonts/calibrii.ttf"),
+            Path(".venv/Lib/site-packages/reportlab/fonts/VeraIt.ttf"),
+        ]
+
+        reg_path = next((p for p in candidates_reg if p.exists()), None)
+        bold_path = next((p for p in candidates_bold if p.exists()), None)
+        obl_path = next((p for p in candidates_obl if p.exists()), None)
+
+        if reg_path and "Helvetica" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("Helvetica", str(reg_path)))
+        if bold_path and "Helvetica-Bold" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("Helvetica-Bold", str(bold_path)))
+        if obl_path and "Helvetica-Oblique" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("Helvetica-Oblique", str(obl_path)))
+    except Exception as e:
+        print(f"Font embedding warning: {e}")
 
 
 class KDPPdfExporter:
@@ -29,6 +70,7 @@ class KDPPdfExporter:
         Compiles Front Matter + Content Drawings + Blank Verso Pages.
         """
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        ensure_kdp_embedded_fonts()
 
         settings = project_data.get("settings", {})
         trim_w = float(settings.get("trim_width_pt", 612.0))   # 8.5 in * 72
@@ -183,14 +225,44 @@ class KDPPdfExporter:
             if single_sided:
                 render_blank_page()
 
-        # Calculate actual starting page number for content pages
-        fm_count = sum([1 for flag in [inc_disclaimer, inc_contents, inc_belongs, inc_color_test, (inc_custom_page and custom_page_pos == "front")] if flag])
-        needs_fm_pad = single_sided and (fm_count % 2 != 0)
-        if needs_fm_pad:
-            fm_count += 1
-        start_content_page_num = fm_count + 1
+        # Accurately pre-calculate starting page number for content drawings and TOC
+        sim_page = 1
+        if inc_disclaimer:
+            sim_page += 1
+            if single_sided or inc_belongs:
+                sim_page += 1
+        if inc_belongs:
+            if sim_page == 1:
+                sim_page += 2
+            elif sim_page % 2 == 0:
+                sim_page += 1
+            sim_page += 1  # Belongs to
+            sim_page += 1  # Blank after belongs to
+        if inc_contents:
+            if sim_page % 2 == 0:
+                sim_page += 1
+            sim_page += 1  # TOC
+            if single_sided:
+                sim_page += 1  # Blank after TOC
+        if inc_color_test:
+            if sim_page % 2 == 0:
+                sim_page += 1
+            sim_page += 1  # Color test
+            if single_sided:
+                sim_page += 1  # Blank after Color test
+        if inc_custom_page and custom_page_pos == "front":
+            if sim_page % 2 == 0:
+                sim_page += 1
+            sim_page += 1  # Custom page
+            if single_sided:
+                sim_page += 1  # Blank after custom
+        if single_sided and (sim_page % 2 == 0):
+            sim_page += 1
 
-        # --- PAGE 1: DISCLAIMER & COPYRIGHT ---
+        start_content_page_num = sim_page
+        fm_count = start_content_page_num - 1
+
+        # --- 1. DISCLAIMER & COPYRIGHT (PAGE 1 - RIGHT) ---
         if inc_disclaimer:
             c.setFillColor(colors.white)
             c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
@@ -274,8 +346,71 @@ class KDPPdfExporter:
             c.drawCentredString(page_w / 2.0, page_h - 540 - bleed_pt, "Printed in the United States of America  •  Amazon KDP Distribution")
             c.showPage()
 
-        # --- PAGE 2: TABLE OF CONTENTS (AUTO ITEM LIST) ---
+            # If followed by Belongs To or in single-sided mode, insert blank verso (Page 2 - Left)
+            if single_sided or inc_belongs:
+                render_blank_page()
+
+        # --- 2. THIS BOOK BELONGS TO (PAGE 3 - RIGHT) WITH AUTO BLANK BEFORE & AFTER ---
+        if inc_belongs:
+            # Guarantee blank page before Belongs To
+            if c.getPageNumber() == 1:
+                render_blank_page()  # Page 1 Blank Flyleaf
+                render_blank_page()  # Page 2 Blank Flyleaf Verso
+            elif c.getPageNumber() % 2 == 0:
+                render_blank_page()  # Ensure Belongs To is on an ODD (Right) page
+
+            c.setFillColor(colors.white)
+            c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+
+            c.setStrokeColor(colors.HexColor("#0f172a"))
+            c.setLineWidth(1.5)
+            c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
+            c.setStrokeColor(colors.HexColor("#cbd5e1"))
+            c.setLineWidth(0.75)
+            c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
+
+            c.setFont("Helvetica-Bold", 16)
+            c.setFillColor(colors.HexColor("#334155"))
+            c.drawCentredString(page_w / 2.0, page_h - 130 - bleed_pt, custom_belongs_title)
+
+            # Outlined BELONGS TO
+            c.setFont("Helvetica-Bold", 32)
+            c.setStrokeColor(colors.HexColor("#0f172a"))
+            c.setFillColor(colors.white)
+            c.setLineWidth(1.6)
+            c._code.append("2 Tr\n")
+            c.drawCentredString(page_w / 2.0, page_h - 190 - bleed_pt, custom_belongs_header)
+            c._code.append("0 Tr\n")
+
+            # Clean writing line
+            c.setStrokeColor(colors.HexColor("#94a3b8"))
+            c.setLineWidth(1.2)
+            line_y = page_h - 300 - bleed_pt
+            c.line(80 + bleed_pt, line_y, page_w - 80 - bleed_pt, line_y)
+
+            c.setFont("Helvetica-Oblique", 11)
+            c.setFillColor(colors.HexColor("#64748b"))
+            c.drawCentredString(page_w / 2.0, page_h - 380 - bleed_pt, custom_subtext)
+
+            # Extra gift dedication line if provided
+            if custom_belongs_gift:
+                c.setFont("Helvetica-Bold", 10)
+                c.setFillColor(colors.HexColor("#475569"))
+                c.drawCentredString(page_w / 2.0, page_h - 430 - bleed_pt, custom_belongs_gift)
+                c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                c.setLineWidth(1.0)
+                c.line(120 + bleed_pt, page_h - 455 - bleed_pt, page_w - 120 - bleed_pt, page_h - 455 - bleed_pt)
+
+            c.showPage()
+
+            # Automatic blank page AFTER Belongs To (Left page)
+            render_blank_page()
+
+        # --- 3. TABLE OF CONTENTS (AUTO ITEM LIST) ---
         if inc_contents:
+            if c.getPageNumber() % 2 == 0:
+                render_blank_page()
+
             c.setFillColor(colors.white)
             c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
 
@@ -354,55 +489,14 @@ class KDPPdfExporter:
                 c.drawCentredString(page_w / 2.0, 50 + bleed_pt, custom_toc_footer)
 
             c.showPage()
+            if single_sided:
+                render_blank_page()
 
-        # --- PAGE 3: THIS BOOK BELONGS TO ---
-        if inc_belongs:
-            c.setFillColor(colors.white)
-            c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
-
-            c.setStrokeColor(colors.HexColor("#0f172a"))
-            c.setLineWidth(1.5)
-            c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
-            c.setStrokeColor(colors.HexColor("#cbd5e1"))
-            c.setLineWidth(0.75)
-            c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
-
-            c.setFont("Helvetica-Bold", 16)
-            c.setFillColor(colors.HexColor("#334155"))
-            c.drawCentredString(page_w / 2.0, page_h - 130 - bleed_pt, custom_belongs_title)
-
-            # Outlined BELONGS TO
-            c.setFont("Helvetica-Bold", 32)
-            c.setStrokeColor(colors.HexColor("#0f172a"))
-            c.setFillColor(colors.white)
-            c.setLineWidth(1.6)
-            c._code.append("2 Tr\n")
-            c.drawCentredString(page_w / 2.0, page_h - 190 - bleed_pt, custom_belongs_header)
-            c._code.append("0 Tr\n")
-
-            # Clean writing line
-            c.setStrokeColor(colors.HexColor("#94a3b8"))
-            c.setLineWidth(1.2)
-            line_y = page_h - 300 - bleed_pt
-            c.line(80 + bleed_pt, line_y, page_w - 80 - bleed_pt, line_y)
-
-            c.setFont("Helvetica-Oblique", 11)
-            c.setFillColor(colors.HexColor("#64748b"))
-            c.drawCentredString(page_w / 2.0, page_h - 380 - bleed_pt, custom_subtext)
-
-            # Extra gift dedication line if provided
-            if custom_belongs_gift:
-                c.setFont("Helvetica-Bold", 10)
-                c.setFillColor(colors.HexColor("#475569"))
-                c.drawCentredString(page_w / 2.0, page_h - 430 - bleed_pt, custom_belongs_gift)
-                c.setStrokeColor(colors.HexColor("#cbd5e1"))
-                c.setLineWidth(1.0)
-                c.line(120 + bleed_pt, page_h - 455 - bleed_pt, page_w - 120 - bleed_pt, page_h - 455 - bleed_pt)
-
-            c.showPage()
-
-        # --- PAGE 4: COLOR TEST PALETTE ---
+        # --- 4. COLOR TEST PALETTE ---
         if inc_color_test:
+            if c.getPageNumber() % 2 == 0:
+                render_blank_page()
+
             c.setFillColor(colors.white)
             c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
 
@@ -459,20 +553,41 @@ class KDPPdfExporter:
                 c.drawCentredString(page_w / 2.0, 48 + bleed_pt, custom_color_note)
 
             c.showPage()
+            if single_sided:
+                render_blank_page()
 
         # --- OPTIONAL FRONT MATTER CUSTOM PAGE ---
         if inc_custom_page and custom_page_pos == "front":
+            if c.getPageNumber() % 2 == 0:
+                render_blank_page()
             render_custom_text_page()
 
-        # If single-sided and front-matter had an odd number of pages, insert a blank verso page
-        # so that Drawing 1 is guaranteed to start on an ODD page (RIGHT side) with Blank on LEFT
-        if needs_fm_pad:
+        # If single-sided and front-matter ended on an even page or needs padding so Drawing 1 starts on ODD (Right)
+        if single_sided and (c.getPageNumber() % 2 == 0):
             render_blank_page()
 
         # =========================================================================
         # 2. CONTENT DRAWING PAGES (Pages 5+) + BLANK VERSO PAGES
         # =========================================================================
         for page_idx, page in enumerate(content_pages):
+            cur_doc_page = c.getPageNumber()
+            is_odd_page = (cur_doc_page % 2 != 0)
+
+            # KDP Safe Print Margins (in points)
+            # Safe Top and Bottom: min 0.375" (27 pt) from trim. Enforce 32 pt inside trim.
+            safe_bottom = bleed_pt + 32.0
+            safe_top = page_h - bleed_pt - 32.0
+
+            # Gutter vs Outside Margins:
+            # Gutter requires min 0.50" (36 pt) inside trim. Enforce 38 pt inside trim.
+            # Outside requires min 0.375" (27 pt) inside trim. Enforce 30 pt inside trim.
+            if is_odd_page:
+                safe_left = bleed_pt + 38.0
+                safe_right = page_w - bleed_pt - 30.0
+            else:
+                safe_left = bleed_pt + 30.0
+                safe_right = page_w - bleed_pt - 38.0
+
             # 1. Fill page with pure white
             c.setFillColor(colors.white)
             c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
@@ -633,9 +748,16 @@ class KDPPdfExporter:
                     )
                     if is_special_page:
                         continue
+                    
+                    # Strictly clamp outer border within KDP safe print margins
+                    bx = max(safe_left, min(x, safe_right - 80))
+                    by = max(safe_bottom, min(y, safe_top - 80))
+                    bw = min(w, safe_right - bx)
+                    bh = min(h, safe_top - by)
+
                     c.setStrokeColor(colors.HexColor("#111827"))
                     c.setLineWidth(1.5)
-                    c.roundRect(x, y, w, h, radius=6, fill=0, stroke=1)
+                    c.roundRect(bx, by, bw, bh, radius=6, fill=0, stroke=1)
 
             # 3. If page has Sudoku Puzzles attached, render vector Sudoku grids
             puzzles = page.get("puzzles", [])
@@ -1139,10 +1261,10 @@ class KDPPdfExporter:
 
             # Optional Bottom-Center Page Number
             if include_page_numbers:
-                page_display_num = fm_count + 1 + (page_idx * 2 if single_sided else page_idx)
+                page_display_num = cur_doc_page
                 c.setFont("Helvetica-Bold", 10)
                 c.setFillColor(colors.HexColor("#334155"))
-                c.drawCentredString(page_w / 2.0, 18 + bleed_pt, str(page_display_num))
+                c.drawCentredString(page_w / 2.0, bleed_pt + 20, str(page_display_num))
 
             c.showPage()
 

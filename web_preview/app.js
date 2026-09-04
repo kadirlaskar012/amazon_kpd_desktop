@@ -45,7 +45,7 @@ let currentProject = {
         { id: "elem_ref_1", type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: "Playful Lion Reference", image_src: null },
         { id: "elem_title_1", type: "title", x: 235, y: 70, w: 240, h: 80, text: "LION", font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
         { id: "elem_main_1", type: "main_image", x: 35, y: 220, w: 440, h: 410, text: "Playful Lion Drawing", image_src: null },
-        { id: "elem_frame_1", type: "border", x: 25, y: 15, w: 460, h: 630 }
+        { id: "elem_frame_1", type: "border", x: 35, y: 28, w: 440, h: 604 }
       ]
     },
     {
@@ -57,7 +57,7 @@ let currentProject = {
         { id: "elem_ref_2", type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: "Gentle Elephant Reference", image_src: null },
         { id: "elem_title_2", type: "title", x: 235, y: 70, w: 240, h: 80, text: "ELEPHANT", font_size: 34, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
         { id: "elem_main_2", type: "main_image", x: 35, y: 220, w: 440, h: 410, text: "Gentle Elephant Drawing", image_src: null },
-        { id: "elem_frame_2", type: "border", x: 25, y: 15, w: 460, h: 630 }
+        { id: "elem_frame_2", type: "border", x: 35, y: 28, w: 440, h: 604 }
       ]
     },
     {
@@ -69,7 +69,7 @@ let currentProject = {
         { id: "elem_ref_3", type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: "Cute Dog Reference", image_src: null },
         { id: "elem_title_3", type: "title", x: 235, y: 70, w: 240, h: 80, text: "PUPPY DOG", font_size: 34, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
         { id: "elem_main_3", type: "main_image", x: 35, y: 220, w: 440, h: 410, text: "Cute Dog Drawing", image_src: null },
-        { id: "elem_frame_3", type: "border", x: 25, y: 15, w: 460, h: 630 }
+        { id: "elem_frame_3", type: "border", x: 35, y: 28, w: 440, h: 604 }
       ]
     },
     {
@@ -81,7 +81,7 @@ let currentProject = {
         { id: "elem_ref_4", type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: "Happy Monkey Reference", image_src: null },
         { id: "elem_title_4", type: "title", x: 235, y: 70, w: 240, h: 80, text: "MONKEY", font_size: 34, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
         { id: "elem_main_4", type: "main_image", x: 35, y: 220, w: 440, h: 410, text: "Happy Monkey Drawing", image_src: null },
-        { id: "elem_frame_4", type: "border", x: 25, y: 15, w: 460, h: 630 }
+        { id: "elem_frame_4", type: "border", x: 35, y: 28, w: 440, h: 604 }
       ]
     }
   ]
@@ -1300,27 +1300,56 @@ function renderExportModalPreview() {
   if (incDisclaimer) {
     const discTitle = document.getElementById("exp-fm-text-title")?.value || "Disclaimer & Copyright";
     exportPages.push({ page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", badge: `Page ${exportPages.length + 1} • Disclaimer` });
-  }
-  if (incContents) {
-    const tocTitle = document.getElementById("exp-fm-text-toc-heading")?.value || "Table of Contents";
-    exportPages.push({ page_type: "front_matter_contents", title: tocTitle, badge: `Page ${exportPages.length + 1} • Contents` });
+    if (singleSided || incBelongs) {
+      exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+    }
   }
   if (incBelongs) {
+    if (exportPages.length === 0) {
+      exportPages.push({ page_type: "blank_verso", title: "Blank Flyleaf", badge: `Page ${exportPages.length + 1} • Blank (Right)` });
+      exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank (Left)` });
+    } else if (exportPages.length % 2 !== 0) {
+      exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+    }
     const bTitle = document.getElementById("exp-fm-text-belongs-title")?.value || "This Book Belongs To";
     exportPages.push({ page_type: "front_matter_belongs_to", title: bTitle, badge: `Page ${exportPages.length + 1} • Belongs To` });
+    // Automatic blank page after Belongs To
+    exportPages.push({ page_type: "blank_verso", title: "Blank Back Page", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+  }
+  if (incContents) {
+    if (exportPages.length % 2 !== 0) {
+      exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+    }
+    const tocTitle = document.getElementById("exp-fm-text-toc-heading")?.value || "Table of Contents";
+    exportPages.push({ page_type: "front_matter_contents", title: tocTitle, badge: `Page ${exportPages.length + 1} • Contents` });
+    if (singleSided) {
+      exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+    }
   }
   if (incColorTest) {
+    if (exportPages.length % 2 !== 0) {
+      exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+    }
     const colTitle = document.getElementById("exp-fm-text-color-title")?.value || "Color Test Palette";
     exportPages.push({ page_type: "front_matter_color_test", title: colTitle, badge: `Page ${exportPages.length + 1} • Color Test` });
+    if (singleSided) {
+      exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+    }
   }
 
   // If custom page placed in Front Matter
   if (incCustom && customPos === "front") {
+    if (exportPages.length % 2 !== 0) {
+      exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+    }
     exportPages.push({
       page_type: "custom_text_page",
       title: customPageTitle,
       badge: `Page ${exportPages.length + 1} • Custom Note`
     });
+    if (singleSided) {
+      exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+    }
   }
 
   // If singleSided and front matter count is odd, insert a blank verso page so Drawing 1 starts on ODD (Right)
@@ -1583,9 +1612,9 @@ function renderSpreadPreview() {
   // Build compiled full KDP book pages for realistic spread inspection
   let compiledSpreadPages = isColoring ? [
     { page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", page_number: 1, is_front_matter: true },
-    { page_type: "front_matter_contents", title: "Table of Contents", page_number: 2, is_front_matter: true },
+    { page_type: "blank_verso", title: "Blank Back Page", page_number: 2, is_front_matter: true },
     { page_type: "front_matter_belongs_to", title: "This Book Belongs To", page_number: 3, is_front_matter: true },
-    { page_type: "front_matter_color_test", title: "Color Test Palette", page_number: 4, is_front_matter: true }
+    { page_type: "blank_verso", title: "Blank Back Page", page_number: 4, is_front_matter: true }
   ] : [
     { page_type: "front_matter_disclaimer", title: "Disclaimer & Copyright", page_number: 1, is_front_matter: true }
   ];
@@ -2783,7 +2812,7 @@ async function submitCreateProject() {
         
         const elems = [
           { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
-          { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${pageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ];
 
         pagesList.push({
@@ -2827,7 +2856,7 @@ async function submitCreateProject() {
           games: pageGames,
           elements: [
             { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${pageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       }
@@ -2857,7 +2886,7 @@ async function submitCreateProject() {
           maze: mz,
           elements: [
             { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 26, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${pageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       }
@@ -2887,7 +2916,7 @@ async function submitCreateProject() {
           word_search: ws,
           elements: [
             { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${pageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       }
@@ -2919,7 +2948,7 @@ async function submitCreateProject() {
             { id: `elem_ref_${pageNum}`, type: "ref_image", x: 35, y: 25, w: 160, h: 150, text: pTitle, image_src: null },
             { id: `elem_title_${pageNum}`, type: "title", x: 215, y: 55, w: 260, h: 80, text: pTitle.toUpperCase(), font_size: 34, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
             { id: `elem_dot_${pageNum}`, type: "dot_to_dot", x: 35, y: 190, w: 440, h: 440, text: pTitle },
-            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${pageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       }
@@ -2951,7 +2980,7 @@ async function submitCreateProject() {
           tracing: trData,
           elements: [
             { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${pageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       }
@@ -2981,7 +3010,7 @@ async function submitCreateProject() {
           scissor_skills: scData,
           elements: [
             { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${pageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       }
@@ -3011,7 +3040,7 @@ async function submitCreateProject() {
           shadow_matching: smData,
           elements: [
             { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${pageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       }
@@ -3041,7 +3070,7 @@ async function submitCreateProject() {
           ispy: ispyData,
           elements: [
             { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${pageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       }
@@ -3071,7 +3100,7 @@ async function submitCreateProject() {
           grid_drawing: gdData,
           elements: [
             { id: `elem_title_${pageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${pageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${pageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       }
@@ -3093,7 +3122,7 @@ async function submitCreateProject() {
           { id: `elem_ref_${contentNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${contentNum}`, image_src: null },
           { id: `elem_title_${contentNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${contentNum}`, font_size: 40, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
           { id: `elem_main_${contentNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${contentNum}`, image_src: null },
-          { id: `elem_frame_${contentNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${contentNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     }
@@ -4937,13 +4966,13 @@ function applyPageLayout(layoutKey) {
       { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: "Reference Image", image_src: existingRefImg },
       { id: `elem_title_${Date.now()}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: existingTitle.toUpperCase(), font_size: 40, color: "#ffffff", is_outline: projOutline, font_family: projFont, letter_spacing: 2 },
       { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: "Coloring Drawing", image_src: existingMainImg },
-      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
     ];
   } else if (layoutKey === "full_page") {
     page.page_type = "content";
     newElements = [
       { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 25, w: 440, h: 605, text: "Full Page Drawing", image_src: existingMainImg || existingRefImg },
-      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
     ];
   } else if (layoutKey === "kdp_center_ref") {
     page.page_type = "content";
@@ -4953,7 +4982,7 @@ function applyPageLayout(layoutKey) {
       { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 175, y: 25, w: 160, h: 140, text: "Reference Image", image_src: existingRefImg },
       { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 172, w: 440, h: 46, text: existingTitle.toUpperCase(), font_size: 34, color: "#ffffff", is_outline: projOutline, font_family: projFont, letter_spacing: 2 },
       { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 225, w: 440, h: 405, text: "Coloring Drawing", image_src: existingMainImg },
-      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
     ];
   } else if (layoutKey === "kdp_side_by_side") {
     page.page_type = "content";
@@ -4963,7 +4992,7 @@ function applyPageLayout(layoutKey) {
       { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 25, w: 440, h: 40, text: existingTitle.toUpperCase(), font_size: 26, color: "#ffffff", is_outline: projOutline, font_family: projFont },
       { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 75, w: 210, h: 545, text: "Color Guide", image_src: existingRefImg },
       { id: `elem_main_${Date.now()}`, type: "main_image", x: 260, y: 75, w: 215, h: 545, text: "Draw & Color Here", image_src: existingMainImg },
-      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
     ];
   } else if (layoutKey === "kdp_story_drawing") {
     page.page_type = "content";
@@ -4975,7 +5004,7 @@ function applyPageLayout(layoutKey) {
       { id: `elem_hw1_${Date.now()}`, type: "title", x: 45, y: 470, w: 420, h: 30, text: "____________________________________", font_size: 16, color: "#94a3b8", is_outline: false },
       { id: `elem_hw2_${Date.now()}`, type: "title", x: 45, y: 530, w: 420, h: 30, text: "____________________________________", font_size: 16, color: "#94a3b8", is_outline: false },
       { id: `elem_hw3_${Date.now()}`, type: "title", x: 45, y: 590, w: 420, h: 30, text: "____________________________________", font_size: 16, color: "#94a3b8", is_outline: false },
-      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
     ];
   } else if (layoutKey === "kdp_4grid") {
     page.page_type = "content";
@@ -4985,7 +5014,7 @@ function applyPageLayout(layoutKey) {
       { id: `elem_box2_${Date.now()}`, type: "main_image", x: 260, y: 55, w: 215, h: 265, text: "Quadrant 2", image_src: null },
       { id: `elem_box3_${Date.now()}`, type: "main_image", x: 35, y: 340, w: 210, h: 265, text: "Quadrant 3", image_src: null },
       { id: `elem_box4_${Date.now()}`, type: "main_image", x: 260, y: 340, w: 215, h: 265, text: "Quadrant 4", image_src: null },
-      { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+      { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
     ];
   } else if (layoutKey.startsWith("custom_")) {
     // Load elements from user-saved custom layout
@@ -5132,7 +5161,7 @@ function applyCustomLayoutTweaks() {
     if (borderEl) page.elements = page.elements.filter(e => e.id !== borderEl.id);
   } else {
     if (!borderEl) {
-      borderEl = { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 };
+      borderEl = { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 };
       page.elements.push(borderEl);
     }
   }
@@ -7048,7 +7077,7 @@ async function addNewPage() {
         puzzles: p ? [p] : [],
         elements: [
           { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
-          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     } catch (e) {
@@ -7088,7 +7117,7 @@ async function addNewPage() {
         games: games,
         elements: [
           { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: "TIC-TAC-TOE", font_size: 26, color: "#0f172a", is_outline: false },
-          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     } catch (e) {
@@ -7116,7 +7145,7 @@ async function addNewPage() {
         maze: m,
         elements: [
           { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 26, color: "#0f172a", is_outline: false },
-          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     } catch (e) {
@@ -7144,7 +7173,7 @@ async function addNewPage() {
         word_search: ws,
         elements: [
           { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
-          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     } catch (e) {
@@ -7176,7 +7205,7 @@ async function addNewPage() {
           { id: `elem_ref_${newPageNum}`, type: "ref_image", x: 35, y: 25, w: 160, h: 150, text: pTitle, image_src: null },
           { id: `elem_title_${newPageNum}`, type: "title", x: 215, y: 55, w: 260, h: 80, text: pTitle.toUpperCase(), font_size: 34, color: "#ffffff", is_outline: true, font_family: "Fredoka", letter_spacing: 2 },
           { id: `elem_dot_${newPageNum}`, type: "dot_to_dot", x: 35, y: 190, w: 440, h: 440, text: pTitle },
-          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     } catch (e) {
@@ -7201,7 +7230,7 @@ async function addNewPage() {
         tracing: data.tracing || {},
         elements: [
           { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: `LETTER TRACING: ${char}`, font_size: 22, color: "#0f172a", is_outline: false },
-          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     } catch (e) {
@@ -7226,7 +7255,7 @@ async function addNewPage() {
         scissor_skills: data.scissor_skills || {},
         elements: [
           { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: `SCISSOR CUTTING: ${pat.toUpperCase()}`, font_size: 22, color: "#0f172a", is_outline: false },
-          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     } catch (e) {
@@ -7249,7 +7278,7 @@ async function addNewPage() {
         shadow_matching: data.shadow_matching || {},
         elements: [
           { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: `SHADOW MATCH #${newPageNum}`, font_size: 22, color: "#0f172a", is_outline: false },
-          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     } catch (e) {
@@ -7272,7 +7301,7 @@ async function addNewPage() {
         ispy: data.ispy || {},
         elements: [
           { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: `I-SPY & COUNT ANIMALS`, font_size: 22, color: "#0f172a", is_outline: false },
-          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     } catch (e) {
@@ -7295,7 +7324,7 @@ async function addNewPage() {
         grid_drawing: data.grid_drawing || {},
         elements: [
           { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 25, w: 440, h: 35, text: `LEARN TO DRAW: GRID COPY`, font_size: 22, color: "#0f172a", is_outline: false },
-          { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     } catch (e) {
@@ -7318,7 +7347,7 @@ async function addNewPage() {
         { id: `elem_ref_${newPageNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${newPageNum}`, image_src: null },
         { id: `elem_title_${newPageNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${newPageNum}`, font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
         { id: `elem_main_${newPageNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${newPageNum}`, image_src: null },
-        { id: `elem_frame_${newPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
       ]
     });
   }
@@ -7684,7 +7713,7 @@ async function insertPageAt(targetIndex, pageType = "blank") {
           puzzles: [p],
           elements: [
             { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       } catch (e) {}
@@ -7705,7 +7734,7 @@ async function insertPageAt(targetIndex, pageType = "blank") {
           games: games,
           elements: [
             { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: "TIC-TAC-TOE", font_size: 26, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       } catch (e) {}
@@ -7727,7 +7756,7 @@ async function insertPageAt(targetIndex, pageType = "blank") {
           maze: m,
           elements: [
             { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 24, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       } catch (e) {}
@@ -7749,7 +7778,7 @@ async function insertPageAt(targetIndex, pageType = "blank") {
           word_search: ws,
           elements: [
             { id: `elem_title_${Date.now()}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 22, color: "#0f172a", is_outline: false },
-            { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+            { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
           ]
         });
       } catch (e) {}
@@ -7768,7 +7797,7 @@ async function insertPageAt(targetIndex, pageType = "blank") {
           { id: `elem_ref_${Date.now()}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${targetIndex + 1}`, image_src: null },
           { id: `elem_title_${Date.now()}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `DRAWING ${targetIndex + 1}`, font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
           { id: `elem_main_${Date.now()}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${targetIndex + 1}`, image_src: null },
-          { id: `elem_frame_${Date.now()}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${Date.now()}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
     }
@@ -7940,7 +7969,7 @@ function handleBatchImagesUpload(event) {
           { id: `elem_ref_${Date.now()}_${idx}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: cleanTitle, image_src: finalDataUrl },
           { id: `elem_title_${Date.now()}_${idx}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: cleanTitle.toUpperCase(), font_size: autoFontSize, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
           { id: `elem_main_${Date.now()}_${idx}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: cleanTitle, image_src: finalDataUrl },
-          { id: `elem_frame_${Date.now()}_${idx}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+          { id: `elem_frame_${Date.now()}_${idx}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
         ]
       });
 
@@ -8176,7 +8205,7 @@ function autoFillTo24Pages() {
         { id: `elem_ref_${drawPageNum}`, type: "ref_image", x: 35, y: 25, w: 190, h: 180, text: `Ref ${contentCount}`, image_src: null },
         { id: `elem_title_${drawPageNum}`, type: "title", x: 235, y: 70, w: 240, h: 80, text: `PAGE ${contentCount}`, font_size: 40, color: projColor, is_outline: projOutline, stroke_color: projStroke, font_family: projFont, letter_spacing: 2 },
         { id: `elem_main_${drawPageNum}`, type: "main_image", x: 35, y: 220, w: 440, h: 410, text: `Drawing ${contentCount}`, image_src: null },
-        { id: `elem_frame_${drawPageNum}`, type: "border", x: 25, y: 15, w: 460, h: 630 }
+        { id: `elem_frame_${drawPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
       ]
     });
 
