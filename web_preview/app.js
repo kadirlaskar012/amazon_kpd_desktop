@@ -295,6 +295,19 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+
+  // Auto-open modal or tab if requested via URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const modalParam = urlParams.get("modal");
+  const pubTabParam = urlParams.get("pubtab");
+  if (modalParam === "publish") {
+    setTimeout(() => {
+      openPublishHelperModal();
+      if (pubTabParam) {
+        switchPubTab(pubTabParam);
+      }
+    }, 500);
+  }
 });
 
 // ==========================================
@@ -7451,6 +7464,28 @@ function loadPublishMetadata(forceRefresh = false) {
   const author = currentProject.author || "Creative Kids Studio";
   const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
   const trimSize = currentProject.settings?.trim_size || "8.5x11";
+
+  // Instant default render so user never waits for network
+  if (!currentPublishMetadata) {
+    const instantMeta = {
+      backend_keywords: [
+        "preschool animal coloring pages for boys and girls",
+        "easy big simple bold outlines for tiny hands",
+        "cute toddler travel quiet time activity gifts",
+        "kindergarten fine motor skills practice workbook",
+        "relaxing mindful screen free art creative pad",
+        "single sided bleed safe illustrations gift idea",
+        "birthday holiday stocking stuffer for little kids"
+      ],
+      recommended_categories: [
+        "Children's Books > Activities, Crafts & Games > Activity Books",
+        "Children's Books > Early Learning > Basic Concepts",
+        "Children's Books > Animals"
+      ],
+      html_description: `<h2>🎉 Spark Creativity & Endless Fun with the Ultimate ${topic}! 🌟</h2>\n\n<p>Looking for a fun, engaging, and screen-free way to boost your child's creativity and cognitive skills? <b>${topic}</b> is specially designed for little learners (Ages 4-8) to develop hand-eye coordination, focus, and artistic confidence!</p>\n\n<h3>⭐ What Makes This Book Special:</h3>\n<ul>\n  <li><b>${pagesCount}+ Unique & Fun Pages:</b> Carefully crafted with clean, bold lines and charming designs children adore.</li>\n  <li><b>Perfect for Little Hands:</b> Generous ${trimSize}" format provides ample drawing and activity space.</li>\n  <li><b>Single-Sided Bleed-Safe Pages:</b> Blank back pages prevent bleed-through from markers, pens, and crayons.</li>\n  <li><b>Builds Vital Early Skills:</b> Enhances fine motor control, pencil grip, cognitive focus, and creative imagination.</li>\n  <li><b>Ideal Screen-Free Gift:</b> Perfect for birthdays, holidays, road trips, rainy days, and homeschool activities!</li>\n</ul>\n\n<p><b>✨ Grab your copy today and watch your little one's creativity soar! 🚀</b></p>`
+    };
+    renderPublishMetadata(instantMeta);
+  }
 
   fetch("/api/ai/generate_metadata", {
     method: "POST",
