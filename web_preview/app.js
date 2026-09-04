@@ -740,15 +740,9 @@ function clearActiveProject() {
 function loadInitialProject() {
   fetchDefaultLocation();
 
-  // URL query parameter determines tab if explicitly provided; otherwise ALWAYS default to dashboard on launch/refresh
+  // Restore the active tab from URL query params or localStorage; defaults to dashboard on first visit
   const urlParams = new URLSearchParams(window.location.search);
-  const targetTab = urlParams.get("tab") || "dashboard";
-
-  // Clean up any stale tab memory so refreshing or pressing F5 always firmly keeps you on Dashboard
-  try {
-    sessionStorage.removeItem("kdp_active_tab");
-    localStorage.removeItem("kdp_active_tab");
-  } catch (e) {}
+  const targetTab = urlParams.get("tab") || localStorage.getItem("kdp_active_tab") || "dashboard";
 
   // Hydrate UI state synchronously to guarantee immediate solid render with ZERO flashing
   document.documentElement.setAttribute("data-active-tab", targetTab);
@@ -777,7 +771,26 @@ function loadInitialProject() {
       const parsed = JSON.parse(cachedData);
       if (parsed && parsed.name) {
         currentProject = parsed;
+        const savedPageIdx = parseInt(localStorage.getItem("kdp_active_page_index") || "0", 10);
+        const maxPageIdx = Math.max(0, (currentProject.pages || []).length - 1);
+        currentPageIndex = Math.min(savedPageIdx, maxPageIdx);
+
+        renumberPages();
         syncActiveProjectUI();
+
+        // If landing in Canvas Editor, synchronously render page elements and timeline immediately with zero flash
+        if (targetTab === "canvas") {
+          loadPageIntoCanvas(currentPageIndex);
+          renderTimeline();
+          renderMediaLibrary();
+          requestAnimationFrame(() => {
+            fitCanvasView();
+          });
+        } else if (targetTab === "preview") {
+          renderSpreadPreview();
+        } else if (targetTab === "preflight") {
+          updatePreflightDashboard();
+        }
       }
     }
   } catch (e) {}
@@ -792,7 +805,7 @@ function loadInitialProject() {
 
   updateNavigationTabsVisibility(targetTab);
 
-  // Query real projects list from local disk
+  // Background verification: query real projects list from local disk
   fetch("/api/projects")
     .then(r => r.json())
     .then(data => {
@@ -810,8 +823,8 @@ function loadInitialProject() {
         return;
       }
 
-      // Check if last opened project still exists on disk
-      const savedPath = localStorage.getItem("kdp_active_project_path");
+      // Check if active project still exists on disk
+      const savedPath = localStorage.getItem("kdp_active_project_path") || (currentProject && currentProject.project_dir);
       let matchedProj = null;
       if (savedPath) {
         const normSaved = savedPath.replace(/\\/g, "/").toLowerCase();
@@ -847,17 +860,13 @@ function loadInitialProject() {
 
             if (targetTab === "canvas") {
               loadPageIntoCanvas(currentPageIndex);
-              switchTab("canvas");
+              renderTimeline();
             } else if (targetTab && targetTab !== "dashboard") {
               switchTab(targetTab);
-            } else {
-              // Firmly remain on dashboard
-              switchTab("dashboard");
             }
           })
           .catch(() => {
             syncActiveProjectUI();
-            switchTab("dashboard");
           });
       } else {
         clearActiveProject();
@@ -866,8 +875,6 @@ function loadInitialProject() {
     })
     .catch(err => {
       console.warn("Project directory query error:", err);
-      clearActiveProject();
-      switchTab("dashboard");
     });
 }
 
@@ -2296,7 +2303,9 @@ function setupNavigation() {
 }
 
 function switchTab(tabId) {
-  // Do NOT store in storage: refreshing or pressing F5 must always reliably land on Dashboard
+  // Persist active tab so that refreshing or pressing F5 keeps you in the exact same state
+  localStorage.setItem("kdp_active_tab", tabId);
+  sessionStorage.setItem("kdp_active_tab", tabId);
   document.documentElement.setAttribute("data-active-tab", tabId);
 
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));

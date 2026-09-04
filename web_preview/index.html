@@ -19,9 +19,7 @@
         var theme = localStorage.getItem("kdp_studio_theme") || "light";
         document.documentElement.setAttribute("data-theme", theme);
         var urlParams = new URLSearchParams(window.location.search);
-        var tab = urlParams.get("tab") || "dashboard";
-        sessionStorage.removeItem("kdp_active_tab");
-        localStorage.removeItem("kdp_active_tab");
+        var tab = urlParams.get("tab") || localStorage.getItem("kdp_active_tab") || "dashboard";
         document.documentElement.setAttribute("data-active-tab", tab);
       } catch (e) { }
     })();
