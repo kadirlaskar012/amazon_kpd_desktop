@@ -93,6 +93,8 @@
             title="Generate Amazon KDP Full Wrap Cover PDF">🎨 Cover PDF</button>
           <button class="btn btn-success btn-sm" id="btn-export-pdf" onclick="exportProjectPdf()"
             title="Generate & Download 300 DPI Amazon KDP PDF">📄 Export PDF</button>
+          <button class="btn btn-accent btn-sm" id="btn-publish-helper" onclick="openPublishHelperModal()"
+            title="KDP Publishing Kit, Pricing & Royalty Calculator">🚀 Publish Helper</button>
         </div>
       </div>
     </header>
@@ -909,10 +911,11 @@
             <!-- Rendered dynamically by updatePreflightDashboard() -->
           </div>
 
-          <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+          <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap;">
             <button class="btn btn-outline" onclick="autoFillTo24Pages()">➕ Auto-Fill to 24 Pages (KDP Minimum)</button>
             <button class="btn btn-warning" onclick="openCoverModal()">🎨 Create Cover PDF</button>
             <button class="btn btn-success" onclick="exportProjectPdf()">📄 Export Interior PDF</button>
+            <button class="btn btn-accent" onclick="openPublishHelperModal()" style="font-weight: 700;">🚀 KDP Publish Helper & Pricing</button>
           </div>
         </div>
       </section>
@@ -1901,11 +1904,375 @@
           </div>
         </div>
       </div>
+    <!-- ======================================================= -->
+    <!-- AMAZON KDP PUBLISHING INTELLIGENCE & PACKAGING STUDIO   -->
+    <!-- ======================================================= -->
+    <div class="modal-overlay" id="publish-helper-modal">
+      <div class="modal-box publish-helper-dialog" style="max-width: 960px; width: 95%;">
+        <!-- Header -->
+        <div class="modal-header">
+          <div class="modal-title">
+            <span style="font-size: 24px;">🚀</span>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 800; font-size: 18px;">Amazon KDP Publishing Suite & Pricing Intelligence</span>
+                <span class="badge pass" style="font-size: 11px; padding: 2px 8px;">Easy-to-Publish</span>
+              </div>
+              <p style="font-size: 12px; color: var(--text-secondary); margin: 2px 0 0 0;">
+                Calculated specifically for your current book: <strong id="pub-banner-book-name" style="color: var(--primary);">My Jungle Coloring Book</strong> (<span id="pub-banner-specs">24 Pages • 8.5"×11"</span>)
+              </p>
+            </div>
+          </div>
+          <button class="modal-close" onclick="closeModal('publish-helper-modal')">&times;</button>
+        </div>
+
+        <!-- Sub Navigation Workflow Tabs -->
+        <div class="publish-tabs-bar">
+          <button class="pub-tab-btn active" data-pubtab="pricing" onclick="switchPubTab('pricing')">
+            💰 Royalty & Pricing Calculator
+          </button>
+          <button class="pub-tab-btn" data-pubtab="keywords" onclick="switchPubTab('keywords')">
+            🎯 7 Backend Keywords & SEO
+          </button>
+          <button class="pub-tab-btn" data-pubtab="description" onclick="switchPubTab('description')">
+            ✍️ Rich HTML Description
+          </button>
+          <button class="pub-tab-btn" data-pubtab="checklist" onclick="switchPubTab('checklist')">
+            📋 KDP Upload Checklist
+          </button>
+          <button class="pub-tab-btn highlight" data-pubtab="bundle" onclick="switchPubTab('bundle')">
+            📦 1-Click Bundle Export (ZIP)
+          </button>
+        </div>
+
+        <div class="modal-body publish-modal-body" style="padding: 16px 20px; max-height: 70vh; overflow-y: auto;">
+          
+          <!-- ================= TAB 1: PRICING & ROYALTY CALCULATOR ================= -->
+          <div class="pub-tab-content active" id="pub-content-pricing">
+            <!-- Dynamic Pricing Advice Alert Banner -->
+            <div class="pricing-strategy-card" style="margin-bottom: 20px;">
+              <div class="strategy-header">
+                <span class="strategy-icon">💡</span>
+                <div>
+                  <h4 style="margin: 0; font-size: 15px; font-weight: 700;">Smart Pricing Strategy for Your Present Book</h4>
+                  <p style="margin: 3px 0 0 0; font-size: 12.5px; color: var(--text-secondary);" id="pub-strategy-advice">
+                    Based on your <strong>24-page 8.5×11"</strong> book, here is how you should price it for maximum sales and profit on Amazon.
+                  </p>
+                </div>
+              </div>
+
+              <div class="strategy-options-grid">
+                <!-- Option 1: Launch Sweet Spot -->
+                <div class="strategy-tier-box recommended" onclick="setCalculatorPrice(6.99)">
+                  <div class="tier-tag">⭐ RECOMMENDED LAUNCH PRICE</div>
+                  <div class="tier-price">$6.99</div>
+                  <div class="tier-profit">Your Profit: <strong id="tier-launch-profit">+$1.89</strong> / sale</div>
+                  <div class="tier-desc">Amazon buyer impulse-buy sweet spot! Maximize conversion rates & gather early reviews.</div>
+                  <button class="btn btn-sm btn-primary" style="margin-top: 8px; width: 100%;">Set Price to $6.99</button>
+                </div>
+
+                <!-- Option 2: Standard Profit -->
+                <div class="strategy-tier-box" onclick="setCalculatorPrice(7.99)">
+                  <div class="tier-tag">📈 STANDARD PROFIT PRICE</div>
+                  <div class="tier-price">$7.99</div>
+                  <div class="tier-profit">Your Profit: <strong id="tier-regular-profit">+$2.49</strong> / sale</div>
+                  <div class="tier-desc">The industry standard for 50-80 page books once you have 10+ reviews.</div>
+                  <button class="btn btn-sm btn-outline" style="margin-top: 8px; width: 100%;">Set Price to $7.99</button>
+                </div>
+
+                <!-- Option 3: Premium Tier -->
+                <div class="strategy-tier-box" onclick="setCalculatorPrice(8.99)">
+                  <div class="tier-tag">👑 PREMIUM TIER</div>
+                  <div class="tier-price">$8.99</div>
+                  <div class="tier-profit">Your Profit: <strong id="tier-premium-profit">+$3.09</strong> / sale</div>
+                  <div class="tier-desc">Best if your book has 70+ pages, full activity bundles, or colored interior.</div>
+                  <button class="btn btn-sm btn-outline" style="margin-top: 8px; width: 100%;">Set Price to $8.99</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Real-Time Interactive Calculator Grid -->
+            <div class="royalty-calc-grid">
+              <!-- Left Column: Price Controller -->
+              <div class="calc-control-panel">
+                <label style="font-weight: 700; font-size: 13px; display: block; margin-bottom: 6px;">
+                  Test / Set List Price (USD $):
+                </label>
+                <div class="price-input-row" style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+                  <div class="currency-input-wrap" style="position: relative; flex: 1;">
+                    <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--text-secondary);">$</span>
+                    <input type="number" id="pub-calc-input" class="form-control" value="6.99" min="3.85" max="25.00" step="0.10"
+                      style="padding-left: 28px; font-size: 18px; font-weight: 800; color: var(--primary);"
+                      oninput="onCalculatorInputChange(this.value)">
+                  </div>
+                  <span class="floor-badge" id="pub-floor-badge" title="Minimum price to cover Amazon print cost">
+                    Min Floor: $3.84
+                  </span>
+                </div>
+
+                <input type="range" id="pub-calc-slider" min="3.85" max="14.99" step="0.10" value="6.99"
+                  class="custom-slider" style="width: 100%; margin-bottom: 16px;"
+                  oninput="onCalculatorSliderChange(this.value)">
+
+                <!-- Amazon Printing Specs Card -->
+                <div class="print-specs-card">
+                  <div class="print-spec-row">
+                    <span>Interior Type:</span>
+                    <strong>Black & White on White Paper</strong>
+                  </div>
+                  <div class="print-spec-row">
+                    <span>Page Count:</span>
+                    <strong id="pub-calc-page-count">24 Pages</strong>
+                  </div>
+                  <div class="print-spec-row">
+                    <span>Trim Size:</span>
+                    <strong id="pub-calc-trim">8.5" × 11"</strong>
+                  </div>
+                  <div class="print-spec-row">
+                    <span>Amazon Printing Cost:</span>
+                    <strong id="pub-calc-cost-display" style="color: #ef4444;">$2.30</strong>
+                  </div>
+                  <div class="print-spec-row" style="font-size: 11px; color: var(--text-secondary); border-top: 1px dashed var(--border); padding-top: 6px;">
+                    <span>Amazon Royalty Rate:</span>
+                    <span>60% (Standard Distribution)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Earnings & Royalties Card -->
+              <div class="calc-metrics-panel">
+                <div class="net-royalty-hero">
+                  <div class="royalty-lbl">YOUR NET PROFIT PER BOOK SOLD</div>
+                  <div class="royalty-amount" id="pub-metric-net-royalty">$1.89</div>
+                  <div class="royalty-sub" id="pub-metric-margin">Profit Margin: 27.1% of List Price</div>
+                </div>
+
+                <div class="royalty-breakdown-list">
+                  <div class="breakdown-item">
+                    <span>Customer Pays:</span>
+                    <strong id="pub-metric-list-price">$6.99</strong>
+                  </div>
+                  <div class="breakdown-item">
+                    <span>Amazon 40% Share:</span>
+                    <span id="pub-metric-amazon-fee" style="color: var(--text-secondary);">-$2.80</span>
+                  </div>
+                  <div class="breakdown-item">
+                    <span>Printing Cost (Deducted):</span>
+                    <span id="pub-metric-print-deduct" style="color: #ef4444;">-$2.30</span>
+                  </div>
+                  <div class="breakdown-item total">
+                    <span>Author Royalty (60% - Print):</span>
+                    <strong id="pub-metric-author-total" style="color: #10b981;">+$1.89</strong>
+                  </div>
+                </div>
+
+                <!-- Sales Projections Table -->
+                <div class="sales-projections-box">
+                  <div style="font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">
+                    Estimated Earnings Projection
+                  </div>
+                  <div class="projection-row">
+                    <span>10 Books:</span> <strong id="proj-10">$18.90</strong>
+                    <span style="margin-left: 12px;">50 Books:</span> <strong id="proj-50">$94.50</strong>
+                  </div>
+                  <div class="projection-row" style="margin-top: 4px;">
+                    <span>100 Books:</span> <strong id="proj-100" style="color: var(--primary);">$189.00</strong>
+                    <span style="margin-left: 12px;">500 Books:</span> <strong id="proj-500" style="color: #10b981;">$945.00</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= TAB 2: 7 BACKEND KEYWORDS & SEO ================= -->
+          <div class="pub-tab-content" id="pub-content-keywords">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <h4 style="margin: 0; font-size: 15px; font-weight: 700;">Amazon KDP 7 Backend Keywords (Organic SEO)</h4>
+                <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">
+                  Copy these 7 high-demand phrases directly into Amazon KDP's 7 keyword slots (all &lt; 50 characters, zero repetition).
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm btn-outline" onclick="regeneratePublishKeywords()">
+                  🔄 Refresh Keywords
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="copyAllKeywords()">
+                  📋 Copy All 7 Keywords
+                </button>
+              </div>
+            </div>
+
+            <!-- Keywords 7 Slots List -->
+            <div class="keywords-slots-grid" id="pub-keywords-container">
+              <!-- Rendered dynamically by populatePublishKeywords() -->
+            </div>
+
+            <!-- Categories Section -->
+            <div style="margin-top: 20px;">
+              <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Recommended Amazon KDP Categories (Select up to 3)</h4>
+              <div class="categories-list-box" id="pub-categories-container">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= TAB 3: RICH HTML DESCRIPTION ================= -->
+          <div class="pub-tab-content" id="pub-content-description">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <h4 style="margin: 0; font-size: 15px; font-weight: 700;">Amazon-Compliant Rich HTML Book Description</h4>
+                <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-secondary);">
+                  Formatted with clean headers, bullet points, and emojis to stand out against competitors on Amazon.
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <div class="btn-group-dual" style="margin: 0;">
+                  <button class="btn btn-sm btn-outline active" id="btn-desc-mode-prev" onclick="toggleDescMode('prev')">👁️ Preview</button>
+                  <button class="btn btn-sm btn-outline" id="btn-desc-mode-code" onclick="toggleDescMode('code')">&lt;/&gt; HTML Code</button>
+                </div>
+                <button class="btn btn-sm btn-success" onclick="copyHtmlDescription()">
+                  📋 Copy HTML Description
+                </button>
+              </div>
+            </div>
+
+            <!-- Visual Preview View -->
+            <div class="desc-preview-container" id="pub-desc-preview-view">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <!-- Raw HTML Code View (Hidden by default) -->
+            <div class="desc-code-container" id="pub-desc-code-view" style="display: none;">
+              <textarea id="pub-desc-raw-code" class="form-control" rows="11" readonly style="font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5;"></textarea>
+            </div>
+          </div>
+
+          <!-- ================= TAB 4: KDP UPLOAD CHECKLIST ================= -->
+          <div class="pub-tab-content" id="pub-content-checklist">
+            <h4 style="margin: 0 0 6px 0; font-size: 15px; font-weight: 700;">KDP Upload Settings Cheat-Sheet</h4>
+            <p style="margin: 0 0 16px 0; font-size: 12px; color: var(--text-secondary);">
+              Follow this step-by-step checklist when filling out the form on <a href="https://kdp.amazon.com" target="_blank" style="color: var(--primary); text-decoration: underline;">kdp.amazon.com</a>.
+            </p>
+
+            <div class="kdp-steps-accordion">
+              <!-- Step 1 -->
+              <div class="kdp-step-card">
+                <div class="kdp-step-head">
+                  <span class="step-circle">1</span>
+                  <strong>Tab 1: Paperback Details</strong>
+                </div>
+                <div class="kdp-step-body">
+                  <ul>
+                    <li><strong>Book Title:</strong> Match the title of your project (<code id="chk-title">My Jungle Coloring Book</code>)</li>
+                    <li><strong>Subtitle:</strong> Paste subtitle generated in SEO tab</li>
+                    <li><strong>Author:</strong> Enter your Pen Name (<code id="chk-author">Creative Kids Studio</code>)</li>
+                    <li><strong>Description:</strong> Copy & paste HTML Description from Tab 3</li>
+                    <li><strong>Publishing Rights:</strong> Select <em>"I own the copyright and hold necessary publishing rights"</em></li>
+                    <li><strong>Primary Audience:</strong> Sexually explicit images = <strong>No</strong>, Reading Age = <strong>4-8 Years</strong></li>
+                    <li><strong>Categories:</strong> Select the 3 categories suggested in Tab 2</li>
+                    <li><strong>Keywords:</strong> Paste the 7 keywords into slots 1 to 7</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Step 2 -->
+              <div class="kdp-step-card">
+                <div class="kdp-step-head">
+                  <span class="step-circle">2</span>
+                  <strong>Tab 2: Paperback Content (Files & Print Options)</strong>
+                </div>
+                <div class="kdp-step-body">
+                  <ul>
+                    <li><strong>Print ISBN:</strong> Select <em>"Assign me a free KDP ISBN"</em></li>
+                    <li><strong>Interior & Paper Type:</strong> Select <strong>"Black & white interior with white paper"</strong></li>
+                    <li><strong>Trim Size:</strong> Select <strong id="chk-trim">8.5 x 11 in</strong></li>
+                    <li><strong>Bleed Settings:</strong> Select <strong>"Bleed (PDF only)"</strong></li>
+                    <li><strong>Cover Finish:</strong> Select <strong>"Matte"</strong> (smooth, premium feel, easy to hold)</li>
+                    <li><strong>Manuscript:</strong> Upload <code id="chk-interior-filename">...Interior_Print_Ready.pdf</code></li>
+                    <li><strong>Book Cover:</strong> Select <em>"Upload a cover you already have"</em> and upload <code id="chk-cover-filename">...Cover_Full_Wrap.pdf</code></li>
+                    <li><strong>Launch Previewer:</strong> Click and review; our PDFs pass with 0 errors!</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Step 3 -->
+              <div class="kdp-step-card">
+                <div class="kdp-step-head">
+                  <span class="step-circle">3</span>
+                  <strong>Tab 3: Paperback Rights & Pricing</strong>
+                </div>
+                <div class="kdp-step-body">
+                  <ul>
+                    <li><strong>Territories:</strong> Select <strong>"All territories (worldwide rights)"</strong></li>
+                    <li><strong>Primary Marketplace:</strong> Select <strong>"Amazon.com"</strong></li>
+                    <li><strong>Amazon.com List Price:</strong> Enter <strong id="chk-price" style="color: #10b981;">$6.99</strong> (or $7.99)</li>
+                    <li>Click <strong>"Publish Your Paperback Book"</strong>! Your book will go live in 24-72 hours.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= TAB 5: 1-CLICK BUNDLE EXPORT ================= -->
+          <div class="pub-tab-content" id="pub-content-bundle">
+            <div class="bundle-export-hero">
+              <div style="font-size: 36px; margin-bottom: 10px;">📦</div>
+              <h3 style="margin: 0 0 6px 0; font-weight: 800;">1-Click Complete Publishing Bundle (.ZIP)</h3>
+              <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--text-secondary); max-width: 600px; margin-left: auto; margin-right: auto;">
+                Generates and packages the Interior PDF (300 DPI), Full Wrap Cover PDF (Spine calculated), and full KDP Upload Guide into one tidy ZIP on your computer.
+              </p>
+
+              <div class="bundle-contents-card">
+                <div class="bundle-item">
+                  <span class="bundle-icon">📄</span>
+                  <div>
+                    <div class="bundle-item-title">Interior Print-Ready PDF (300 DPI)</div>
+                    <div class="bundle-item-sub">Exact trim size, safe gutter margins, blank verso bleed-safe pages</div>
+                  </div>
+                  <span class="badge pass">READY</span>
+                </div>
+                <div class="bundle-item">
+                  <span class="bundle-icon">🎨</span>
+                  <div>
+                    <div class="bundle-item-title">Full Wrap Cover PDF (300 DPI)</div>
+                    <div class="bundle-item-sub">Front + Back + Exact Spine Width + 0.125" Bleed Allowance</div>
+                  </div>
+                  <span class="badge pass">READY</span>
+                </div>
+                <div class="bundle-item">
+                  <span class="bundle-icon">📝</span>
+                  <div>
+                    <div class="bundle-item-title">Metadata & Upload Guide (.txt)</div>
+                    <div class="bundle-item-sub">Title, 7 Backend Keywords, HTML Description, Pricing & Checklist</div>
+                  </div>
+                  <span class="badge pass">READY</span>
+                </div>
+              </div>
+
+              <div style="margin-top: 24px;">
+                <button class="btn btn-lg btn-success" id="btn-run-bundle-export" onclick="executePublishingBundleExport()" style="font-weight: 800; padding: 12px 28px; font-size: 16px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">
+                  📦 Generate & Download Publishing Bundle (.ZIP)
+                </button>
+              </div>
+
+              <div id="bundle-export-status" style="margin-top: 14px; font-size: 13px; color: var(--text-secondary); display: none;">
+                <span class="pulse-dot"></span> <span id="bundle-status-text">Packaging files...</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 12px; color: var(--text-secondary);">
+            💡 Need to adjust book content first? Close this modal and use the Canvas Editor or Settings anytime.
+          </div>
+          <button class="btn btn-outline" onclick="closeModal('publish-helper-modal')">Close</button>
+        </div>
+      </div>
     </div>
-
-
-
-    <!-- Hidden File Inputs -->
     <input type="file" id="media-library-upload-input" multiple accept="image/*" style="display: none;"
       onchange="handleMediaLibraryUpload(event)">
     <input type="file" id="batch-import-upload-input" multiple accept="image/*" style="display: none;"

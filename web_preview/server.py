@@ -11,6 +11,8 @@ import json
 import base64
 import shutil
 import urllib.parse
+import zipfile
+import mimetypes
 from pathlib import Path
 
 # Add project root to sys.path
@@ -206,14 +208,19 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             query_params = urllib.parse.parse_qs(parsed.query)
             raw_file = query_params.get("path", [""])[0]
             if raw_file and Path(raw_file).exists():
-                pdf_file = Path(raw_file)
+                export_file = Path(raw_file)
+                mime_type, _ = mimetypes.guess_type(export_file.name)
+                if not mime_type:
+                    mime_type = "application/zip" if export_file.suffix.lower() == ".zip" else "application/octet-stream"
+                disposition = "attachment" if export_file.suffix.lower() == ".zip" else "inline"
                 self.send_response(200)
-                self.send_header("Content-Type", "application/pdf")
-                self.send_header("Content-Disposition", f"inline; filename=\"{pdf_file.name}\"")
-                self.send_header("Content-Length", str(pdf_file.stat().st_size))
+                self.send_header("Content-Type", mime_type)
+                self.send_header("Content-Disposition", f"{disposition}; filename=\"{export_file.name}\"")
+                self.send_header("Content-Length", str(export_file.stat().st_size))
                 self.end_headers()
-                with open(pdf_file, "rb") as f:
+                with open(export_file, "rb") as f:
                     shutil.copyfileobj(f, self.wfile)
+                return
         elif req_path == "/api/ai/get_key":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -419,6 +426,206 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
                 return
+
+        elif req_path == "/api/projects/export_publishing_bundle":
+            # Generate Complete Amazon KDP Publishing Package (Interior PDF + Cover PDF + Metadata Guide ZIP)
+            project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "My_Project")).resolve()
+            exports_dir = project_dir / "exports"
+            exports_dir.mkdir(parents=True, exist_ok=True)
+
+            proj_name = req_data.get("name", "KDP_Book").replace(" ", "_")
+            out_interior_pdf = exports_dir / f"{proj_name}_Interior_Print_Ready.pdf"
+            out_cover_pdf = exports_dir / f"{proj_name}_Cover_Full_Wrap.pdf"
+            out_guide_txt = exports_dir / f"{proj_name}_KDP_Publishing_Guide_and_Metadata.txt"
+            out_zip = exports_dir / f"{proj_name}_KDP_Publishing_Bundle.zip"
+
+            single_sided = req_data.get("single_sided", True)
+            blank_page_note = req_data.get("blank_page_note", False)
+            include_front_matter = req_data.get("include_front_matter", True)
+            include_page_numbers = req_data.get("include_page_numbers", False)
+            cover_config = req_data.get("cover_config", {})
+
+            # 1. Generate Interior PDF
+            try:
+                KDPPdfExporter.generate_pdf(
+                    req_data,
+                    out_interior_pdf,
+                    include_front_matter=include_front_matter,
+                    single_sided=single_sided,
+                    blank_page_note=blank_page_note,
+                    include_page_numbers=include_page_numbers
+                )
+            except Exception as e:
+                print(f"Bundle Interior PDF Generation Warning: {e}")
+
+            # 2. Generate Cover PDF
+            try:
+                KDPCoverExporter.generate_cover_pdf(req_data, out_cover_pdf, cover_config=cover_config)
+            except Exception as e:
+                print(f"Bundle Cover PDF Generation Warning: {e}")
+
+            # 3. Generate Metadata & Upload Guide TXT
+            meta = req_data.get("metadata", {})
+            pages_count = len(req_data.get("pages", []))
+            trim_size = req_data.get("settings", {}).get("trim_size", "8.5x11")
+            author = req_data.get("author") or meta.get("author") or "Creative Kids Studio"
+
+            if not meta or not meta.get("backend_keywords"):
+                ai = AIKDPAssistant()
+                topic = req_data.get("theme") or req_data.get("name", "Coloring Book")
+                book_type = req_data.get("book_type", "coloring_book")
+                meta = ai.generate_kdp_metadata(
+                    topic_or_niche=topic,
+                    book_type=book_type,
+                    author_name=author,
+                    page_count=pages_count,
+                    trim_size=trim_size
+                )
+
+            title = meta.get("title") or req_data.get("name", "My KDP Book")
+            subtitle = meta.get("subtitle", f"{pages_count}+ Fun & Easy Coloring Pages")
+            keywords = meta.get("backend_keywords", [])
+            categories = meta.get("recommended_categories", [])
+            html_desc = meta.get("html_description", "")
+
+            # Print cost & royalties
+            if pages_count <= 108:
+                print_cost = 2.30
+            else:
+                print_cost = round(1.00 + (pages_count * 0.012), 2)
+            floor_price = round(print_cost / 0.60, 2)
+            launch_profit = round((6.99 * 0.60) - print_cost, 2)
+            regular_profit = round((7.99 * 0.60) - print_cost, 2)
+
+            guide_text = f"""================================================================================
+          AMAZON KDP COMPLETE PUBLISHING GUIDE & METADATA CHEAT SHEET
+             Generated by KDP Book Production Studio (Print-Ready)
+================================================================================
+
+[1] BOOK INFORMATION & SETUP:
+--------------------------------------------------------------------------------
+Book Title: {title}
+Subtitle: {subtitle}
+Author / Pen Name: {author}
+Page Count: {pages_count} pages
+Trim Size: {trim_size}
+Ink & Paper Type: Black & white interior with white paper
+Bleed Settings: Bleed (PDF only)
+Paperback Cover Finish: Matte (Recommended for coloring books)
+
+[2] PRICING & ROYALTY PROFIT STRATEGY (US MARKET):
+--------------------------------------------------------------------------------
+Amazon KDP Printing Cost: ${print_cost:.2f}
+Minimum Break-Even Price: ${floor_price:.2f}
+
+* RECOMMENDED LAUNCH PRICE: $6.99
+  -> Amazon Cut (40%): $2.80
+  -> Printing Cost: ${print_cost:.2f}
+  -> YOUR NET PROFIT PER BOOK: ${launch_profit:.2f}
+  * Strategy: High conversion rate, rapid initial reviews, and algorithmic ranking boost.
+
+* RECOMMENDED REGULAR PRICE: $7.99
+  -> Amazon Cut (40%): $3.20
+  -> Printing Cost: ${print_cost:.2f}
+  -> YOUR NET PROFIT PER BOOK: ${regular_profit:.2f}
+  * Strategy: Long-term optimal profit margin once you reach 10-15 customer reviews.
+
+[3] 7 AMAZON KDP BACKEND SEARCH KEYWORDS (COPY INTO SLOTS 1 TO 7):
+--------------------------------------------------------------------------------
+"""
+            for i, kw in enumerate(keywords[:7], 1):
+                guide_text += f"Keyword Slot {i}: {kw}\n"
+
+            guide_text += f"""
+[4] RECOMMENDED AMAZON KDP CATEGORIES (CHOOSE UP TO 3 IN KDP):
+--------------------------------------------------------------------------------
+"""
+            for i, cat in enumerate(categories[:3], 1):
+                guide_text += f"Category {i}: {cat}\n"
+
+            guide_text += f"""
+[5] AMAZON HTML BOOK DESCRIPTION (READY TO PASTE INTO AMAZON KDP):
+--------------------------------------------------------------------------------
+{html_desc}
+
+================================================================================
+[6] STEP-BY-STEP INSTRUCTIONS TO PUBLISH ON AMAZON KDP:
+================================================================================
+Step 1: Go to https://kdp.amazon.com and sign in to your Amazon account.
+Step 2: Click the yellow "+ Create" button and select "Create Paperback".
+
+--- TAB 1: PAPERBACK DETAILS ---
+1. Primary Language: English
+2. Book Title: Paste the Title from above.
+3. Subtitle: Paste the Subtitle from above.
+4. Author: Enter your Pen Name ({author}).
+5. Description: Paste the HTML description from Section [5] above.
+6. Publishing Rights: Choose "I own the copyright and hold necessary publishing rights".
+7. Primary Audience (Adult Content): Select "No".
+8. Reading Age: Minimum 4 Years, Maximum 8 Years (or your target age).
+9. Primary Marketplace: Amazon.com
+10. Categories: Click "Choose categories" and pick the 3 categories listed in Section [4].
+11. Keywords: Copy and paste Keyword Slots 1 to 7 into the 7 keyword boxes.
+12. Click "Save and Continue".
+
+--- TAB 2: PAPERBACK CONTENT ---
+1. Print ISBN: Select "Assign me a free KDP ISBN".
+2. Publication Date: Leave blank (uses current date).
+3. Print Options:
+   - Ink & Paper Type: "Black & white interior with white paper"
+   - Trim Size: Select "{trim_size}"
+   - Bleed Settings: Select "Bleed (PDF only)"
+   - Paperback Cover Finish: Select "Matte"
+4. Manuscript: Click "Upload paperback manuscript" and choose:
+   -> "{out_interior_pdf.name}"
+5. Book Cover: Select "Upload a cover you already have" and choose:
+   -> "{out_cover_pdf.name}"
+6. Book Preview: Click "Launch Previewer" (wait 1-2 mins) and check for any cut-off warnings.
+7. Click "Save and Continue".
+
+--- TAB 3: PAPERBACK RIGHTS & PRICING ---
+1. Territories: Select "All territories (worldwide rights)".
+2. Primary Marketplace: Amazon.com
+3. Pricing: Enter "$6.99" (or "$7.99") in the Amazon.com price box.
+   Notice your royalty matches the calculation in Section [2] above!
+4. Click "Publish Your Paperback Book"!
+
+🎉 THAT'S IT! Your book will be reviewed by Amazon and available for sale worldwide within 24-72 hours!
+================================================================================
+"""
+            with open(out_guide_txt, "w", encoding="utf-8") as f:
+                f.write(guide_text)
+
+            # 4. Package into ZIP
+            with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
+                if out_interior_pdf.exists():
+                    zipf.write(out_interior_pdf, arcname=out_interior_pdf.name)
+                if out_cover_pdf.exists():
+                    zipf.write(out_cover_pdf, arcname=out_cover_pdf.name)
+                if out_guide_txt.exists():
+                    zipf.write(out_guide_txt, arcname=out_guide_txt.name)
+
+            file_size_mb = round(out_zip.stat().st_size / (1024 * 1024), 2)
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            resp = {
+                "status": "success",
+                "zip_path": str(out_zip),
+                "filename": out_zip.name,
+                "file_size_mb": file_size_mb,
+                "download_url": f"/api/exports/{urllib.parse.quote(out_zip.name)}?path={urllib.parse.quote(str(out_zip))}",
+                "metadata": meta,
+                "print_cost": print_cost,
+                "floor_price": floor_price,
+                "recommended_launch_price": 6.99,
+                "launch_profit": launch_profit,
+                "recommended_regular_price": 7.99,
+                "regular_profit": regular_profit
+            }
+            self.wfile.write(json.dumps(resp).encode("utf-8"))
+            return
 
         elif req_path == "/api/projects/toggle_lock":
             raw_path = req_data.get("path", "")
@@ -686,8 +893,17 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             book_type = req_data.get("book_type", "coloring_book")
             target_age = req_data.get("target_age", "Ages 4-8")
             author = req_data.get("author", "Creative Kids Studio")
+            page_count = int(req_data.get("page_count", 24))
+            trim_size = req_data.get("trim_size", "8.5x11")
             ai = AIKDPAssistant()
-            meta = ai.generate_kdp_metadata(topic_or_niche=topic, book_type=book_type, target_age=target_age, author_name=author)
+            meta = ai.generate_kdp_metadata(
+                topic_or_niche=topic,
+                book_type=book_type,
+                target_age=target_age,
+                author_name=author,
+                page_count=page_count,
+                trim_size=trim_size
+            )
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()

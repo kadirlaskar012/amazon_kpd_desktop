@@ -7284,3 +7284,376 @@ function executeCoverPdfExport(openInBrowser = true) {
     showToast(`⚠️ Cover PDF Export error: ${err.message}`, "danger");
   });
 }
+
+// ==========================================
+// Amazon KDP Publishing Intelligence & Packaging Engine
+// ==========================================
+let currentPublishMetadata = null;
+let currentPublishPrice = 6.99;
+
+function openPublishHelperModal() {
+  const modal = document.getElementById("publish-helper-modal");
+  if (!modal) return;
+
+  const projName = currentProject.name || "My Jungle Coloring Book";
+  const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
+  const trimSize = currentProject.settings?.trim_size || "8.5x11";
+  const author = currentProject.author || "Creative Kids Studio";
+
+  // Update header banner
+  const nameEl = document.getElementById("pub-banner-book-name");
+  if (nameEl) nameEl.innerText = projName;
+  const specsEl = document.getElementById("pub-banner-specs");
+  if (specsEl) specsEl.innerText = `${pagesCount} Pages • ${trimSize}" • Black & White`;
+
+  // Update print specs in calculator
+  const calcPageEl = document.getElementById("pub-calc-page-count");
+  if (calcPageEl) calcPageEl.innerText = `${pagesCount} Pages`;
+  const calcTrimEl = document.getElementById("pub-calc-trim");
+  if (calcTrimEl) calcTrimEl.innerText = `${trimSize}"`;
+
+  // Update checklist elements
+  const chkTitle = document.getElementById("chk-title");
+  if (chkTitle) chkTitle.innerText = projName;
+  const chkAuthor = document.getElementById("chk-author");
+  if (chkAuthor) chkAuthor.innerText = author;
+  const chkTrim = document.getElementById("chk-trim");
+  if (chkTrim) chkTrim.innerText = `${trimSize} in`;
+
+  const safeProjName = projName.replace(/\s+/g, "_");
+  const chkInterior = document.getElementById("chk-interior-filename");
+  if (chkInterior) chkInterior.innerText = `${safeProjName}_Interior_Print_Ready.pdf`;
+  const chkCover = document.getElementById("chk-cover-filename");
+  if (chkCover) chkCover.innerText = `${safeProjName}_Cover_Full_Wrap.pdf`;
+
+  // Calculate dynamic pricing tiers for this specific book
+  const printCost = (pagesCount <= 108) ? 2.30 : (1.00 + (pagesCount * 0.012));
+  const launchProfit = Math.max(0, (6.99 * 0.60) - printCost);
+  const regularProfit = Math.max(0, (7.99 * 0.60) - printCost);
+  const premiumProfit = Math.max(0, (8.99 * 0.60) - printCost);
+
+  const tLaunch = document.getElementById("tier-launch-profit");
+  if (tLaunch) tLaunch.innerText = `+$${launchProfit.toFixed(2)}`;
+  const tRegular = document.getElementById("tier-regular-profit");
+  if (tRegular) tRegular.innerText = `+$${regularProfit.toFixed(2)}`;
+  const tPremium = document.getElementById("tier-premium-profit");
+  if (tPremium) tPremium.innerText = `+$${premiumProfit.toFixed(2)}`;
+
+  const adviceEl = document.getElementById("pub-strategy-advice");
+  if (adviceEl) {
+    adviceEl.innerHTML = `Based on your <strong>${pagesCount}-page ${trimSize}"</strong> book, our algorithm recommends launching at <strong>$6.99</strong> for rapid sales & review traction (earning <strong>+$${launchProfit.toFixed(2)}</strong>/sale), then stepping up to <strong>$7.99</strong> (earning <strong>+$${regularProfit.toFixed(2)}</strong>/sale) once established.`;
+  }
+
+  // Set default initial price
+  currentPublishPrice = 6.99;
+  setCalculatorPrice(currentPublishPrice);
+
+  // Switch to default tab
+  switchPubTab("pricing");
+
+  // Fetch or generate metadata
+  loadPublishMetadata();
+
+  modal.classList.add("active");
+}
+
+function switchPubTab(tabName) {
+  const tabs = document.querySelectorAll(".pub-tab-btn");
+  tabs.forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-pubtab") === tabName);
+  });
+
+  const panels = document.querySelectorAll(".pub-tab-content");
+  panels.forEach(p => {
+    p.classList.toggle("active", p.id === `pub-content-${tabName}`);
+  });
+}
+
+function setCalculatorPrice(price) {
+  currentPublishPrice = parseFloat(price) || 6.99;
+  const input = document.getElementById("pub-calc-input");
+  if (input) input.value = currentPublishPrice.toFixed(2);
+  const slider = document.getElementById("pub-calc-slider");
+  if (slider) slider.value = currentPublishPrice;
+
+  updatePublishPricingView(currentPublishPrice);
+}
+
+function onCalculatorInputChange(val) {
+  const price = parseFloat(val) || 3.85;
+  currentPublishPrice = price;
+  const slider = document.getElementById("pub-calc-slider");
+  if (slider) slider.value = price;
+  updatePublishPricingView(price);
+}
+
+function onCalculatorSliderChange(val) {
+  const price = parseFloat(val) || 3.85;
+  currentPublishPrice = price;
+  const input = document.getElementById("pub-calc-input");
+  if (input) input.value = price.toFixed(2);
+  updatePublishPricingView(price);
+}
+
+function updatePublishPricingView(listPrice) {
+  const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
+  const printCost = (pagesCount <= 108) ? 2.30 : (1.00 + (pagesCount * 0.012));
+  const floorPrice = printCost / 0.60;
+
+  const amazonCut = listPrice * 0.40;
+  const authorRoyalty = Math.max(0, (listPrice * 0.60) - printCost);
+  const marginPct = listPrice > 0 ? ((authorRoyalty / listPrice) * 100).toFixed(1) : "0.0";
+
+  // Specs & floor
+  const costDisp = document.getElementById("pub-calc-cost-display");
+  if (costDisp) costDisp.innerText = `$${printCost.toFixed(2)}`;
+  const floorBadge = document.getElementById("pub-floor-badge");
+  if (floorBadge) floorBadge.innerText = `Min Floor: $${floorPrice.toFixed(2)}`;
+
+  // Hero metric
+  const netRoyaltyEl = document.getElementById("pub-metric-net-royalty");
+  if (netRoyaltyEl) netRoyaltyEl.innerText = `$${authorRoyalty.toFixed(2)}`;
+  const marginEl = document.getElementById("pub-metric-margin");
+  if (marginEl) marginEl.innerText = `Profit Margin: ${marginPct}% of List Price`;
+
+  // Breakdown items
+  const lpEl = document.getElementById("pub-metric-list-price");
+  if (lpEl) lpEl.innerText = `$${listPrice.toFixed(2)}`;
+  const amzFeeEl = document.getElementById("pub-metric-amazon-fee");
+  if (amzFeeEl) amzFeeEl.innerText = `-$${amazonCut.toFixed(2)}`;
+  const prnDedEl = document.getElementById("pub-metric-print-deduct");
+  if (prnDedEl) prnDedEl.innerText = `-$${printCost.toFixed(2)}`;
+  const authTotEl = document.getElementById("pub-metric-author-total");
+  if (authTotEl) authTotEl.innerText = `+$${authorRoyalty.toFixed(2)}`;
+
+  // Projections
+  const p10 = document.getElementById("proj-10");
+  if (p10) p10.innerText = `$${(authorRoyalty * 10).toFixed(2)}`;
+  const p50 = document.getElementById("proj-50");
+  if (p50) p50.innerText = `$${(authorRoyalty * 50).toFixed(2)}`;
+  const p100 = document.getElementById("proj-100");
+  if (p100) p100.innerText = `$${(authorRoyalty * 100).toFixed(2)}`;
+  const p500 = document.getElementById("proj-500");
+  if (p500) p500.innerText = `$${(authorRoyalty * 500).toFixed(2)}`;
+
+  // Checklist display
+  const chkPrice = document.getElementById("chk-price");
+  if (chkPrice) chkPrice.innerText = `$${listPrice.toFixed(2)}`;
+}
+
+function loadPublishMetadata(forceRefresh = false) {
+  if (currentPublishMetadata && !forceRefresh) {
+    renderPublishMetadata(currentPublishMetadata);
+    return;
+  }
+
+  const topic = currentProject.name || "Jungle Animals";
+  const author = currentProject.author || "Creative Kids Studio";
+  const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
+  const trimSize = currentProject.settings?.trim_size || "8.5x11";
+
+  fetch("/api/ai/generate_metadata", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      topic: topic,
+      book_type: "coloring_book",
+      target_age: "Ages 4-8",
+      author: author,
+      page_count: pagesCount,
+      trim_size: trimSize
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.status === "success" && data.metadata) {
+      currentPublishMetadata = data.metadata;
+      renderPublishMetadata(data.metadata);
+    }
+  })
+  .catch(err => {
+    console.warn("Could not fetch metadata from backend:", err);
+  });
+}
+
+function regeneratePublishKeywords() {
+  showToast("🔄 Refreshing Amazon SEO Keywords...", "info");
+  loadPublishMetadata(true);
+}
+
+function renderPublishMetadata(meta) {
+  if (!meta) return;
+
+  // 1. Render Keywords Slots
+  const kwContainer = document.getElementById("pub-keywords-container");
+  if (kwContainer && meta.backend_keywords) {
+    let kwHtml = "";
+    meta.backend_keywords.slice(0, 7).forEach((kw, idx) => {
+      const slotNum = idx + 1;
+      const charCount = kw.length;
+      kwHtml += `
+        <div class="keyword-slot-row">
+          <span class="slot-num-badge">Slot #${slotNum}</span>
+          <span class="slot-text-content">${escapeHtml(kw)}</span>
+          <span class="slot-char-count">${charCount} / 50</span>
+          <button class="btn btn-sm btn-outline" onclick="copyHelperText('${encodeURIComponent(kw)}', 'Keyword #${slotNum}')">
+            📋 Copy
+          </button>
+        </div>
+      `;
+    });
+    kwContainer.innerHTML = kwHtml;
+  }
+
+  // 2. Render Categories
+  const catContainer = document.getElementById("pub-categories-container");
+  if (catContainer && meta.recommended_categories) {
+    let catHtml = "";
+    meta.recommended_categories.slice(0, 3).forEach((cat, idx) => {
+      catHtml += `
+        <div class="category-row">
+          <span class="category-text">📁 ${escapeHtml(cat)}</span>
+          <button class="btn btn-sm btn-outline" onclick="copyHelperText('${encodeURIComponent(cat)}', 'Category')">
+            📋 Copy
+          </button>
+        </div>
+      `;
+    });
+    catContainer.innerHTML = catHtml;
+  }
+
+  // 3. Render HTML Description
+  const descPrev = document.getElementById("pub-desc-preview-view");
+  if (descPrev && meta.html_description) {
+    descPrev.innerHTML = meta.html_description;
+  }
+
+  const descRaw = document.getElementById("pub-desc-raw-code");
+  if (descRaw && meta.html_description) {
+    descRaw.value = meta.html_description;
+  }
+}
+
+function toggleDescMode(mode) {
+  const btnPrev = document.getElementById("btn-desc-mode-prev");
+  const btnCode = document.getElementById("btn-desc-mode-code");
+  const viewPrev = document.getElementById("pub-desc-preview-view");
+  const viewCode = document.getElementById("pub-desc-code-view");
+
+  if (mode === "prev") {
+    if (btnPrev) btnPrev.classList.add("active");
+    if (btnCode) btnCode.classList.remove("active");
+    if (viewPrev) viewPrev.style.display = "block";
+    if (viewCode) viewCode.style.display = "none";
+  } else {
+    if (btnCode) btnCode.classList.add("active");
+    if (btnPrev) btnPrev.classList.remove("active");
+    if (viewPrev) viewPrev.style.display = "none";
+    if (viewCode) viewCode.style.display = "block";
+  }
+}
+
+function copyAllKeywords() {
+  if (!currentPublishMetadata || !currentPublishMetadata.backend_keywords) {
+    showToast("⚠️ No keywords available to copy", "warning");
+    return;
+  }
+  const text = currentPublishMetadata.backend_keywords.slice(0, 7).join("\n");
+  navigator.clipboard.writeText(text).then(() => {
+    showToast("🎉 Copied all 7 Amazon KDP Keywords to clipboard!", "success");
+  }).catch(() => {
+    showToast("⚠️ Could not write to clipboard", "danger");
+  });
+}
+
+function copyHtmlDescription() {
+  const rawCode = document.getElementById("pub-desc-raw-code")?.value || currentPublishMetadata?.html_description;
+  if (!rawCode) {
+    showToast("⚠️ No description available to copy", "warning");
+    return;
+  }
+  navigator.clipboard.writeText(rawCode).then(() => {
+    showToast("🎉 Copied Amazon Rich HTML Description to clipboard!", "success");
+  }).catch(() => {
+    showToast("⚠️ Could not write to clipboard", "danger");
+  });
+}
+
+function copyHelperText(encodedText, label) {
+  const text = decodeURIComponent(encodedText);
+  navigator.clipboard.writeText(text).then(() => {
+    showToast(`📋 Copied ${label} to clipboard!`, "info");
+  }).catch(() => {
+    showToast("⚠️ Could not write to clipboard", "danger");
+  });
+}
+
+function executePublishingBundleExport() {
+  const btn = document.getElementById("btn-run-bundle-export");
+  const statusWrap = document.getElementById("bundle-export-status");
+  const statusText = document.getElementById("bundle-status-text");
+
+  if (btn) btn.disabled = true;
+  if (statusWrap) statusWrap.style.display = "block";
+  if (statusText) statusText.innerText = "Generating 300 DPI Interior, Cover PDF & Packaging ZIP...";
+
+  showToast("📦 Packaging 1-Click Publishing Bundle...", "info");
+
+  // Cover image extraction
+  let coverImg = null;
+  for (const p of (currentProject.pages || [])) {
+    for (const el of (p.elements || [])) {
+      if ((el.type === "main_image" || el.type === "ref_image") && el.image_src) {
+        coverImg = el.image_src;
+        break;
+      }
+    }
+    if (coverImg) break;
+  }
+
+  const payload = {
+    ...currentProject,
+    metadata: currentPublishMetadata || {},
+    cover_config: {
+      title: currentProject.name || "MY JUNGLE COLORING BOOK",
+      subtitle: currentPublishMetadata?.subtitle || "50+ Fun & Easy Coloring Pages",
+      author: currentProject.author || "Creative Kids Studio",
+      bg_color: "#1e1b4b",
+      spine_color: "#1e1b4b",
+      back_heading: "WHY YOUR CHILD WILL LOVE THIS BOOK",
+      paper_type: "white",
+      front_image: coverImg
+    }
+  };
+
+  fetch("/api/projects/export_publishing_bundle", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (btn) btn.disabled = false;
+    if (statusWrap) statusWrap.style.display = "none";
+
+    if (data.status === "success" && data.download_url) {
+      showToast(`🎉 Publishing Bundle Downloaded: ${data.filename} (${data.file_size_mb} MB)!`, "success");
+      fetchRecentProjects();
+
+      // Trigger instant ZIP download
+      const a = document.createElement("a");
+      a.href = data.download_url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } else {
+      showToast(`⚠️ Bundle Export failed: ${data.error || 'Unknown error'}`, "danger");
+    }
+  })
+  .catch(err => {
+    if (btn) btn.disabled = false;
+    if (statusWrap) statusWrap.style.display = "none";
+    showToast(`⚠️ Bundle Export error: ${err.message}`, "danger");
+  });
+}

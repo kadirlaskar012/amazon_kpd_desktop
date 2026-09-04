@@ -10,7 +10,10 @@ import math
 from typing import List, Dict, Any, Optional, Tuple, Union
 from PIL import Image
 import numpy as np
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 
 class DotToDotGenerator:

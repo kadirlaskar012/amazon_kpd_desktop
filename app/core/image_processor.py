@@ -11,7 +11,10 @@ import base64
 from typing import Tuple, Optional, Union
 from PIL import Image, ImageEnhance, ImageOps
 import numpy as np
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 
 class KDPImageProcessor:
@@ -89,9 +92,14 @@ class KDPImageProcessor:
         alpha = np_img[:, :, 3]
 
         # Convert to grayscale & HSV to check for color content
-        gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
-        hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
-        sat = hsv[:, :, 1]
+        if cv2 is not None:
+            gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+            hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+            sat = hsv[:, :, 1]
+        else:
+            gray = np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)
+            hsv_img = Image.fromarray(rgb).convert("HSV")
+            sat = np.array(hsv_img)[:, :, 1]
 
         # Detect if image has noticeable color
         has_color = bool(np.mean(sat > 25) > 0.01)
@@ -124,7 +132,10 @@ class KDPImageProcessor:
             pil_img = pil_img.convert("RGBA")
 
         np_img = np.array(pil_img)
-        gray = cv2.cvtColor(np_img[:, :, :3], cv2.COLOR_RGB2GRAY)
+        if cv2 is not None:
+            gray = cv2.cvtColor(np_img[:, :, :3], cv2.COLOR_RGB2GRAY)
+        else:
+            gray = np.dot(np_img[:, :, :3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)
         alpha = np_img[:, :, 3]
 
         # Non-white / non-transparent pixels (artwork)

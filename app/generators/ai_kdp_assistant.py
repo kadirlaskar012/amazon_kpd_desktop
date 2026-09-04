@@ -200,9 +200,20 @@ class AIKDPAssistant:
         topic_or_niche: str,
         book_type: str = "coloring_book",
         target_age: str = "Ages 4-8",
-        author_name: str = "Creative Kids Studio"
+        author_name: str = "Creative Kids Studio",
+        page_count: int = 50,
+        trim_size: str = "8.5x11"
     ) -> Dict[str, Any]:
         """Generate complete Amazon KDP Title, Subtitle, 7 Backend Keywords, Categories, and HTML Description."""
+        # Calculate Amazon KDP B&W Printing Cost (US Market)
+        if page_count <= 108:
+            print_cost = 2.30
+        else:
+            print_cost = round(1.00 + (page_count * 0.012), 2)
+        floor_price = round(print_cost / 0.60, 2)
+        launch_profit = round((6.99 * 0.60) - print_cost, 2)
+        regular_profit = round((7.99 * 0.60) - print_cost, 2)
+
         prompt = f"""
         Act as an Amazon KDP Bestseller Publishing Copywriter and SEO Specialist.
         Generate high-converting Amazon metadata for a Children's Activity Book:
@@ -210,6 +221,8 @@ class AIKDPAssistant:
         - Book Type: "{book_type}"
         - Target Age: "{target_age}"
         - Author: "{author_name}"
+        - Page Count: {page_count} pages
+        - Trim Size: {trim_size}
 
         CRITICAL AMAZON KDP RULES:
         1. Title: Catchy, memorable, includes primary high-volume keyword (Max 60 chars).
@@ -233,7 +246,7 @@ class AIKDPAssistant:
           ],
           "html_description": "<h3>...</h3><p>...</p><ul><li>...</li></ul>",
           "target_audience": "Toddlers, Preschoolers, Kindergarteners {target_age}",
-          "recommended_list_price": "$7.99"
+          "recommended_list_price": "$6.99"
         }}
         """
         gemini_res = self._call_gemini(prompt)
@@ -242,6 +255,17 @@ class AIKDPAssistant:
                 clean_json = re.sub(r"^```json\s*|\s*```$", "", gemini_res.strip(), flags=re.MULTILINE)
                 parsed = json.loads(clean_json)
                 if isinstance(parsed, dict) and "title" in parsed:
+                    parsed["pricing_strategy"] = {
+                        "page_count": page_count,
+                        "trim_size": trim_size,
+                        "printing_cost": print_cost,
+                        "floor_price": floor_price,
+                        "recommended_launch_price": 6.99,
+                        "launch_royalty_profit": launch_profit,
+                        "recommended_regular_price": 7.99,
+                        "regular_royalty_profit": regular_profit,
+                        "advice": f"For your {page_count}-page {trim_size} book, launch at $6.99 to capture quick sales & reviews (earning ${launch_profit:.2f}/sale), then raise to $7.99 (earning ${regular_profit:.2f}/sale)."
+                    }
                     return parsed
             except Exception:
                 pass
@@ -251,7 +275,7 @@ class AIKDPAssistant:
         b_type_title = book_type.replace("_", " ").title()
 
         title = f"My First {clean_topic} {b_type_title}"
-        subtitle = f"50+ Fun, Easy & Engaging Activity Pages for Toddlers and Kids {target_age} | Learn, Color & Create"
+        subtitle = f"{page_count}+ Fun, Easy & Engaging Activity Pages for Kids {target_age} | Learn, Color & Create ({trim_size}\")"
 
         keywords_map = {
             "coloring_book": [
@@ -326,8 +350,8 @@ class AIKDPAssistant:
 
 <h3>⭐ What Makes This Book Special:</h3>
 <ul>
-  <li><b>50+ Unique & Fun Illustrations:</b> Carefully crafted with clean lines and charming designs children adore.</li>
-  <li><b>Perfect for Little Hands:</b> Large 8.5 x 11 inch format provides generous drawing and activity space.</li>
+  <li><b>{page_count}+ Unique & Fun Pages:</b> Carefully crafted with clean, bold lines and charming designs children adore.</li>
+  <li><b>Perfect for Little Hands:</b> Generous {trim_size} inch format provides ample drawing and activity space.</li>
   <li><b>Single-Sided Bleed-Safe Pages:</b> Blank back pages prevent bleed-through from markers, pens, and crayons.</li>
   <li><b>Builds Vital Early Skills:</b> Enhances fine motor control, pencil grip, cognitive focus, and creative imagination.</li>
   <li><b>Ideal Screen-Free Gift:</b> Perfect for birthdays, holidays, road trips, rainy days, and homeschool activities!</li>
@@ -347,5 +371,16 @@ class AIKDPAssistant:
             ],
             "html_description": html_desc,
             "target_audience": f"Toddlers & Kids {target_age}",
-            "recommended_list_price": "$7.99"
+            "recommended_list_price": "$6.99",
+            "pricing_strategy": {
+                "page_count": page_count,
+                "trim_size": trim_size,
+                "printing_cost": print_cost,
+                "floor_price": floor_price,
+                "recommended_launch_price": 6.99,
+                "launch_royalty_profit": launch_profit,
+                "recommended_regular_price": 7.99,
+                "regular_royalty_profit": regular_profit,
+                "advice": f"For your {page_count}-page {trim_size} book, launch at $6.99 to capture quick sales & reviews (earning ${launch_profit:.2f}/sale), then raise to $7.99 (earning ${regular_profit:.2f}/sale)."
+            }
         }
