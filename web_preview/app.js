@@ -4147,6 +4147,7 @@ function renderMediaLibrary() {
       </div>
     `;
     updateMediaSelectionUI();
+    updateAutoPlotCardUI();
     return;
   }
 
@@ -4209,6 +4210,7 @@ function renderMediaLibrary() {
 
   updateMediaSelectionUI();
   populateQuickMediaPicker();
+  updateAutoPlotCardUI();
 }
 
 function handleMediaDragStart(e, mediaId) {
@@ -4469,6 +4471,435 @@ async function applyMediaToSlot(mediaId, slotType) {
   markProjectDirty();
   loadPageIntoCanvas(currentPageIndex);
   renderTimeline();
+}
+
+// ==========================================
+// ⚡ AUTO-PLOT MEDIA TO CANVAS ENGINE
+// ==========================================
+
+/**
+ * Parses raw media filename into a cleaned subject name and detected role ('ref' vs 'outline').
+ * Handles:
+ * - bear_color, bear-color, bear color -> role: 'ref', subject: 'Bear'
+ * - bear_outline, bear_drawing, bear_lineart, bear_sketch, bear_bw -> role: 'outline', subject: 'Bear'
+ * - 01_bear_color, 01_bear_outline -> preserves sortKey '0001_bear' for orderly plotting
+ */
+function parseMediaSubjectAndRole(rawName) {
+  if (!rawName) return { subjectKey: "untitled", subjectTitle: "UNTITLED", role: "outline", sortKey: "9999_untitled" };
+  
+  // Strip extension
+  let base = rawName.replace(/\.[^/.]+$/, "").trim();
+
+  // Extract leading sequence number (e.g. 01_, 02-, 1. ) for sorting
+  let sortNum = "9999";
+  const numMatch = base.match(/^(\d+)[\s_\.\-]+/);
+  if (numMatch) {
+    sortNum = numMatch[1].padStart(4, "0");
+  }
+
+  // Detect role based on color vs outline tags
+  let role = null; // 'ref' or 'outline'
+  const colorSuffixRegex = /[_\-\s(]+(color(?:ed)?|colour(?:ed)?|ref(?:erence)?|guide)[_\-\s)]*$/i;
+  const colorPrefixRegex = /^(color(?:ed)?|colour(?:ed)?|ref(?:erence)?|guide)[_\-\s]+/i;
+
+  const outlineSuffixRegex = /[_\-\s(]+(outline|drawing|lineart|line_art|sketch|bw|blackwhite|black_white|contour)[_\-\s)]*$/i;
+  const outlinePrefixRegex = /^(outline|drawing|lineart|line_art|sketch|bw|blackwhite|black_white|contour)[_\-\s]+/i;
+
+  if (colorSuffixRegex.test(base)) {
+    role = "ref";
+    base = base.replace(colorSuffixRegex, "");
+  } else if (colorPrefixRegex.test(base)) {
+    role = "ref";
+    base = base.replace(colorPrefixRegex, "");
+  } else if (outlineSuffixRegex.test(base)) {
+    role = "outline";
+    base = base.replace(outlineSuffixRegex, "");
+  } else if (outlinePrefixRegex.test(base)) {
+    role = "outline";
+    base = base.replace(outlinePrefixRegex, "");
+  }
+
+  // Remove leading numbers or "page_01" from base subject name
+  base = base.replace(/^(page\s*[\-_]*)?\d+[\s_\.\-]+/i, "");
+  base = base.replace(/[_\-]+/g, " ").trim();
+  if (!base) base = "DRAWING";
+
+  const subjectTitle = formatSubjectTitle(base);
+  const subjectKey = base.toLowerCase();
+
+  return {
+    rawName,
+    subjectKey,
+    subjectTitle,
+    role,
+    sortKey: `${sortNum}_${subjectKey}`
+  };
+}
+
+function formatSubjectTitle(str) {
+  if (!str) return "UNTITLED";
+  return str.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
+
+/**
+ * Groups media items into paired subject sets:
+ * Each set has { subjectKey, subjectTitle, sortKey, ref, outline }
+ */
+function groupMediaIntoSubjectPairs(mediaList) {
+  if (!mediaList || mediaList.length === 0) return [];
+
+  const parsed = mediaList.map(item => {
+    const p = parseMediaSubjectAndRole(item.name || item.fileName || "");
+    return { ...p, mediaItem: item };
+  });
+
+  const subjectMap = new Map();
+
+  parsed.forEach(item => {
+    const key = item.subjectKey;
+    if (!subjectMap.has(key)) {
+      subjectMap.set(key, {
+        subjectKey: key,
+        subjectTitle: item.subjectTitle,
+        sortKey: item.sortKey,
+        ref: null,
+        outline: null,
+        unspecified: []
+      });
+    }
+    const grp = subjectMap.get(key);
+    if (item.sortKey < grp.sortKey) {
+      grp.sortKey = item.sortKey;
+    }
+
+    if (item.role === "ref") {
+      if (!grp.ref) grp.ref = item.mediaItem;
+      else grp.unspecified.push(item.mediaItem);
+    } else if (item.role === "outline") {
+      if (!grp.outline) grp.outline = item.mediaItem;
+      else grp.unspecified.push(item.mediaItem);
+    } else {
+      grp.unspecified.push(item.mediaItem);
+    }
+  });
+
+  // Second pass: distribute any unspecified items to missing slots
+  const resultPairs = [];
+  subjectMap.forEach(grp => {
+    grp.unspecified.forEach(media => {
+      if (!grp.outline && !grp.ref) {
+        grp.outline = media; // default single to outline/drawing
+      } else if (!grp.outline) {
+        grp.outline = media;
+      } else if (!grp.ref) {
+        grp.ref = media;
+      }
+    });
+
+    resultPairs.push(grp);
+  });
+
+  // Sort sets numerically/alphabetically
+  resultPairs.sort((a, b) => a.sortKey.localeCompare(b.sortKey, undefined, { numeric: true, sensitivity: "base" }));
+
+  return resultPairs;
+}
+
+/**
+ * Updates UI badge and button in media library drawer
+ */
+function updateAutoPlotCardUI() {
+  const badge = document.getElementById("auto-plot-detected-badge");
+  const btn = document.getElementById("btn-auto-plot-media");
+  const projectMedia = currentProject.media || [];
+
+  if (projectMedia.length === 0) {
+    if (badge) {
+      badge.innerText = "0 Sets Ready";
+      badge.style.background = "rgba(148, 163, 184, 0.15)";
+      badge.style.color = "var(--text-muted)";
+      badge.style.borderColor = "var(--border)";
+    }
+    if (btn) {
+      btn.innerText = "⚡ Auto-Plot Media to Pages";
+      btn.disabled = false;
+    }
+    return;
+  }
+
+  const pairs = groupMediaIntoSubjectPairs(projectMedia);
+  const pairCount = pairs.length;
+
+  if (badge) {
+    badge.innerText = `${pairCount} Set${pairCount === 1 ? '' : 's'} Ready`;
+    badge.style.background = "rgba(16, 185, 129, 0.15)";
+    badge.style.color = "#10b981";
+    badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+  }
+  if (btn) {
+    btn.innerText = `⚡ Auto-Plot (${pairCount} Set${pairCount === 1 ? '' : 's'} to Canvas)`;
+    btn.disabled = false;
+  }
+}
+
+/**
+ * Main Trigger: User clicked "⚡ Auto-Plot Media to Pages" button
+ */
+function triggerAutoPlotMedia() {
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    return;
+  }
+
+  const projectMedia = currentProject.media || [];
+  if (projectMedia.length === 0) {
+    showToast("⚠️ Media library is empty. Please upload images first!", "info");
+    return;
+  }
+
+  const pairs = groupMediaIntoSubjectPairs(projectMedia);
+  if (pairs.length === 0) {
+    showToast("⚠️ No image sets could be parsed from media library.", "warning");
+    return;
+  }
+
+  const contentPages = (currentProject.pages || []).filter(p => p.page_type === "content" || (!p.page_type && !p.is_front_matter));
+  const currentCount = contentPages.length;
+  const pairCount = pairs.length;
+
+  // Condition 1: If project page count is already >= pair count, plot directly without prompting!
+  if (currentCount >= pairCount) {
+    recordHistoryState("Auto-Plot Media to Canvas");
+    applyPairsToPages(pairs, contentPages);
+    showToast(`⚡ Successfully plotted all ${pairCount} image sets to canvas!`, "success");
+    return;
+  }
+
+  // Condition 2: If project has fewer content pages, prompt user with expansion confirmation modal!
+  showAutoPlotExpandModal(pairs, currentCount, pairCount);
+}
+
+/**
+ * Shows the Auto-Plot Page Expansion Confirmation Modal
+ */
+function showAutoPlotExpandModal(pairs, currentContentCount, pairCount) {
+  window._pendingAutoPlotPairs = pairs;
+
+  const countElem = document.getElementById("auto-plot-modal-pairs-count");
+  const currElem = document.getElementById("auto-plot-modal-curr-pages");
+  const needElem = document.getElementById("auto-plot-modal-needed-pages");
+  const pairDesc = document.getElementById("auto-plot-modal-pair-desc");
+  const pageDesc = document.getElementById("auto-plot-modal-page-desc");
+  const targetDesc = document.getElementById("auto-plot-modal-target-desc");
+  const currBtnNum = document.getElementById("auto-plot-curr-btn-num");
+  const targetBtnNum = document.getElementById("auto-plot-target-btn-num");
+  const listContainer = document.getElementById("auto-plot-modal-preview-list");
+
+  const needed = pairCount - currentContentCount;
+
+  if (countElem) countElem.innerText = pairCount;
+  if (currElem) currElem.innerText = currentContentCount;
+  if (needElem) needElem.innerText = `+${needed}`;
+  if (pairDesc) pairDesc.innerText = `${pairCount} paired image sets`;
+  if (pageDesc) pageDesc.innerText = `${currentContentCount} content page${currentContentCount === 1 ? '' : 's'}`;
+  if (targetDesc) targetDesc.innerText = `${pairCount} pages`;
+  if (currBtnNum) currBtnNum.innerText = currentContentCount;
+  if (targetBtnNum) targetBtnNum.innerText = pairCount;
+
+  if (listContainer) {
+    listContainer.innerHTML = "";
+    pairs.forEach((p, idx) => {
+      const row = document.createElement("div");
+      row.className = "auto-plot-preview-item";
+
+      const refTag = p.ref 
+        ? `<span class="auto-plot-tag-ref" title="Reference (Color): ${p.ref.name}">🎯 ${p.ref.name}</span>`
+        : `<span class="auto-plot-tag-missing">— No Ref —</span>`;
+
+      const outlineTag = p.outline 
+        ? `<span class="auto-plot-tag-outline" title="Drawing (Outline): ${p.outline.name}">🎨 ${p.outline.name}</span>`
+        : `<span class="auto-plot-tag-missing">— No Outline —</span>`;
+
+      const isBeyondCurrent = idx >= currentContentCount;
+      const beyondBadge = isBeyondCurrent 
+        ? `<span style="font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: rgba(245, 158, 11, 0.15); color: #d97706; font-weight: 700;">Needs Expansion</span>` 
+        : `<span style="font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 600;">Page ${idx + 1}</span>`;
+
+      row.innerHTML = `
+        <div class="auto-plot-preview-title">
+          <span>${idx + 1}.</span>
+          <strong>${p.subjectTitle}</strong>
+          ${beyondBadge}
+        </div>
+        <div class="auto-plot-preview-tags">
+          ${refTag}
+          ${outlineTag}
+        </div>
+      `;
+      listContainer.appendChild(row);
+    });
+  }
+
+  const modal = document.getElementById("auto-plot-expand-modal");
+  if (modal) modal.classList.add("active");
+}
+
+/**
+ * User approved expanding pages to match pairs count and plotting all
+ */
+function executeAutoPlotWithExpand() {
+  closeModal("auto-plot-expand-modal");
+  const pairs = window._pendingAutoPlotPairs;
+  if (!pairs || pairs.length === 0) return;
+
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    return;
+  }
+
+  recordHistoryState(`Expand to ${pairs.length} Pages & Auto-Plot`);
+
+  let contentPages = (currentProject.pages || []).filter(p => p.page_type === "content" || (!p.page_type && !p.is_front_matter));
+  const currentCount = contentPages.length;
+  const needed = pairs.length - currentCount;
+
+  if (needed > 0) {
+    // Template page to clone from
+    const template = contentPages[contentPages.length - 1] || currentProject.pages[0];
+
+    for (let i = 0; i < needed; i++) {
+      const clone = JSON.parse(JSON.stringify(template));
+      clone.page_type = "content";
+      clone.title = `Drawing ${currentCount + i + 1}`;
+      clone.elements = (clone.elements || []).map(el => ({
+        ...el,
+        id: `elem_${el.type}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        image_src: (el.type === "ref_image" || el.type === "main_image") ? null : el.image_src,
+        text: (el.type === "ref_image" || el.type === "main_image") ? "" : el.text
+      }));
+      currentProject.pages.push(clone);
+    }
+
+    renumberPages();
+    syncContentsPage();
+  }
+
+  // Refresh content pages list after expansion
+  contentPages = (currentProject.pages || []).filter(p => p.page_type === "content" || (!p.page_type && !p.is_front_matter));
+
+  applyPairsToPages(pairs, contentPages);
+  showToast(`🎉 Expanded book to ${pairs.length} pages & plotted all images!`, "success");
+}
+
+/**
+ * User chose to only plot to existing pages without expanding
+ */
+function executeAutoPlotWithCurrentPagesOnly() {
+  closeModal("auto-plot-expand-modal");
+  const pairs = window._pendingAutoPlotPairs;
+  if (!pairs || pairs.length === 0) return;
+
+  if (currentProject.is_locked) {
+    showToast("🔒 Cannot modify: Project is locked!", "warning");
+    return;
+  }
+
+  const contentPages = (currentProject.pages || []).filter(p => p.page_type === "content" || (!p.page_type && !p.is_front_matter));
+  const pairsToPlot = pairs.slice(0, contentPages.length);
+
+  recordHistoryState(`Auto-Plot First ${pairsToPlot.length} Pages`);
+  applyPairsToPages(pairsToPlot, contentPages);
+  showToast(`⚡ Plotted first ${pairsToPlot.length} image sets into current pages!`, "success");
+}
+
+/**
+ * Core Plotting Logic: Maps subject pairs into target content pages
+ */
+function applyPairsToPages(pairs, targetPages) {
+  if (!pairs || !targetPages) return;
+
+  const projFont = currentProject.settings?.default_font_family || "Fredoka";
+  const projOutline = currentProject.settings?.default_font_mode !== "solid";
+  const projStroke = currentProject.settings?.default_stroke_color || "#0f172a";
+  const projColor = currentProject.settings?.default_text_color || (projOutline ? "#ffffff" : "#111827");
+
+  pairs.forEach((pair, idx) => {
+    if (idx >= targetPages.length) return;
+    const page = targetPages[idx];
+    if (!page || page.page_type === "blank_verso") return;
+
+    if (!page.elements) page.elements = [];
+
+    // 1. Reference Box (Color Image)
+    let refElem = page.elements.find(e => e.type === "ref_image");
+    if (!refElem && pair.ref) {
+      refElem = {
+        id: `elem_ref_${Date.now()}_${idx}`,
+        type: "ref_image",
+        x: 35, y: 25, w: 190, h: 180,
+        text: pair.subjectTitle,
+        image_src: null
+      };
+      page.elements.unshift(refElem);
+    }
+    if (refElem && pair.ref) {
+      const refUrl = pair.ref.dataUrl || `/api/projects/asset?project_dir=${encodeURIComponent(currentProject.project_dir || "")}&filename=${encodeURIComponent(pair.ref.fileName || pair.ref.name || "")}`;
+      refElem.image_src = refUrl;
+      refElem.text = pair.ref.name || pair.subjectTitle;
+    }
+
+    // 2. Drawing Area (Outline Image)
+    let mainElem = page.elements.find(e => e.type === "main_image");
+    if (!mainElem && pair.outline) {
+      mainElem = {
+        id: `elem_main_${Date.now()}_${idx}`,
+        type: "main_image",
+        x: 35, y: 220, w: 440, h: 410,
+        text: pair.subjectTitle,
+        image_src: null
+      };
+      page.elements.push(mainElem);
+    }
+    if (mainElem && pair.outline) {
+      const mainUrl = pair.outline.dataUrl || `/api/projects/asset?project_dir=${encodeURIComponent(currentProject.project_dir || "")}&filename=${encodeURIComponent(pair.outline.fileName || pair.outline.name || "")}`;
+      mainElem.image_src = mainUrl;
+      mainElem.text = pair.outline.name || pair.subjectTitle;
+    }
+
+    // 3. Page Title (Clean Subject Name, e.g. "BEAR")
+    let titleElem = page.elements.find(e => e.type === "title");
+    const titleText = pair.subjectTitle.toUpperCase();
+    const autoSize = calculateAutoTitleFontSize(titleText, 40);
+
+    if (!titleElem) {
+      titleElem = {
+        id: `elem_title_${Date.now()}_${idx}`,
+        type: "title",
+        x: 235, y: 70, w: 240, h: 80,
+        text: titleText,
+        font_size: autoSize,
+        color: projColor,
+        is_outline: projOutline,
+        stroke_color: projStroke,
+        font_family: projFont,
+        letter_spacing: 2
+      };
+      page.elements.push(titleElem);
+    } else {
+      titleElem.text = titleText;
+      titleElem.font_size = autoSize;
+    }
+
+    // Update document page title
+    page.title = cleanTitleString(titleText);
+  });
+
+  renumberPages();
+  syncContentsPage();
+  loadPageIntoCanvas(currentPageIndex);
+  renderTimeline();
+  syncActiveProjectUI();
+  markProjectDirty();
 }
 
 // ==========================================

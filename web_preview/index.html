@@ -579,6 +579,25 @@
                 <p>Saved into this project's <code id="media-folder-hint">/assets</code> directory</p>
               </div>
 
+              <!-- Dedicated 1-Click Auto-Plot to Canvas Card -->
+              <div class="auto-plot-card" id="auto-plot-card">
+                <div class="auto-plot-card-header">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 15px;">⚡</span>
+                    <strong style="font-size: 12.5px; color: var(--text-primary);">Auto-Plot to Canvas</strong>
+                  </div>
+                  <span class="badge" id="auto-plot-detected-badge" style="font-size: 10px; background: rgba(99, 102, 241, 0.15); color: var(--primary); border: 1px solid rgba(99, 102, 241, 0.3);">
+                    0 Sets Ready
+                  </span>
+                </div>
+                <p class="auto-plot-desc">
+                  Automatically maps paired images into canvas pages. Filenames with <code>_color</code> go to <strong>Reference Box</strong>, <code>_outline</code> go to <strong>Drawing Area</strong>, and page title gets the cleaned subject name.
+                </p>
+                <button class="auto-plot-btn" id="btn-auto-plot-media" onclick="triggerAutoPlotMedia()" title="Automatically map all paired media into book pages">
+                  ⚡ Auto-Plot Media to Pages
+                </button>
+              </div>
+
               <div class="media-sort-bar"
                 style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0 6px 0; padding: 0 4px;">
                 <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">🔤 Sort Media:</span>
@@ -2558,6 +2577,73 @@
         </div>
       </div>
     </div>
+
+    <!-- ======================================================= -->
+    <!-- AUTO-PLOT & PAGE EXPANSION CONFIRMATION MODAL           -->
+    <!-- ======================================================= -->
+    <div class="modal-overlay" id="auto-plot-expand-modal">
+      <div class="modal-card" style="max-width: 580px; width: 92%;">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span style="font-size: 24px;">⚡</span>
+            <div>
+              <strong style="font-size: 16px; font-weight: 800;">Expand Pages for Auto-Plot?</strong>
+              <p style="font-size: 12px; color: var(--text-secondary); margin: 2px 0 0 0;">
+                More media sets detected than current project content pages.
+              </p>
+            </div>
+          </div>
+          <button class="modal-close" onclick="closeModal('auto-plot-expand-modal')">&times;</button>
+        </div>
+
+        <div class="modal-body" style="padding: 16px 20px;">
+          <!-- Summary Banner -->
+          <div class="auto-plot-stat-banner" style="background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-around; text-align: center;">
+            <div>
+              <div style="font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Image Sets Found</div>
+              <div id="auto-plot-modal-pairs-count" style="font-size: 22px; font-weight: 800; color: var(--primary);">0</div>
+            </div>
+            <div style="border-right: 1px solid var(--border);"></div>
+            <div>
+              <div style="font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Current Content Pages</div>
+              <div id="auto-plot-modal-curr-pages" style="font-size: 22px; font-weight: 800; color: var(--text-primary);">0</div>
+            </div>
+            <div style="border-right: 1px solid var(--border);"></div>
+            <div>
+              <div style="font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Pages Needed</div>
+              <div id="auto-plot-modal-needed-pages" style="font-size: 22px; font-weight: 800; color: #10b981;">+0</div>
+            </div>
+          </div>
+
+          <div style="font-size: 13px; line-height: 1.5; color: var(--text-primary); margin-bottom: 14px;">
+            You have <strong id="auto-plot-modal-pair-desc" style="color: var(--primary);">30 paired image sets</strong> in your media library, but this project currently has <strong id="auto-plot-modal-page-desc">10 content pages</strong>.
+            <br>
+            Do you want to automatically expand the project to <strong id="auto-plot-modal-target-desc" style="color: #10b981;">30 pages</strong> and plot all image sets?
+          </div>
+
+          <!-- Preview List of Pairs -->
+          <div style="font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">
+            Detected Pairs &amp; Mapping Preview:
+          </div>
+          <div id="auto-plot-modal-preview-list" class="auto-plot-preview-scrollbox" style="max-height: 170px; overflow-y: auto; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 11.5px;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-outline" onclick="closeModal('auto-plot-expand-modal')">✕ Cancel</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" id="btn-plot-current-only" onclick="executeAutoPlotWithCurrentPagesOnly()">
+              📄 Plot First <span id="auto-plot-curr-btn-num">0</span> Pages Only
+            </button>
+            <button class="btn btn-primary" id="btn-expand-and-plot" onclick="executeAutoPlotWithExpand()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; font-weight: 700;">
+              ⚡ Expand to <span id="auto-plot-target-btn-num">0</span> Pages &amp; Plot All
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <input type="file" id="media-library-upload-input" multiple accept="image/*" style="display: none;"
       onchange="handleMediaLibraryUpload(event)">
     <input type="file" id="batch-import-upload-input" multiple accept="image/*" style="display: none;"
