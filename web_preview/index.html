@@ -89,6 +89,10 @@
             Keys</button>
           <button class="btn btn-primary btn-sm" id="btn-save-project" onclick="saveProject(true)">💾 Save
             (Ctrl+S)</button>
+          <button class="btn btn-outline btn-sm" id="btn-upscaler-tool" onclick="openKdpUpscalerTool()"
+            title="Amazon KDP 300 DPI Image Upscaler & Safe Margin Cropper" style="border-color: rgba(99, 102, 241, 0.4); color: var(--primary); font-weight: 600;">
+            🖼️ Upscaler
+          </button>
           <button class="btn btn-warning btn-sm" id="btn-cover-gen" onclick="openCoverModal()"
             title="Generate Amazon KDP Full Wrap Cover PDF">🎨 Cover PDF</button>
           <button class="btn btn-success btn-sm" id="btn-export-pdf" onclick="exportProjectPdf()"
@@ -206,6 +210,36 @@
             </div>
             <div class="recent-list" id="recent-projects-list">
               <!-- Rendered dynamically with Lock / Delete buttons -->
+            </div>
+          </div>
+
+          <!-- KDP Pro Image Upscaler & Safe Margin Cropper Card -->
+          <div class="dash-card dash-upscaler-tool-card" style="grid-column: 1 / -1; background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.04)); border: 1.5px solid rgba(99, 102, 241, 0.3); border-radius: 10px;">
+            <div class="card-header" style="border-bottom: 1px solid rgba(99, 102, 241, 0.15);">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 26px; filter: drop-shadow(0 2px 6px rgba(99, 102, 241, 0.35));">🖼️</span>
+                <div>
+                  <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Amazon KDP Image Upscaler & Safe Margin Cropper</h3>
+                  <div class="sub-lbl" style="font-size: 12px; margin-top: 2px;">Upscale to 300 / 600 DPI • Auto-Crop to KDP Safe Printable Margins (Zero Rejection)</div>
+                </div>
+              </div>
+              <span class="badge" style="background: rgba(99, 102, 241, 0.18); color: var(--primary); font-weight: 700; font-size: 11px;">PRO TOOL</span>
+            </div>
+            <div style="padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 280px;">
+                <p style="margin: 0; font-size: 13.5px; color: var(--text-muted); line-height: 1.55;">
+                  Import low-res drawings, AI illustrations, or sketches. Automatically upscales to crisp <strong>300 DPI / 600 DPI</strong> print resolution and fits the artwork strictly inside <strong>Amazon KDP safe printable margins (0.25" / 0.375")</strong> so your pages are 100% immune from KDP interior pre-flight margin errors.
+                </p>
+                <div style="display: flex; gap: 16px; margin-top: 12px; font-size: 12px; color: var(--text-main); flex-wrap: wrap;">
+                  <span>🛡️ <strong>Zero Margin Error</strong></span>
+                  <span>✨ <strong>Background Purification</strong></span>
+                  <span>🗡️ <strong>Line Art Sharpening</strong></span>
+                  <span>📐 <strong>8.5×11", 8.5×8.5", 6×9" Presets</strong></span>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-lg" onclick="openKdpUpscalerTool()" style="display: flex; align-items: center; gap: 8px; font-weight: 700; box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35); padding: 12px 24px; font-size: 14px;">
+                <span>🚀 Launch Image Upscaler & Cropper</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1993,6 +2027,194 @@
             <span class="upload-footer-status" id="upload-footer-status">Complete steps or add directly</span>
             <button class="btn btn-success" id="btn-finalize-upload" onclick="finalizeInteractiveUpload()">
               📥 Add to Project Media
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- AMAZON KDP IMAGE UPSCALER & SAFE MARGIN CROPPER TOOL     -->
+    <!-- ======================================================= -->
+    <div class="modal-overlay" id="kdp-image-upscaler-modal">
+      <div class="modal-card kdp-upscaler-dialog" style="max-width: 980px; width: 95%; max-height: 92vh; display: flex; flex-direction: column;">
+        <div class="modal-header" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.08)); border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 26px;">🖼️</span>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Amazon KDP Image Upscaler & Safe Margin Cropper</h3>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700; font-size: 10.5px;">300 / 600 DPI</span>
+                <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary); font-weight: 700; font-size: 10.5px;">Safe Margin Guard</span>
+              </div>
+              <p class="modal-subtitle" style="margin: 2px 0 0; font-size: 11.5px; color: var(--text-muted);">
+                Upscales low-res artwork to print resolution and automatically fits illustration inside KDP safe margins (0% margin rejection).
+              </p>
+            </div>
+          </div>
+          <button class="modal-close" onclick="closeKdpUpscalerTool()">&times;</button>
+        </div>
+
+        <div class="modal-body" style="padding: 16px 20px; overflow-y: auto; flex: 1;">
+          <div class="upscaler-workspace-grid">
+            <!-- LEFT: Controls Column -->
+            <div class="upscaler-controls-panel">
+              <!-- Upload Dropzone -->
+              <div class="upscaler-dropzone" id="upscaler-dropzone" onclick="document.getElementById('upscaler-file-input').click()">
+                <input type="file" id="upscaler-file-input" accept="image/png, image/jpeg, image/webp, image/bmp" style="display: none;" onchange="handleUpscalerFileInput(event)">
+                <div class="dropzone-icon" style="font-size: 32px; line-height: 1;">📤</div>
+                <div style="font-weight: 600; font-size: 12.5px; margin-top: 6px;">Click or Drag & Drop Image Here</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">PNG, JPG, WEBP, or AI Scans</div>
+                <button type="button" class="btn btn-xs btn-outline" style="margin-top: 8px;" onclick="event.stopPropagation(); pickImageFromProjectForUpscaler();">
+                  📂 Pick from Current Project Media
+                </button>
+              </div>
+
+              <!-- Presets & Settings -->
+              <div class="upscaler-settings-group" style="margin-top: 14px;">
+                <div class="form-group" style="margin-bottom: 10px;">
+                  <label style="font-size: 11.5px; font-weight: 600; display: flex; justify-content: space-between;">
+                    <span>📐 Amazon KDP Trim Size:</span>
+                    <span id="upscaler-trim-dims-label" style="color: var(--primary); font-size: 11px; font-weight: 700;">8.5 × 11.0 in</span>
+                  </label>
+                  <select id="upscaler-trim-select" class="form-control" style="font-size: 12px; padding: 6px;" onchange="onUpscalerSettingsChanged()">
+                    <option value="8.5x11" selected>8.5" × 11.0" (Letter - Standard Coloring Book)</option>
+                    <option value="8.5x8.5">8.5" × 8.5" (Square - Picture / Activity Book)</option>
+                    <option value="6x9">6.0" × 9.0" (Standard Paperback / Puzzle)</option>
+                    <option value="8.25x11">8.25" × 11.0" (Children's Hardcover / Large)</option>
+                    <option value="7x10">7.0" × 10.0" (Medium Workbook)</option>
+                    <option value="match_project">⚡ Match Current Project Trim Size</option>
+                  </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 11.5px; font-weight: 600;">🖨️ Target Print DPI:</label>
+                    <select id="upscaler-dpi-select" class="form-control" style="font-size: 12px; padding: 6px;" onchange="onUpscalerSettingsChanged()">
+                      <option value="300" selected>300 DPI (KDP Standard)</option>
+                      <option value="600">600 DPI (Ultra Sharp Line Art)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 11.5px; font-weight: 600;">🛡️ KDP Safe Margin:</label>
+                    <select id="upscaler-margin-select" class="form-control" style="font-size: 12px; padding: 6px;" onchange="onUpscalerSettingsChanged()">
+                      <option value="0.375" selected>0.375 in (Recommended)</option>
+                      <option value="0.250">0.250 in (Minimum KDP)</option>
+                      <option value="0.500">0.500 in (Kids Safe Padding)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 10px;">
+                  <label style="font-size: 11.5px; font-weight: 600;">🎯 Margin Fit & Crop Guard:</label>
+                  <select id="upscaler-fit-mode" class="form-control" style="font-size: 12px; padding: 6px;" onchange="onUpscalerSettingsChanged()">
+                    <option value="fit_safe" selected>🛡️ KDP Safe Fit (100% Inside Safe Margins - Zero Rejection)</option>
+                    <option value="crop_safe">✂️ Fill Safe Area (Center Crop to Safe Zone)</option>
+                    <option value="full_bleed">📄 Full Bleed (Cover Whole Page)</option>
+                  </select>
+                </div>
+
+                <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                  <input type="checkbox" id="upscaler-has-bleed" onchange="onUpscalerSettingsChanged()">
+                  <label for="upscaler-has-bleed" style="font-size: 11.5px; cursor: pointer; user-select: none;">Include 0.125 in Bleed allowance (+9 pt)</label>
+                </div>
+
+                <!-- Enhancement Checkboxes -->
+                <div style="background: var(--bg-surface-subtle, rgba(0,0,0,0.02)); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px;">
+                  <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Image Cleanup & Enhancements</div>
+                  
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; margin-bottom: 6px; cursor: pointer;">
+                    <input type="checkbox" id="upscaler-opt-clean-bg" checked onchange="onUpscalerSettingsChanged()">
+                    <span>✨ Make Background Pure White (#FFFFFF)</span>
+                  </label>
+                  
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; margin-bottom: 6px; cursor: pointer;">
+                    <input type="checkbox" id="upscaler-opt-sharpen" checked onchange="onUpscalerSettingsChanged()">
+                    <span>🗡️ Unsharp Mask Line Art Sharpening</span>
+                  </label>
+
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; margin-bottom: 6px; cursor: pointer;">
+                    <input type="checkbox" id="upscaler-opt-auto-crop" checked onchange="onUpscalerSettingsChanged()">
+                    <span>🎯 Auto-Trim Outer Empty Whitespace</span>
+                  </label>
+
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; cursor: pointer;">
+                    <input type="checkbox" id="upscaler-opt-lineart" onchange="onUpscalerSettingsChanged()">
+                    <span>🖤 Pure Black & White (Binarize for Coloring)</span>
+                  </label>
+                </div>
+
+                <button type="button" class="btn btn-primary" id="btn-process-upscale" style="width: 100%; margin-top: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="executeKdpImageUpscale()">
+                  ⚡ Process, Upscale & Safe-Crop
+                </button>
+              </div>
+            </div>
+
+            <!-- RIGHT: Interactive Live KDP Page Preview -->
+            <div class="upscaler-preview-panel">
+              <div class="upscaler-preview-header">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 13px; font-weight: 700;">📖 KDP Print Page Simulation</span>
+                  <span id="upscaler-status-badge" class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 10px;">🛡️ Safe Zone Ready</span>
+                </div>
+                <div class="preview-mode-switch" style="display: flex; gap: 4px;">
+                  <button type="button" class="btn btn-xs btn-outline active" id="btn-prevmode-upscaled" onclick="setUpscalerPreviewMode('upscaled')">Upscaled & Fitted</button>
+                  <button type="button" class="btn btn-xs btn-outline" id="btn-prevmode-original" onclick="setUpscalerPreviewMode('original')">Original</button>
+                </div>
+              </div>
+
+              <!-- Visual Book Page with Safe Margin Overlay -->
+              <div class="upscaler-page-viewport" id="upscaler-page-viewport">
+                <div class="upscaler-page-sheet" id="upscaler-page-sheet">
+                  <!-- Green/Gold Dashed Safe Margin Line -->
+                  <div class="upscaler-safe-margin-box" id="upscaler-safe-margin-box" title="Amazon KDP Safe Printable Zone">
+                    <span class="safe-margin-label" id="safe-margin-display-label">Safe Margin (0.375")</span>
+                  </div>
+                  <!-- Image display -->
+                  <img id="upscaler-preview-img" src="" alt="Preview" style="display: none;">
+                  <div id="upscaler-placeholder" style="text-align: center; color: var(--text-muted); padding: 40px 20px;">
+                    <div style="font-size: 38px; margin-bottom: 8px;">🖼️</div>
+                    <div style="font-weight: 600; font-size: 13px;">No Image Loaded</div>
+                    <div style="font-size: 11px; margin-top: 4px; color: var(--text-muted);">Upload an image on the left to see live 300 DPI upscale and KDP margin fit.</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Stats & Specs Banner -->
+              <div class="upscaler-stats-grid" id="upscaler-stats-grid" style="display: none;">
+                <div class="upscaler-stat-pill">
+                  <span class="stat-title">Original Resolution:</span>
+                  <span id="u-stat-orig">0 × 0 px</span>
+                </div>
+                <div class="upscaler-stat-pill highlight">
+                  <span class="stat-title">KDP Print Output:</span>
+                  <span id="u-stat-out">2550 × 3300 px (300 DPI)</span>
+                </div>
+                <div class="upscaler-stat-pill">
+                  <span class="stat-title">Safe Printable Area:</span>
+                  <span id="u-stat-safe">2326 × 3076 px</span>
+                </div>
+                <div class="upscaler-stat-pill">
+                  <span class="stat-title">File Size:</span>
+                  <span id="u-stat-size">0 KB</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface-subtle); border-top: 1px solid var(--border);">
+          <button class="btn btn-outline" onclick="closeKdpUpscalerTool()">Close</button>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn btn-secondary" id="btn-upscaler-to-canvas" onclick="sendUpscaledImageToActiveCanvas()" disabled title="Send this 300 DPI image to the active canvas page">
+              🖼️ Place on Current Canvas Page
+            </button>
+            <button class="btn btn-success" id="btn-upscaler-add-page" onclick="addUpscaledImageAsNewPage()" disabled title="Save to project and add as a new interior drawing page">
+              ➕ Add to Book as New Page
+            </button>
+            <button class="btn btn-primary" id="btn-upscaler-download" onclick="downloadUpscaledImageFile()" disabled title="Download the full 300 DPI PNG file">
+              💾 Download 300 DPI Image
             </button>
           </div>
         </div>

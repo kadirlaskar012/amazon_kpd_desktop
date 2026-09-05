@@ -9,7 +9,7 @@ Features:
 import io
 import base64
 from typing import Tuple, Optional, Union
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance, ImageOps, ImageFilter
 import numpy as np
 try:
     import cv2
@@ -178,3 +178,182 @@ class KDPImageProcessor:
             new_h = max(100, int(h * ratio))
             return pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
         return pil_img
+
+    TRIM_PRESETS = {
+        "8.5x11": (8.5, 11.0),
+        "8.5x8.5": (8.5, 8.5),
+        "6x9": (6.0, 9.0),
+        "8.25x11": (8.25, 11.0),
+        "7x10": (7.0, 10.0),
+        "5.5x8.5": (5.5, 8.5),
+    }
+
+    @classmethod
+    def upscale_and_crop_kdp(
+        cls,
+        image_input: Union[bytes, str],
+        trim_size: str = "8.5x11",
+        custom_width_in: float = 8.5,
+        custom_height_in: float = 11.0,
+        target_dpi: int = 300,
+        margin_in: float = 0.375,
+        fit_mode: str = "fit_safe",  # "fit_safe", "crop_safe", "full_bleed"
+        has_bleed: bool = False,
+        clean_bg: bool = True,
+        sharpen: bool = True,
+        line_art_mode: bool = False,
+        auto_focus_crop: bool = True,
+        bg_threshold: int = 225,
+    ) -> dict:
+        """
+        Upscales an image to 300 / 600 DPI and ensures strict Amazon KDP safe margin compliance.
+        Artwork is scaled and framed so it never touches or exceeds KDP rejection margins.
+        """
+        # 1. Decode input to PIL Image
+        if isinstance(image_input, str) and image_input.startswith("data:image"):
+            header, encoded = image_input.split(",", 1)
+            raw_bytes = base64.b64decode(encoded)
+        elif isinstance(image_input, str):
+            raw_bytes = base64.b64decode(image_input)
+        else:
+            raw_bytes = image_input
+
+        pil_img = Image.open(io.BytesIO(raw_bytes))
+        orig_w, orig_h = pil_img.size
+
+        # Convert to RGBA or RGB
+        if pil_img.mode not in ("RGB", "RGBA"):
+            pil_img = pil_img.convert("RGBA")
+
+        # 2. Auto Focus & Crop (Strip loose outer empty border if desired)
+        if auto_focus_crop:
+            pil_img = cls.auto_crop_and_focus(pil_img, padding_ratio=0.02)
+
+        # 3. Background Cleanout (Turn dirty scanner off-white to #FFFFFF)
+        if clean_bg:
+            pil_img = cls.clean_lineart_background(pil_img, threshold=bg_threshold)
+
+        # 4. Pure Black & White Line Art Mode (if requested for coloring books)
+        if line_art_mode:
+            gray = pil_img.convert("L")
+            enhancer = ImageEnhance.Contrast(gray)
+            gray = enhancer.enhance(1.4)
+            np_gray = np.array(gray)
+            np_out = np.where(np_gray < 160, 0, 255).astype(np.uint8)
+            pil_img = Image.fromarray(np_out, mode="L").convert("RGBA")
+
+        # 5. Determine Physical Dimensions & Target Pixel Dimensions
+        if trim_size in cls.TRIM_PRESETS:
+            trim_w_in, trim_h_in = cls.TRIM_PRESETS[trim_size]
+        else:
+            trim_w_in = float(custom_width_in or 8.5)
+            trim_h_in = float(custom_height_in or 11.0)
+
+        target_dpi = int(target_dpi or 300)
+        margin_in = float(margin_in or 0.375)
+
+        if has_bleed:
+            page_w_in = trim_w_in + 0.125
+            page_h_in = trim_h_in + 0.250
+            bleed_px = int(round(0.125 * target_dpi))
+        else:
+            page_w_in = trim_w_in
+            page_h_in = trim_h_in
+            bleed_px = 0
+
+        page_w_px = int(round(page_w_in * target_dpi))
+        page_h_px = int(round(page_h_in * target_dpi))
+        margin_px = int(round(margin_in * target_dpi))
+
+        safe_x = margin_px + bleed_px
+        safe_y = margin_px + bleed_px
+        safe_w = max(50, page_w_px - 2 * safe_x)
+        safe_h = max(50, page_h_px - 2 * safe_y)
+
+        cur_w, cur_h = pil_img.size
+
+        # 6. Scaling and Placement
+        if fit_mode == "fit_safe":
+            # Scale so image fits completely inside (safe_w, safe_h) with zero margin breach
+            scale = min(safe_w / max(1, cur_w), safe_h / max(1, cur_h))
+            new_w = max(1, int(round(cur_w * scale)))
+            new_h = max(1, int(round(cur_h * scale)))
+            resized = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+            # Create target page canvas with pure white background
+            canvas = Image.new("RGB", (page_w_px, page_h_px), (255, 255, 255))
+            paste_x = safe_x + (safe_w - new_w) // 2
+            paste_y = safe_y + (safe_h - new_h) // 2
+
+            if resized.mode == "RGBA":
+                canvas.paste(resized, (paste_x, paste_y), mask=resized.split()[3])
+            else:
+                canvas.paste(resized, (paste_x, paste_y))
+
+        elif fit_mode == "crop_safe":
+            # Scale to completely fill safe zone, crop excess, center in safe zone
+            scale = max(safe_w / max(1, cur_w), safe_h / max(1, cur_h))
+            new_w = max(1, int(round(cur_w * scale)))
+            new_h = max(1, int(round(cur_h * scale)))
+            resized = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+            crop_x = (new_w - safe_w) // 2
+            crop_y = (new_h - safe_h) // 2
+            cropped = resized.crop((crop_x, crop_y, crop_x + safe_w, crop_y + safe_h))
+
+            canvas = Image.new("RGB", (page_w_px, page_h_px), (255, 255, 255))
+            if cropped.mode == "RGBA":
+                canvas.paste(cropped, (safe_x, safe_y), mask=cropped.split()[3])
+            else:
+                canvas.paste(cropped, (safe_x, safe_y))
+
+        else:  # full_bleed
+            # Fill entire canvas, crop excess to page dimensions
+            scale = max(page_w_px / max(1, cur_w), page_h_px / max(1, cur_h))
+            new_w = max(1, int(round(cur_w * scale)))
+            new_h = max(1, int(round(cur_h * scale)))
+            resized = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+            crop_x = (new_w - page_w_px) // 2
+            crop_y = (new_h - page_h_px) // 2
+            canvas = resized.crop((crop_x, crop_y, crop_x + page_w_px, crop_y + page_h_px))
+            if canvas.mode != "RGB":
+                canvas = canvas.convert("RGB")
+
+        # 7. Apply Unsharp Masking for Line Crispness
+        if sharpen:
+            canvas = canvas.filter(ImageFilter.UnsharpMask(radius=1.8, percent=140, threshold=3))
+
+        # 8. Save PNG with embedded 300 / 600 DPI header
+        out_buf = io.BytesIO()
+        canvas.save(out_buf, format="PNG", dpi=(target_dpi, target_dpi), optimize=True)
+        out_bytes = out_buf.getvalue()
+        size_kb = max(1, round(len(out_bytes) / 1024, 1))
+
+        encoded_data = base64.b64encode(out_bytes).decode("utf-8")
+        data_url = f"data:image/png;base64,{encoded_data}"
+
+        return {
+            "status": "success",
+            "original_width": orig_w,
+            "original_height": orig_h,
+            "output_width": page_w_px,
+            "output_height": page_h_px,
+            "dpi": target_dpi,
+            "trim_size": trim_size,
+            "trim_width_in": trim_w_in,
+            "trim_height_in": trim_h_in,
+            "has_bleed": has_bleed,
+            "margin_in": margin_in,
+            "margin_px": margin_px,
+            "safe_box": {
+                "x": safe_x,
+                "y": safe_y,
+                "width": safe_w,
+                "height": safe_h
+            },
+            "fit_mode": fit_mode,
+            "data_url": data_url,
+            "size_kb": size_kb
+        }
+

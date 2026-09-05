@@ -9649,3 +9649,443 @@ function executePublishingBundleExport() {
     showToast(`⚠️ Bundle Export error: ${err.message}`, "danger");
   });
 }
+
+// ===================================================
+// Amazon KDP Image Upscaler & Safe Margin Cropper Tool
+// ===================================================
+let upscalerRawImage = null;
+let upscalerFileName = "artwork.png";
+let upscalerProcessedResult = null;
+let upscalerPreviewMode = "upscaled";
+
+function openKdpUpscalerTool(initialImageSrc = null, initialName = null) {
+  const modal = document.getElementById("kdp-image-upscaler-modal");
+  if (!modal) return;
+
+  // Set up drag & drop listeners on dropzone if not already attached
+  const dropzone = document.getElementById("upscaler-dropzone");
+  if (dropzone && !dropzone.dataset.listenersAttached) {
+    dropzone.dataset.listenersAttached = "true";
+    dropzone.addEventListener("dragover", e => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("dragover");
+    });
+    dropzone.addEventListener("drop", e => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        const file = e.dataTransfer.files[0];
+        loadUpscalerFile(file);
+      }
+    });
+  }
+
+  // Pre-select trim size matching current project if applicable
+  if (currentProject && currentProject.settings) {
+    const pw = (currentProject.settings.trim_width_pt / 72.0).toFixed(1);
+    const ph = (currentProject.settings.trim_height_pt / 72.0).toFixed(1);
+    const preset = `${pw}x${ph}`;
+    const select = document.getElementById("upscaler-trim-select");
+    if (select) {
+      const matchOpt = Array.from(select.options).find(o => o.value === preset);
+      if (matchOpt) {
+        select.value = preset;
+      }
+    }
+  }
+
+  onUpscalerSettingsChanged();
+
+  if (initialImageSrc) {
+    upscalerRawImage = initialImageSrc;
+    upscalerFileName = initialName || "project_artwork.png";
+    executeKdpImageUpscale();
+  } else if (!upscalerProcessedResult && !upscalerRawImage) {
+    resetUpscalerPreview();
+  }
+
+  modal.classList.add("active");
+}
+
+function closeKdpUpscalerTool() {
+  const modal = document.getElementById("kdp-image-upscaler-modal");
+  if (modal) modal.classList.remove("active");
+}
+
+function handleUpscalerFileInput(event) {
+  const file = event.target.files && event.target.files[0];
+  if (file) {
+    loadUpscalerFile(file);
+  }
+}
+
+function loadUpscalerFile(file) {
+  if (!file.type.startsWith("image/")) {
+    showToast("Please upload a valid image file (PNG, JPG, WEBP)", "warning");
+    return;
+  }
+  upscalerFileName = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    upscalerRawImage = e.target.result;
+    executeKdpImageUpscale();
+  };
+  reader.readAsDataURL(file);
+}
+
+function onUpscalerSettingsChanged() {
+  const trimSel = document.getElementById("upscaler-trim-select");
+  const marginSel = document.getElementById("upscaler-margin-select");
+  const hasBleed = document.getElementById("upscaler-has-bleed")?.checked || false;
+  const dimsLabel = document.getElementById("upscaler-trim-dims-label");
+  const marginBox = document.getElementById("upscaler-safe-margin-box");
+  const marginLabel = document.getElementById("safe-margin-display-label");
+  const sheet = document.getElementById("upscaler-page-sheet");
+
+  let wIn = 8.5, hIn = 11.0;
+  const val = trimSel ? trimSel.value : "8.5x11";
+
+  if (val === "8.5x11") { wIn = 8.5; hIn = 11.0; }
+  else if (val === "8.5x8.5") { wIn = 8.5; hIn = 8.5; }
+  else if (val === "6x9") { wIn = 6.0; hIn = 9.0; }
+  else if (val === "8.25x11") { wIn = 8.25; hIn = 11.0; }
+  else if (val === "7x10") { wIn = 7.0; hIn = 10.0; }
+  else if (val === "match_project" && currentProject && currentProject.settings) {
+    wIn = (currentProject.settings.trim_width_pt / 72.0);
+    hIn = (currentProject.settings.trim_height_pt / 72.0);
+  }
+
+  const marginIn = parseFloat(marginSel ? marginSel.value : 0.375);
+
+  if (dimsLabel) {
+    dimsLabel.innerText = `${wIn.toFixed(2)} × ${hIn.toFixed(2)} in${hasBleed ? ' (+Bleed)' : ''}`;
+  }
+
+  if (sheet) {
+    const totalW = wIn + (hasBleed ? 0.125 : 0);
+    const totalH = hIn + (hasBleed ? 0.250 : 0);
+    sheet.style.aspectRatio = `${totalW} / ${totalH}`;
+
+    // Adjust visual sheet dimensions within viewport
+    const maxViewportH = 380;
+    const calcW = maxViewportH * (totalW / totalH);
+    sheet.style.height = `${maxViewportH}px`;
+    sheet.style.width = `${calcW}px`;
+
+    if (marginBox) {
+      const marginPctX = ((marginIn + (hasBleed ? 0.125 : 0)) / totalW) * 100;
+      const marginPctY = ((marginIn + (hasBleed ? 0.125 : 0)) / totalH) * 100;
+
+      marginBox.style.left = `${marginPctX}%`;
+      marginBox.style.top = `${marginPctY}%`;
+      marginBox.style.width = `${Math.max(10, 100 - (2 * marginPctX))}%`;
+      marginBox.style.height = `${Math.max(10, 100 - (2 * marginPctY))}%`;
+    }
+  }
+
+  if (marginLabel) {
+    marginLabel.innerText = `KDP Safe Margin (${marginIn}" min)`;
+  }
+}
+
+function resetUpscalerPreview() {
+  const imgEl = document.getElementById("upscaler-preview-img");
+  const placeholder = document.getElementById("upscaler-placeholder");
+  const statsGrid = document.getElementById("upscaler-stats-grid");
+  const btnDownload = document.getElementById("btn-upscaler-download");
+  const btnAddPage = document.getElementById("btn-upscaler-add-page");
+  const btnToCanvas = document.getElementById("btn-upscaler-to-canvas");
+
+  if (imgEl) { imgEl.style.display = "none"; imgEl.src = ""; }
+  if (placeholder) placeholder.style.display = "block";
+  if (statsGrid) statsGrid.style.display = "none";
+  if (btnDownload) btnDownload.disabled = true;
+  if (btnAddPage) btnAddPage.disabled = true;
+  if (btnToCanvas) btnToCanvas.disabled = true;
+}
+
+function executeKdpImageUpscale() {
+  if (!upscalerRawImage) {
+    showToast("Please select or drop an image to upscale first!", "info");
+    document.getElementById("upscaler-file-input")?.click();
+    return;
+  }
+
+  const btn = document.getElementById("btn-process-upscale");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span>⏳ Upscaling to 300 DPI & Cropping...</span>`;
+  }
+
+  const trimSel = document.getElementById("upscaler-trim-select")?.value || "8.5x11";
+  const dpiSel = parseInt(document.getElementById("upscaler-dpi-select")?.value || 300);
+  const marginSel = parseFloat(document.getElementById("upscaler-margin-select")?.value || 0.375);
+  const fitMode = document.getElementById("upscaler-fit-mode")?.value || "fit_safe";
+  const hasBleed = document.getElementById("upscaler-has-bleed")?.checked || false;
+  const cleanBg = document.getElementById("upscaler-opt-clean-bg")?.checked !== false;
+  const sharpen = document.getElementById("upscaler-opt-sharpen")?.checked !== false;
+  const autoCrop = document.getElementById("upscaler-opt-auto-crop")?.checked !== false;
+  const lineArtMode = document.getElementById("upscaler-opt-lineart")?.checked || false;
+
+  let customW = 8.5, customH = 11.0;
+  if (trimSel === "match_project" && currentProject && currentProject.settings) {
+    customW = currentProject.settings.trim_width_pt / 72.0;
+    customH = currentProject.settings.trim_height_pt / 72.0;
+  }
+
+  const payload = {
+    image: upscalerRawImage,
+    trim_size: trimSel,
+    custom_width_in: customW,
+    custom_height_in: customH,
+    target_dpi: dpiSel,
+    margin_in: marginSel,
+    fit_mode: fitMode,
+    has_bleed: hasBleed,
+    clean_bg: cleanBg,
+    sharpen: sharpen,
+    line_art_mode: lineArtMode,
+    auto_focus_crop: autoCrop
+  };
+
+  fetch("/api/tools/upscale_image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>⚡ Process, Upscale & Safe-Crop</span>`;
+    }
+
+    if (data.status === "success" && data.data_url) {
+      upscalerProcessedResult = data;
+      setUpscalerPreviewMode("upscaled");
+
+      const statsGrid = document.getElementById("upscaler-stats-grid");
+      if (statsGrid) statsGrid.style.display = "grid";
+
+      const setTxt = (id, txt) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = txt;
+      };
+
+      setTxt("u-stat-orig", `${data.original_width} × ${data.original_height} px`);
+      setTxt("u-stat-out", `${data.output_width} × ${data.output_height} px (${data.dpi} DPI)`);
+      setTxt("u-stat-safe", `${data.safe_box.width} × ${data.safe_box.height} px`);
+      setTxt("u-stat-size", `${data.size_kb} KB`);
+
+      const statusBadge = document.getElementById("upscaler-status-badge");
+      if (statusBadge) {
+        statusBadge.innerText = `🛡️ 100% KDP Compliant (${data.dpi} DPI)`;
+        statusBadge.style.background = "rgba(16, 185, 129, 0.15)";
+        statusBadge.style.color = "#10b981";
+      }
+
+      // Enable actions
+      const btnDownload = document.getElementById("btn-upscaler-download");
+      const btnAddPage = document.getElementById("btn-upscaler-add-page");
+      const btnToCanvas = document.getElementById("btn-upscaler-to-canvas");
+      if (btnDownload) btnDownload.disabled = false;
+      if (btnAddPage) btnAddPage.disabled = false;
+      if (btnToCanvas) btnToCanvas.disabled = false;
+
+      showToast(`✨ Image upscaled to ${data.dpi} DPI & safe-framed for Amazon KDP!`, "success");
+    } else {
+      showToast("❌ Upscale failed: " + (data.error || "Unknown error"), "error");
+    }
+  })
+  .catch(err => {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>⚡ Process, Upscale & Safe-Crop</span>`;
+    }
+    showToast("❌ Error: " + err.message, "error");
+  });
+}
+
+function setUpscalerPreviewMode(mode) {
+  upscalerPreviewMode = mode;
+  const btnUpscaled = document.getElementById("btn-prevmode-upscaled");
+  const btnOriginal = document.getElementById("btn-prevmode-original");
+  const imgEl = document.getElementById("upscaler-preview-img");
+  const placeholder = document.getElementById("upscaler-placeholder");
+
+  if (mode === "upscaled" && upscalerProcessedResult) {
+    if (btnUpscaled) btnUpscaled.classList.add("active");
+    if (btnOriginal) btnOriginal.classList.remove("active");
+    if (imgEl) {
+      imgEl.src = upscalerProcessedResult.data_url;
+      imgEl.style.display = "block";
+    }
+    if (placeholder) placeholder.style.display = "none";
+  } else if (mode === "original" && upscalerRawImage) {
+    if (btnUpscaled) btnUpscaled.classList.remove("active");
+    if (btnOriginal) btnOriginal.classList.add("active");
+    if (imgEl) {
+      imgEl.src = upscalerRawImage;
+      imgEl.style.display = "block";
+    }
+    if (placeholder) placeholder.style.display = "none";
+  }
+}
+
+function downloadUpscaledImageFile() {
+  if (!upscalerProcessedResult || !upscalerProcessedResult.data_url) {
+    showToast("No upscaled image available to download.", "warning");
+    return;
+  }
+  const baseName = (upscalerFileName || "artwork").replace(/\.[^/.]+$/, "");
+  const outName = `${baseName}_KDP_${upscalerProcessedResult.dpi}DPI.png`;
+
+  const a = document.createElement("a");
+  a.href = upscalerProcessedResult.data_url;
+  a.download = outName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  showToast(`💾 Downloaded ${outName} (${upscalerProcessedResult.dpi} DPI)!`, "success");
+}
+
+async function addUpscaledImageAsNewPage() {
+  if (!upscalerProcessedResult || !upscalerProcessedResult.data_url) {
+    showToast("Please upscale an image first.", "warning");
+    return;
+  }
+
+  const projDir = currentProject?.project_dir || "";
+  const baseName = (upscalerFileName || "artwork").replace(/\.[^/.]+$/, "");
+  const saveName = `upscaled_${baseName}_${Date.now()}.png`;
+
+  showToast("💾 Saving upscaled image to project...", "info");
+
+  try {
+    const resp = await fetch("/api/tools/save_upscaled_to_project", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project_dir: projDir,
+        image_data: upscalerProcessedResult.data_url,
+        filename: saveName
+      })
+    });
+    const data = await resp.json();
+    if (data.status !== "success") {
+      throw new Error(data.error || "Failed to save file");
+    }
+
+    const mediaUrl = data.media_url || data.file_path;
+
+    // Create a new drawing page in current project with this image as main_image
+    const newPageNum = (currentProject.pages || []).length + 1;
+    const pTitle = `Drawing ${newPageNum}`;
+
+    currentProject.pages.push({
+      page_number: newPageNum,
+      page_type: "content",
+      title: pTitle,
+      layout: "kdp_top_ref",
+      elements: [
+        { id: `elem_title_${newPageNum}`, type: "title", x: 35, y: 30, w: 440, h: 40, text: pTitle.toUpperCase(), font_size: 26, color: "#0f172a", is_outline: false },
+        { id: `elem_main_${newPageNum}`, type: "main_image", x: 35, y: 75, w: 440, h: 540, text: pTitle, image_src: mediaUrl },
+        { id: `elem_frame_${newPageNum}`, type: "border", x: 35, y: 28, w: 440, h: 604 }
+      ]
+    });
+
+    renumberPages();
+    renderTimeline();
+    selectPage(currentProject.pages.length - 1);
+    syncActiveProjectUI();
+    saveProject(false);
+
+    closeKdpUpscalerTool();
+    switchTab("canvas");
+    showToast(`🎉 Page ${newPageNum} created with 300 DPI upscaled artwork!`, "success");
+  } catch (e) {
+    showToast("❌ Failed to add page: " + e.message, "error");
+  }
+}
+
+async function sendUpscaledImageToActiveCanvas() {
+  if (!upscalerProcessedResult || !upscalerProcessedResult.data_url) {
+    showToast("Please upscale an image first.", "warning");
+    return;
+  }
+
+  const currPage = currentProject?.pages?.[currentPageIndex];
+  if (!currPage) {
+    showToast("No active page loaded in editor.", "warning");
+    return;
+  }
+
+  const projDir = currentProject?.project_dir || "";
+  const baseName = (upscalerFileName || "artwork").replace(/\.[^/.]+$/, "");
+  const saveName = `upscaled_${baseName}_${Date.now()}.png`;
+
+  try {
+    const resp = await fetch("/api/tools/save_upscaled_to_project", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project_dir: projDir,
+        image_data: upscalerProcessedResult.data_url,
+        filename: saveName
+      })
+    });
+    const data = await resp.json();
+    const mediaUrl = data.media_url || data.file_path;
+
+    // Find main_image or ref_image element or create one
+    let targetElem = (currPage.elements || []).find(e => e.type === "main_image" || e.type === "ref_image");
+    if (!targetElem) {
+      targetElem = { id: `elem_main_${currPage.page_number}`, type: "main_image", x: 35, y: 75, w: 440, h: 540, text: "Drawing", image_src: mediaUrl };
+      currPage.elements.push(targetElem);
+    } else {
+      targetElem.image_src = mediaUrl;
+    }
+
+    syncActiveProjectUI();
+    loadPageIntoCanvas(currentPageIndex);
+    renderTimeline();
+    markProjectDirty();
+
+    closeKdpUpscalerTool();
+    switchTab("canvas");
+    showToast("🖼️ Replaced canvas page image with 300 DPI upscaled artwork!", "success");
+  } catch (e) {
+    showToast("❌ Failed to update canvas: " + e.message, "error");
+  }
+}
+
+function pickImageFromProjectForUpscaler() {
+  const mediaList = currentProject?.media || [];
+  const pageImages = [];
+  (currentProject?.pages || []).forEach((p, pIdx) => {
+    (p.elements || []).forEach(e => {
+      if (e.image_src && !pageImages.includes(e.image_src)) {
+        pageImages.push({ src: e.image_src, title: `Page ${pIdx + 1} (${p.title || 'Drawing'})` });
+      }
+    });
+  });
+
+  if (mediaList.length === 0 && pageImages.length === 0) {
+    showToast("No images found in current project. Please upload a file.", "info");
+    document.getElementById("upscaler-file-input")?.click();
+    return;
+  }
+
+  // Pick first available image
+  const chosen = pageImages[0] || (mediaList[0]?.url ? { src: mediaList[0].url, title: mediaList[0].name } : null);
+  if (chosen) {
+    upscalerRawImage = chosen.src;
+    upscalerFileName = (chosen.title || "project_art").replace(/[^a-zA-Z0-9_-]/g, "_") + ".png";
+    executeKdpImageUpscale();
+    showToast(`📂 Loaded image from ${chosen.title}`, "info");
+  }
+}

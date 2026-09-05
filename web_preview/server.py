@@ -13,6 +13,7 @@ import shutil
 import urllib.parse
 import zipfile
 import mimetypes
+import time
 from pathlib import Path
 
 # Add project root to sys.path
@@ -826,6 +827,91 @@ VERDICT: 100% KDP Upload Safe. Ready for Amazon KDP Paperback Submission!
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
                 return
+
+        # ==========================================
+        # Amazon KDP Image Upscaler & Safe Margin Cropper Endpoints
+        # ==========================================
+        elif req_path == "/api/tools/upscale_image":
+            image_data = req_data.get("image") or req_data.get("data_url") or ""
+            trim_size = req_data.get("trim_size", "8.5x11")
+            custom_w = float(req_data.get("custom_width_in", 8.5) or 8.5)
+            custom_h = float(req_data.get("custom_height_in", 11.0) or 11.0)
+            target_dpi = int(req_data.get("target_dpi", 300) or 300)
+            margin_in = float(req_data.get("margin_in", 0.375) or 0.375)
+            fit_mode = req_data.get("fit_mode", "fit_safe")
+            has_bleed = bool(req_data.get("has_bleed", False))
+            clean_bg = bool(req_data.get("clean_bg", True))
+            sharpen = bool(req_data.get("sharpen", True))
+            line_art_mode = bool(req_data.get("line_art_mode", False))
+            auto_focus_crop = bool(req_data.get("auto_focus_crop", True))
+            bg_threshold = int(req_data.get("bg_threshold", 225) or 225)
+
+            try:
+                result = KDPImageProcessor.upscale_and_crop_kdp(
+                    image_input=image_data,
+                    trim_size=trim_size,
+                    custom_width_in=custom_w,
+                    custom_height_in=custom_h,
+                    target_dpi=target_dpi,
+                    margin_in=margin_in,
+                    fit_mode=fit_mode,
+                    has_bleed=has_bleed,
+                    clean_bg=clean_bg,
+                    sharpen=sharpen,
+                    line_art_mode=line_art_mode,
+                    auto_focus_crop=auto_focus_crop,
+                    bg_threshold=bg_threshold
+                )
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(result).encode("utf-8"))
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "error": str(e)}).encode("utf-8"))
+                return
+
+        elif req_path == "/api/tools/save_upscaled_to_project":
+            proj_dir_raw = req_data.get("project_dir", "")
+            if not proj_dir_raw:
+                proj_dir = DEFAULT_PROJECTS_DIR / "Default"
+            else:
+                proj_dir = Path(proj_dir_raw).resolve()
+
+            media_dir = proj_dir / "media"
+            media_dir.mkdir(parents=True, exist_ok=True)
+
+            filename = req_data.get("filename", f"kdp_upscaled_{int(time.time())}.png")
+            if not filename.endswith(".png") and not filename.endswith(".jpg"):
+                filename += ".png"
+
+            data_url = req_data.get("data_url", "")
+            if "," in data_url:
+                _, encoded = data_url.split(",", 1)
+                img_bytes = base64.b64decode(encoded)
+            else:
+                img_bytes = base64.b64decode(data_url)
+
+            target_path = media_dir / filename
+            with open(target_path, "wb") as f:
+                f.write(img_bytes)
+
+            file_url = f"/api/projects/media?project_dir={urllib.parse.quote(str(proj_dir))}&filename={urllib.parse.quote(filename)}"
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "status": "success",
+                "filename": filename,
+                "file_path": str(target_path),
+                "media_url": file_url,
+                "size_kb": max(1, len(img_bytes) // 1024)
+            }).encode("utf-8"))
+            return
 
         elif req_path == "/api/projects/upload_asset":
             project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "Default")).resolve()
