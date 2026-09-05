@@ -9174,6 +9174,7 @@ function updateAiNoticeBanner(type, title, desc) {
   if (icon) icon.innerText = (type === "live") ? "✨" : (type === "error" ? "❌" : "ℹ️");
   if (titleEl) titleEl.innerText = title;
   if (descEl) descEl.innerText = desc;
+  banner.style.display = (type === "live") ? "none" : "flex";
 }
 
 function onAiModelChange(modelId) {
@@ -9200,8 +9201,11 @@ function onAiModelChange(modelId) {
 
 function toggleAiApiKeyDrawer() {
   const drawer = document.getElementById("pub-api-key-drawer");
+  const caret = document.getElementById("ai-drawer-caret");
   if (drawer) {
-    drawer.style.display = (drawer.style.display === "none") ? "block" : "none";
+    const isHidden = (drawer.style.display === "none");
+    drawer.style.display = isHidden ? "block" : "none";
+    if (caret) caret.innerText = isHidden ? "▴" : "▾";
   }
 }
 
@@ -9372,6 +9376,58 @@ function clearGeminiKeyFromModal() {
   });
 }
 
+function getProjectAiPayload() {
+  const topic = currentProject.name || currentProject.theme || "Animal Coloring Book";
+  const author = currentProject.author || "Creative Kids Studio";
+  const pagesCount = (currentProject.pages && currentProject.pages.length) ? currentProject.pages.length : 24;
+  const trimSize = currentProject.settings?.trim_size || (currentProject.settings?.trim_width_in ? `${currentProject.settings.trim_width_in}x${currentProject.settings.trim_height_in}` : "8.5x11");
+  const bookType = currentProject.book_type || "coloring_book";
+
+  let targetAge = "Ages 3-6";
+  const nameStr = (currentProject.name || "");
+  const ageMatch = nameStr.match(/Ages?\s*(\d+[\s–\-_to]+\d+)/i) || nameStr.match(/(\d+[\s–\-_to]+\d+)\s*Years?/i);
+  if (ageMatch) {
+    targetAge = `Ages ${ageMatch[1].replace(/[\-_]/g, "–")}`;
+  } else if (currentProject.target_audience) {
+    targetAge = currentProject.target_audience;
+  }
+
+  const subjects = [];
+  if (Array.isArray(currentProject.pages)) {
+    for (const page of currentProject.pages) {
+      if (page.title && typeof page.title === "string" && page.title.trim()) {
+        const t = page.title.trim();
+        const tLower = t.toLowerCase();
+        if (!subjects.includes(t) && !tLower.includes("disclaimer") && !tLower.includes("contents") && !tLower.includes("blank") && !tLower.includes("belongs")) {
+          subjects.push(t);
+        }
+      }
+      if (Array.isArray(page.elements)) {
+        for (const el of page.elements) {
+          if (el.type === "title" && el.text && typeof el.text === "string") {
+            const et = el.text.trim();
+            if (et.length < 30 && !subjects.includes(et) && !et.toLowerCase().includes("disclaimer") && !et.toLowerCase().includes("table of")) {
+              subjects.push(et);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    topic: topic,
+    book_type: bookType,
+    target_age: targetAge,
+    author: author,
+    page_count: pagesCount,
+    trim_size: trimSize,
+    subjects: subjects,
+    model: activeAiModel,
+    provider: activeAiProvider
+  };
+}
+
 function triggerFullAiMarketAnalysis() {
   const btn = document.getElementById("btn-run-full-ai-research");
   const icon = document.getElementById("ai-research-btn-icon");
@@ -9387,45 +9443,26 @@ function triggerFullAiMarketAnalysis() {
     showToast("ℹ️ Offline Mode: Generating smart built-in template for your book...", "info");
   }
 
-  const topic = currentProject.name || "Jungle Animals";
-  const author = currentProject.author || "Creative Kids Studio";
-  const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
-  const trimSize = currentProject.settings?.trim_size || "8.5x11";
+  const payload = getProjectAiPayload();
 
   // Run Metadata & Cover generation in parallel
   Promise.all([
     fetch("/api/ai/generate_metadata", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        topic: topic,
-        book_type: "coloring_book",
-        target_age: "Ages 4-8",
-        author: author,
-        page_count: pagesCount,
-        trim_size: trimSize,
-        model: activeAiModel
-      })
+      body: JSON.stringify(payload)
     }).then(r => r.json()),
 
     fetch("/api/ai/generate_cover_metadata", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        topic: topic,
-        book_type: "coloring_book",
-        target_age: "Ages 4-8",
-        author: author,
-        page_count: pagesCount,
-        trim_size: trimSize,
-        model: activeAiModel
-      })
+      body: JSON.stringify(payload)
     }).then(r => r.json())
   ])
   .then(([metaData, coverData]) => {
     if (btn) btn.disabled = false;
     if (icon) icon.innerText = "✨";
-    if (txt) txt.innerText = "Run Full Amazon AI Market Analysis";
+    if (txt) txt.innerText = "Run Full AI Market Analysis";
 
     if (metaData.status === "success" && metaData.metadata) {
       currentPublishMetadata = metaData.metadata;
@@ -9468,7 +9505,7 @@ function triggerFullAiMarketAnalysis() {
   .catch(err => {
     if (btn) btn.disabled = false;
     if (icon) icon.innerText = "✨";
-    if (txt) txt.innerText = "Run Full Amazon AI Market Analysis";
+    if (txt) txt.innerText = "Run Full AI Market Analysis";
     showToast(`⚠️ AI Service Notice: ${err.message}. Displaying offline data.`, "warning");
     updateAiStatusBadge("error");
     updateAiNoticeBanner("error", "AI Request Error", `${err.message}. Showing offline templates.`);
@@ -9481,23 +9518,12 @@ function loadPublishMetadata(forceRefresh = false) {
     return;
   }
 
-  const topic = currentProject.name || "Jungle Animals";
-  const author = currentProject.author || "Creative Kids Studio";
-  const pagesCount = currentProject.pages ? currentProject.pages.length : 24;
-  const trimSize = currentProject.settings?.trim_size || "8.5x11";
+  const payload = getProjectAiPayload();
 
   fetch("/api/ai/generate_metadata", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      topic: topic,
-      book_type: "coloring_book",
-      target_age: "Ages 4-8",
-      author: author,
-      page_count: pagesCount,
-      trim_size: trimSize,
-      model: activeAiModel
-    })
+    body: JSON.stringify(payload)
   })
   .then(r => r.json())
   .then(data => {
@@ -9505,15 +9531,15 @@ function loadPublishMetadata(forceRefresh = false) {
       currentPublishMetadata = data.metadata;
       renderPublishMetadata(data.metadata);
 
-      if (data.metadata.ai_source === "gemini_live") {
-        updateAiStatusBadge("connected", activeAiModel);
-        updateAiNoticeBanner("live", "✨ Live Gemini 2.0 AI Connected", "Real-time Amazon search grounding active.");
+      if (data.metadata.ai_source === "gemini_live" || (data.metadata.ai_source && data.metadata.ai_source !== "offline_template")) {
+        updateAiStatusBadge("connected", activeAiModel, activeAiProvider);
+        updateAiNoticeBanner("live", `✨ Live ${getProviderDisplayName(activeAiProvider)} Connected`, "Real-time Amazon search analysis active.");
       } else if (data.metadata.ai_status === "api_error") {
         updateAiStatusBadge("error");
-        updateAiNoticeBanner("error", "Gemini API Notice", `${data.metadata.ai_error || 'API Error'}. Offline template loaded.`);
+        updateAiNoticeBanner("error", "AI Engine Notice", `${data.metadata.ai_error || 'API Error'}. Offline template loaded.`);
       } else {
         updateAiStatusBadge("offline");
-        updateAiNoticeBanner("offline", "No Gemini API Key Connected (Offline Template Mode)", "Studio is running on smart offline templates.");
+        updateAiNoticeBanner("offline", "Smart Offline Template Mode Active", "Studio is running on smart built-in templates.");
       }
     }
   })
@@ -9842,6 +9868,27 @@ function regenerateCoverMetadata() {
   });
 }
 
+function regenerateCoverMetadata() {
+  showToast("🔄 Generating AI Cover Layout & Blurb Copy...", "info");
+  const payload = getProjectAiPayload();
+
+  fetch("/api/ai/generate_cover_metadata", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.status === "success" && res.cover) {
+      applyAiCoverMetadata(res.cover);
+      showToast("🎉 AI Cover Copy & Palette Updated for Your Book!", "success");
+    }
+  })
+  .catch(err => {
+    showToast(`⚠️ Error: ${err.message}`, "warning");
+  });
+}
+
 function exportCoverPdfDirect() {
   showToast("🎨 Generating 300 DPI Amazon KDP Full Wrap Cover PDF...", "info");
 
@@ -9861,10 +9908,15 @@ function exportCoverPdfDirect() {
     cover_config: {
       title: currentCoverConfig.front_title,
       subtitle: currentCoverConfig.front_subtitle,
-      author: currentProject.author || "Creative Kids Studio",
+      author: currentProject.author || currentCoverConfig.author || "Creative Kids Studio",
       bg_color: currentCoverConfig.bg_color,
+      accent_color: currentCoverConfig.accent_color,
       spine_color: currentCoverConfig.bg_color,
       back_heading: currentCoverConfig.back_heading,
+      back_features: currentCoverConfig.back_features,
+      back_blurb: currentCoverConfig.back_blurb,
+      badge_1: currentCoverConfig.badge_1,
+      badge_2: currentCoverConfig.badge_2,
       paper_type: "white",
       front_image: coverImg
     }
@@ -9891,6 +9943,63 @@ function exportCoverPdfDirect() {
   })
   .catch(err => {
     showToast(`⚠️ Cover error: ${err.message}`, "danger");
+  });
+}
+
+function exportCoverImageDirect() {
+  showToast("🖼️ Generating 300 DPI High-Resolution Cover Image (PNG)...", "info");
+
+  let coverImg = null;
+  for (const p of (currentProject.pages || [])) {
+    for (const el of (p.elements || [])) {
+      if ((el.type === "main_image" || el.type === "ref_image") && el.image_src) {
+        coverImg = el.image_src;
+        break;
+      }
+    }
+    if (coverImg) break;
+  }
+
+  const payload = {
+    ...currentProject,
+    cover_config: {
+      title: currentCoverConfig.front_title,
+      subtitle: currentCoverConfig.front_subtitle,
+      author: currentProject.author || currentCoverConfig.author || "Creative Kids Studio",
+      bg_color: currentCoverConfig.bg_color,
+      accent_color: currentCoverConfig.accent_color,
+      spine_color: currentCoverConfig.bg_color,
+      back_heading: currentCoverConfig.back_heading,
+      back_features: currentCoverConfig.back_features,
+      back_blurb: currentCoverConfig.back_blurb,
+      badge_1: currentCoverConfig.badge_1,
+      badge_2: currentCoverConfig.badge_2,
+      paper_type: "white",
+      front_image: coverImg
+    }
+  };
+
+  fetch("/api/projects/export_cover_image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.status === "success" && data.download_url) {
+      showToast(`🎉 Cover PNG Ready & Downloaded: ${data.filename}!`, "success");
+      const a = document.createElement("a");
+      a.href = data.download_url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } else {
+      showToast(`⚠️ Cover image export failed: ${data.error}`, "danger");
+    }
+  })
+  .catch(err => {
+    showToast(`⚠️ Cover image error: ${err.message}`, "danger");
   });
 }
 

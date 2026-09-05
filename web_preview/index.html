@@ -2275,72 +2275,83 @@
           <button class="modal-close" onclick="closeModal('publish-helper-modal')">&times;</button>
         </div>
 
-        <!-- AI Engine Control & Grounding Bar -->
-        <div class="pub-ai-engine-bar">
+        <!-- Compact 1-Line AI Assistant Control Bar -->
+        <div class="pub-ai-engine-bar compact-ai-bar">
           <div class="ai-bar-left">
-            <span class="ai-spark-badge">⚡ AI Engine</span>
-            <select id="pub-ai-model-select" class="form-control pub-model-select" onchange="onAiModelChange(this.value)">
-              <option value="gemini-3.5-flash-lite" selected>Gemini 3.5 Flash-Lite (Recommended - Ultra Fast ~1.2s)</option>
-              <option value="gemini-flash-latest">Gemini Flash Latest (Auto-Updating)</option>
-              <option value="gemini-3.6-flash">Gemini 3.6 Flash (Experimental)</option>
-              <option value="gemini-3.7-flash">Gemini 3.7 Flash (High Intelligence)</option>
-              <option value="gemini-pro-latest">Gemini Pro Latest (Deep Reasoning)</option>
-            </select>
+            <span class="ai-spark-badge">⚡ AI Helper</span>
             <span id="pub-ai-status-tag" class="ai-status-tag offline" title="Checking AI status...">⚪ Offline Mode</span>
+            <select id="pub-ai-model-select" class="form-control pub-model-select-compact" onchange="onAiModelChange(this.value)">
+              <option value="gemini-3.5-flash-lite" selected>Gemini 3.5 Flash-Lite (Fast ~1.2s)</option>
+              <option value="gemini-flash-latest">Gemini Flash Latest</option>
+              <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+              <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+              <option value="gemini-pro-latest">Gemini Pro Latest</option>
+            </select>
           </div>
           <div class="ai-bar-right">
-            <button class="btn btn-sm btn-outline" onclick="toggleAiApiKeyDrawer()" title="Configure AI Provider & API Key">
-              🔑 AI Provider &amp; Key
+            <button class="btn btn-sm btn-outline pub-ai-settings-toggle" id="btn-toggle-ai-drawer" onclick="toggleAiApiKeyDrawer()" title="Configure AI Provider & API Key">
+              <span>⚙️ AI Connection</span> <span id="ai-drawer-caret">▾</span>
             </button>
             <button class="btn btn-sm btn-primary ai-supercharge-btn" id="btn-run-full-ai-research" onclick="triggerFullAiMarketAnalysis()">
-              <span id="ai-research-btn-icon">✨</span> <strong id="ai-research-btn-txt">Run Full Amazon AI Market Analysis</strong>
+              <span id="ai-research-btn-icon">✨</span> <strong id="ai-research-btn-txt">Run Full AI Market Analysis</strong>
             </button>
           </div>
         </div>
 
-        <!-- AI Engine Status & Fallback Notification Banner -->
-        <div id="pub-ai-notice-banner" class="pub-ai-notice-banner offline">
-          <div class="notice-left">
-            <span class="notice-icon" id="pub-notice-icon">⚠️</span>
-            <div class="notice-content">
-              <span id="pub-notice-title" class="notice-title">No AI Key Connected (Offline Template Mode)</span>
-              <span id="pub-notice-desc" class="notice-desc">Studio is currently displaying offline template data. Connect your free Google Gemini or Groq API key to enable live Amazon market intelligence &amp; AI copy.</span>
-            </div>
+        <!-- Floating Collapsible Multi-Provider AI Settings Popover -->
+        <div id="pub-api-key-drawer" class="pub-api-drawer floating-ai-popover" style="display: none;">
+          <div class="ai-popover-header">
+            <span style="font-size: 13px; font-weight: 800; color: var(--text-primary);">⚙️ AI Engine &amp; API Configuration</span>
+            <button class="btn-icon-xs" onclick="toggleAiApiKeyDrawer()" title="Close Settings" style="background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-secondary);">&times;</button>
           </div>
-          <button class="btn btn-xs btn-outline" onclick="toggleAiApiKeyDrawer()" style="white-space: nowrap; font-size: 11px; padding: 4px 10px;">
-            🔑 Connect AI Key
-          </button>
-        </div>
 
-        <!-- Collapsible Multi-Provider API Key Drawer -->
-        <div id="pub-api-key-drawer" class="pub-api-drawer" style="display: none;">
-          <div style="display: flex; gap: 8px; align-items: center; width: 100%; flex-wrap: wrap; margin-bottom: 8px;">
-            <span style="font-size: 12px; font-weight: 700; white-space: nowrap;">AI Provider:</span>
-            <select id="pub-ai-provider-select" class="form-control" style="font-size: 12px; width: auto; min-width: 220px;" onchange="onAiProviderChange(this.value)">
+          <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin: 8px 0;">
+            <label style="font-size: 11.5px; font-weight: 700; width: 75px; flex-shrink: 0;">Provider:</label>
+            <select id="pub-ai-provider-select" class="form-control" style="font-size: 12px; flex: 1;" onchange="onAiProviderChange(this.value)">
               <option value="google_gemini" selected>Google Gemini (Free &amp; Recommended)</option>
               <option value="groq">Groq Cloud (Ultra-Fast Llama 3.3 - Free Key)</option>
               <option value="openrouter">OpenRouter (Free Llama &amp; DeepSeek)</option>
               <option value="openai">OpenAI (GPT-4o-mini)</option>
               <option value="offline">Smart Built-In Heuristics (100% Offline)</option>
             </select>
-            <span style="font-size: 12px; font-weight: 700; white-space: nowrap;">Model:</span>
-            <select id="pub-ai-drawer-model-select" class="form-control" style="font-size: 12px; flex: 1; min-width: 180px;" onchange="onDrawerModelChange(this.value)">
+          </div>
+
+          <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 8px;">
+            <label style="font-size: 11.5px; font-weight: 700; width: 75px; flex-shrink: 0;">Model:</label>
+            <select id="pub-ai-drawer-model-select" class="form-control" style="font-size: 12px; flex: 1;" onchange="onDrawerModelChange(this.value)">
               <option value="gemini-3.5-flash-lite" selected>Gemini 3.5 Flash-Lite (Recommended)</option>
             </select>
           </div>
 
-          <div style="display: flex; gap: 8px; align-items: center; width: 100%; flex-wrap: wrap;">
-            <span id="pub-api-key-label" style="font-size: 12px; font-weight: 700; white-space: nowrap;">API Key:</span>
-            <input type="password" id="pub-gemini-key-input" class="form-control" placeholder="Paste API Key (AIzaSy... / AQ...)" style="font-size: 12px; flex: 1; min-width: 200px;" oninput="onApiKeyInput(this.value)">
-            <button class="btn btn-sm btn-outline" id="btn-test-gemini-key" onclick="testGeminiKeyFromModal()">🧪 Test Key</button>
-            <button class="btn btn-sm btn-primary" id="btn-save-gemini-key" onclick="saveGeminiKeyFromModal()">Save &amp; Connect</button>
-            <button class="btn btn-sm btn-outline" onclick="clearGeminiKeyFromModal()" title="Remove saved API key and use offline template mode">Disconnect</button>
-            <button class="btn btn-sm btn-outline" onclick="toggleAiApiKeyDrawer()">Close</button>
+          <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 10px;">
+            <label id="pub-api-key-label" style="font-size: 11.5px; font-weight: 700; width: 75px; flex-shrink: 0;">API Key:</label>
+            <input type="password" id="pub-gemini-key-input" class="form-control" placeholder="Paste API Key (AIzaSy... / AQ...)" style="font-size: 12px; flex: 1;" oninput="onApiKeyInput(this.value)">
           </div>
-          <div id="pub-key-test-feedback" style="display: none; margin-top: 6px; font-size: 11.5px; font-weight: 600; padding: 6px 10px; border-radius: 6px;"></div>
-          <div id="pub-api-key-help-links" style="font-size: 11px; color: var(--text-secondary); margin-top: 6px;">
+
+          <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-xs btn-outline" id="btn-test-gemini-key" onclick="testGeminiKeyFromModal()">🧪 Test Key</button>
+            <button class="btn btn-xs btn-primary" id="btn-save-gemini-key" onclick="saveGeminiKeyFromModal()">Save &amp; Connect</button>
+            <button class="btn btn-xs btn-outline" onclick="clearGeminiKeyFromModal()" title="Remove saved API key and use offline template mode">Disconnect</button>
+          </div>
+
+          <div id="pub-key-test-feedback" style="display: none; margin-top: 8px; font-size: 11.5px; font-weight: 600; padding: 6px 10px; border-radius: 6px;"></div>
+          <div id="pub-api-key-help-links" style="font-size: 11px; color: var(--text-secondary); margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
             💡 Free keys: <a id="pub-api-link" href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary); text-decoration: underline;">Google AI Studio</a> • <a href="https://console.groq.com/keys" target="_blank" style="color: var(--primary); text-decoration: underline;">Groq Console</a> • <a href="https://openrouter.ai/keys" target="_blank" style="color: var(--primary); text-decoration: underline;">OpenRouter</a>.
           </div>
+        </div>
+
+        <!-- Inline Notification Strip (Hidden when live AI is connected) -->
+        <div id="pub-ai-notice-banner" class="pub-ai-notice-banner offline" style="display: none;">
+          <div class="notice-left">
+            <span class="notice-icon" id="pub-notice-icon">⚠️</span>
+            <div class="notice-content">
+              <span id="pub-notice-title" class="notice-title">Offline Template Mode</span>
+              <span id="pub-notice-desc" class="notice-desc">Connect free Google Gemini or Groq key for live Amazon analysis.</span>
+            </div>
+          </div>
+          <button class="btn btn-xs btn-outline" onclick="toggleAiApiKeyDrawer()" style="white-space: nowrap; font-size: 11px; padding: 2px 8px;">
+            🔑 Connect
+          </button>
         </div>
 
         <!-- Sub Navigation Workflow Tabs -->
@@ -2580,12 +2591,15 @@
                   Back Cover + Calculated Spine + Front Cover + 0.125" Bleed Allowance ready for direct Amazon KDP paperback upload.
                 </p>
               </div>
-              <div style="display: flex; gap: 8px;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <button class="btn btn-sm btn-outline" onclick="regenerateCoverMetadata()">
-                  🔄 AI Regenerate Cover Copy
+                  🔄 AI Regenerate Cover
                 </button>
-                <button class="btn btn-sm btn-primary" onclick="exportCoverPdfDirect()">
-                  🎨 Download 300 DPI Cover PDF
+                <button class="btn btn-sm btn-primary" onclick="exportCoverPdfDirect()" title="Download Official 300 DPI Amazon KDP Full-Wrap Cover PDF">
+                  🎨 Download 300 DPI Cover (PDF)
+                </button>
+                <button class="btn btn-sm btn-accent" onclick="exportCoverImageDirect()" title="Download High-Resolution 300 DPI Cover Image (PNG)">
+                  🖼️ Download Cover Image (PNG)
                 </button>
               </div>
             </div>

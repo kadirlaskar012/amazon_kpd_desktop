@@ -644,12 +644,14 @@ class AIKDPAssistant:
         target_age: str = "Ages 4-8",
         author_name: str = "Creative Kids Studio",
         page_count: int = 50,
-        trim_size: str = "8.5x11"
+        trim_size: str = "8.5x11",
+        subjects: Optional[List[str]] = None,
+        features: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Deep Amazon Market Analysis:
         Generates Bestselling Title, Subtitle, 7 Search-Intent Backend Keywords,
-        Rich HTML Sales Copy, and Competitor Pricing Benchmarks.
+        Rich HTML Sales Copy, and Competitor Pricing Benchmarks tailored to exact project content.
         """
         # Exact Amazon KDP B&W Printing Cost (US Market)
         if page_count <= 108:
@@ -660,6 +662,17 @@ class AIKDPAssistant:
         launch_profit = round((6.99 * 0.60) - print_cost, 2)
         regular_profit = round((7.99 * 0.60) - print_cost, 2)
         premium_profit = round((8.99 * 0.60) - print_cost, 2)
+
+        subj_list = [s.strip().title() for s in (subjects or []) if s and str(s).strip()]
+        subj_summary = ", ".join(subj_list[:25]) if subj_list else ""
+        subj_sample = ", ".join(subj_list[:6]) if subj_list else ""
+
+        subjects_context = ""
+        if subj_summary:
+            subjects_context = f"""
+        - Exact Subjects / Characters Included in this Book ({len(subj_list)} Total): {subj_summary}
+        - Prominent Examples: {subj_sample}
+        """
 
         prompt = f"""
         Act as a top-ranked Amazon KDP Bestseller Publishing Strategist and SEO Copywriter.
@@ -672,13 +685,14 @@ class AIKDPAssistant:
         - Author: "{author_name}"
         - Page Count: {page_count} pages
         - Trim Size: {trim_size} inches
+        {subjects_context}
 
         CRITICAL AMAZON KDP ALGORITHM RULES (A9 / COSMO ENGINE):
         1. Title: Catchy, memorable, includes primary high-volume organic keyword (Max 60 chars).
-        2. Subtitle: Rich with secondary buyer intent keywords, benefits, age group, and number of pages (Max 150 chars).
-        3. 7 Backend Keywords: Exactly 7 distinct search phrases (<50 chars each). DO NOT repeat words already used in the Title or Subtitle! Include buyer intent (gift, preschool motor skills, homeschool, road trip, quiet time).
+        2. Subtitle: Rich with secondary buyer intent keywords, benefits, age group, number of pages, and specific subjects ({subj_sample if subj_sample else 'e.g. key characters'}). Max 150 chars.
+        3. 7 Backend Keywords: Exactly 7 distinct search phrases (<50 chars each). DO NOT repeat words already used in the Title or Subtitle! Include buyer intent (gift, preschool motor skills, homeschool, road trip, quiet time) and specific search terms for the book's subjects ({subj_sample}).
         4. Categories: 3 best Amazon KDP BISAC Categories with high conversion.
-        5. HTML Description: Professional Amazon HTML formatted sales copy using <h2>, <h3>, <b>, <ul>, <li>, emojis, and a compelling urgency call-to-action.
+        5. HTML Description: Professional Amazon HTML formatted sales copy using <h2>, <h3>, <b>, <ul>, <li>, emojis, and a compelling urgency call-to-action. IMPORTANT: Detail the exact contents and subjects ({subj_summary if subj_summary else topic_or_niche}) so parents know exactly what is inside!
         6. Competitor Benchmarks: Estimated lowest, median, and bestseller price in this specific niche on Amazon.
 
         Return ONLY valid raw JSON with this exact structure:
@@ -901,7 +915,9 @@ class AIKDPAssistant:
         target_age: str = "Ages 4-8",
         author: str = "Creative Kids Studio",
         page_count: int = 50,
-        trim_size: str = "8.5x11"
+        trim_size: str = "8.5x11",
+        subjects: Optional[List[str]] = None,
+        features: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         AI Cover Page Architect:
@@ -911,6 +927,17 @@ class AIKDPAssistant:
         spine_width_in = max(0.06, page_count * 0.002252)
         spine_allowed = (page_count >= 79 and spine_width_in >= 0.2)
 
+        subj_list = [s.strip().title() for s in (subjects or []) if s and str(s).strip()]
+        subj_summary = ", ".join(subj_list[:25]) if subj_list else ""
+        subj_sample = ", ".join(subj_list[:6]) if subj_list else ""
+
+        subj_context = ""
+        if subj_summary:
+            subj_context = f"""
+        - Exact Subjects / Animals in Book ({len(subj_list)} Total): {subj_summary}
+        - Sample Highlight Characters: {subj_sample}
+        """
+
         prompt = f"""
         Act as an Amazon KDP Bestseller Cover Designer and Copywriter.
         Generate cover layout specifications and back-cover sales copy for a Children's Activity Book:
@@ -919,29 +946,31 @@ class AIKDPAssistant:
         - Target Age: "{target_age}"
         - Page Count: {page_count} pages
         - Trim Size: {trim_size}
+        {subj_context}
 
         Requirements:
         1. Front Cover Headline: High impact, bold typography text.
-        2. Front Cover Badges: 2 punchy badges (e.g. "50+ UNIQUE PAGES", "AGES 4-8").
-        3. Back Cover Headline: "WHY YOUR CHILD WILL LOVE THIS BOOK" or creative variant.
-        4. Back Cover Blurb: 2-3 engaging sales sentences for parents.
-        5. Back Cover Bullets: 5 compelling bullet selling points with emojis.
-        6. Color Palette: Primary Hex (dark vibrant e.g. #1e1b4b, #0f172a, #064e3b), Accent Hex (gold/yellow e.g. #fbbf24, #f59e0b).
+        2. Front Cover Subtitle: Catchy and specifically mention {subj_sample if subj_sample else 'the activities'} and {target_age}.
+        3. Front Cover Badges: 2 punchy badges (e.g. "{page_count}+ UNIQUE PAGES", "{target_age.upper()}").
+        4. Back Cover Headline: "WHY YOUR CHILD WILL LOVE THIS BOOK" or creative variant.
+        5. Back Cover Blurb: 2-3 engaging sales sentences for parents highlighting {subj_sample if subj_sample else topic}.
+        6. Back Cover Bullets: 5 compelling bullet selling points with emojis (mentioning the {page_count} illustrations, single-sided pages, motor skills, gift quality).
+        7. Color Palette: Primary Hex (dark vibrant e.g. #1e1b4b, #0f172a, #064e3b), Accent Hex (gold/yellow e.g. #fbbf24, #f59e0b).
 
         Return ONLY valid raw JSON:
         {{
           "front_title": "TITLE IN ALL CAPS",
           "front_subtitle": "Subtitle text here",
-          "badge_1": "50+ UNIQUE PAGES",
-          "badge_2": "AGES 4-8",
+          "badge_1": "{page_count}+ UNIQUE PAGES",
+          "badge_2": "{target_age.upper()}",
           "back_heading": "WHY PARENTS & KIDS LOVE THIS BOOK",
-          "back_blurb": "Short persuasive description for parents.",
+          "back_blurb": "Short persuasive description for parents highlighting the characters.",
           "back_features": [
-            "✨ 50+ High-Quality Hand-Drawn Illustrations",
-            "🛡️ Single-Sided Bleed-Safe Pages",
-            "🐾 Perfect Large 8.5 x 11 in Format for Little Hands",
-            "🎯 Enhances Fine Motor Skills & Pencil Control",
-            "🎁 Ideal Screen-Free Gift for Birthdays and Holidays"
+            "✨ {page_count}+ High-Quality Hand-Drawn Illustrations",
+            "🛡️ Single-Sided Bleed-Safe Pages (No Marker Bleed)",
+            "🐾 Featuring Favorite Animals: {subj_sample if subj_sample else 'Safari & Farm Friends'}",
+            "🎯 Large {trim_size} Format Perfect for Tiny Hands",
+            "🎁 Wonderful Screen-Free Gift for Birthdays and Holidays"
           ],
           "bg_color": "#1e1b4b",
           "accent_color": "#fbbf24",
@@ -974,18 +1003,20 @@ class AIKDPAssistant:
         clean_topic = topic.strip().title() or "Jungle Animals"
         b_type_title = book_type.replace("_", " ").title()
 
+        sample_bullet = f"🐾 Featuring 30+ Animals: {subj_sample}" if subj_sample else "🐾 Cute & Delightful Characters"
+
         return {
             "front_title": f"{clean_topic.upper()} {b_type_title.upper()}",
             "front_subtitle": f"{page_count}+ Fun & Easy Coloring Activities For Kids {target_age}",
             "badge_1": f"{page_count}+ PAGES",
             "badge_2": target_age.upper(),
             "back_heading": "WHY YOUR CHILD WILL LOVE THIS BOOK",
-            "back_blurb": f"Spark your little one's imagination with enchanting {clean_topic.lower()} illustrations designed to develop motor skills and provide hours of joyful, screen-free entertainment.",
+            "back_blurb": f"Spark your little one's imagination with enchanting {clean_topic.lower()} illustrations ({subj_sample if subj_sample else 'and more'}) designed to develop motor skills and provide hours of joyful, screen-free entertainment.",
             "back_features": [
                 f"✨ {page_count}+ Hand-Drawn High-Resolution Illustrations",
                 "🛡️ Single-Sided Pages (No Marker Bleed-Through)",
+                sample_bullet,
                 f"🎯 Large {trim_size} Format Perfect for Little Hands",
-                "🧠 Builds Fine Motor Skills, Hand-Eye Coordination & Focus",
                 "🎁 Wonderful Gift for Birthdays, Holidays & Travel"
             ],
             "bg_color": "#1e1b4b",

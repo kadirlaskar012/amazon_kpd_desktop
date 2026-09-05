@@ -167,22 +167,28 @@ class KDPCoverExporter:
         # 5. Draw Back Cover Elements
         back_heading = cover_config.get("back_heading", "WHY YOUR CHILD WILL LOVE THIS BOOK")
         c.setFont("Helvetica-Bold", 18)
-        c.setFillColor(colors.HexColor("#fbbf24"))
+        c.setFillColor(colors.HexColor(cover_config.get("accent_color", "#fbbf24")))
         c.drawCentredString(back_x + (back_w / 2.0), total_h_pt - bleed_pt - 90, back_heading)
 
-        # Back Features List
-        features = [
-            "✨ 50+ High-Quality Hand-Drawn Illustrations",
-            "🛡️ Single-Sided Pages (No Marker Bleed-Through)",
-            "🐾 Color by Reference Guides For Extra Fun",
-            "🎯 Large 8.5 x 11 in Format for Little Hands",
-            "🎁 Perfect Gift for Toddlers, Preschoolers & Kids"
+        # Back Features List (Dynamic from AI or project configuration)
+        features = cover_config.get("back_features") or cover_config.get("features") or [
+            f"• {page_count}+ High-Quality Hand-Drawn Illustrations",
+            "• Single-Sided Bleed-Safe Pages (No Marker Bleed)",
+            "• Color by Reference Guides For Extra Fun",
+            f"• Large {project_data.get('settings', {}).get('trim_width_in', 8.5)}x{project_data.get('settings', {}).get('trim_height_in', 11)} in Format for Little Hands",
+            "• Wonderful Screen-Free Gift for Toddlers & Kids"
         ]
         c.setFont("Helvetica", 12)
         c.setFillColor(colors.white)
-        start_feat_y = total_h_pt - bleed_pt - 150
-        for i, feat in enumerate(features):
-            c.drawString(back_x + 50, start_feat_y - (i * 30), feat)
+        start_feat_y = total_h_pt - bleed_pt - 140
+        for i, feat in enumerate(features[:6]):
+            safe_feat = feat
+            for symbol in ["✨", "🛡️", "🐾", "🎯", "🎁", "🧠", "⭐", "🚀", "🎉", "📘", "🌟"]:
+                safe_feat = safe_feat.replace(symbol, "•")
+            safe_feat = safe_feat.strip()
+            if not safe_feat.startswith("•"):
+                safe_feat = f"• {safe_feat}"
+            c.drawString(back_x + 50, start_feat_y - (i * 28), safe_feat)
 
         # Amazon KDP Barcode Reservation Box on Back Cover (Bottom Right)
         # KDP automatically places ISBN barcode in a 2.0 x 1.2 in zone
@@ -201,4 +207,197 @@ class KDPCoverExporter:
 
         c.showPage()
         c.save()
+        return output_path
+
+    @classmethod
+    def generate_cover_image(
+        cls,
+        project_data: dict,
+        output_path: Path,
+        cover_config: dict = None
+    ) -> Path:
+        """
+        Generates 300 DPI High-Resolution Full-Wrap Cover Image (PNG).
+        Converts the official KDP Cover PDF directly using PyMuPDF if available,
+        or renders pixel-perfect full spread layout using Pillow.
+        """
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        cover_config = cover_config or {}
+
+        # 1. First generate PDF to a temp file to attempt pixel-perfect PDF conversion
+        temp_pdf = output_path.with_suffix(".temp.pdf")
+        pdf_rendered = False
+        try:
+            cls.generate_cover_pdf(project_data, temp_pdf, cover_config=cover_config)
+            pdf_rendered = True
+            
+            # Attempt conversion via pymupdf
+            try:
+                import pymupdf
+                doc = pymupdf.open(str(temp_pdf))
+                page = doc[0]
+                pix = page.get_pixmap(dpi=300)
+                pix.save(str(output_path))
+                doc.close()
+                if temp_pdf.exists():
+                    temp_pdf.unlink()
+                return output_path
+            except Exception as pdf_err:
+                print(f"PyMuPDF not available in current python ({pdf_err}), falling back to Pillow 300 DPI renderer")
+        except Exception as e:
+            print(f"PDF pre-render notice: {e}")
+
+        # 2. High-Resolution Pillow 300 DPI Fallback Engine
+        settings = project_data.get("settings", {})
+        trim_w_pt = float(settings.get("trim_width_pt", 612.0))
+        trim_h_pt = float(settings.get("trim_height_pt", 792.0))
+        bleed_pt = 9.0
+
+        pages = project_data.get("pages", [])
+        page_count = max(24, len(pages))
+        paper_type = cover_config.get("paper_type", "white")
+
+        spine_w_in = cls.calculate_spine_width_in(page_count, paper_type)
+        spine_w_pt = spine_w_in * 72.0
+
+        total_w_pt = (bleed_pt * 2) + (trim_w_pt * 2) + spine_w_pt
+        total_h_pt = trim_h_pt + (bleed_pt * 2)
+
+        # Scale from 72 pt/in to 300 DPI
+        scale = 300.0 / 72.0
+        w_px = int(total_w_pt * scale)
+        h_px = int(total_h_pt * scale)
+
+        bg_hex = cover_config.get("bg_color", "#1e1b4b")
+        accent_hex = cover_config.get("accent_color", "#fbbf24")
+
+        from PIL import ImageDraw, ImageFont
+
+        img = Image.new("RGB", (w_px, h_px), bg_hex)
+        draw = ImageDraw.Draw(img)
+
+        bleed_px = int(bleed_pt * scale)
+        trim_w_px = int(trim_w_pt * scale)
+        spine_w_px = int(spine_w_pt * scale)
+
+        back_x = bleed_px
+        spine_x = back_x + trim_w_px
+        front_x = spine_x + spine_w_px
+
+        # Spine highlight line
+        draw.rectangle([spine_x, 0, spine_x + spine_w_px, h_px], fill=cover_config.get("spine_color", bg_hex))
+
+        # Fonts
+        font_title = None
+        font_sub = None
+        font_back_h = None
+        font_text = None
+        font_small = None
+        for font_name in ["arialbd.ttf", "segoeuib.ttf", "calibrib.ttf", "DejaVuSans-Bold.ttf"]:
+            try:
+                font_title = ImageFont.truetype(font_name, int(28 * scale))
+                font_sub = ImageFont.truetype(font_name, int(14 * scale))
+                font_back_h = ImageFont.truetype(font_name, int(16 * scale))
+                font_text = ImageFont.truetype("arial.ttf", int(11 * scale))
+                font_small = ImageFont.truetype("arial.ttf", int(8 * scale))
+                break
+            except Exception:
+                continue
+
+        if not font_title:
+            font_title = ImageFont.load_default()
+            font_sub = font_title
+            font_back_h = font_title
+            font_text = font_title
+            font_small = font_title
+
+        # Front Cover Content
+        proj_title = (cover_config.get("title") or project_data.get("name") or "COLORING BOOK").upper()
+        subtitle = cover_config.get("subtitle") or f"{page_count}+ Fun & Easy Activities For Kids"
+        author_name = cover_config.get("author") or project_data.get("author") or "Creative Kids Studio"
+
+        draw.text((front_x + (trim_w_px // 2), bleed_px + int(60 * scale)), proj_title, fill=accent_hex, font=font_title, anchor="mt")
+        draw.text((front_x + (trim_w_px // 2), bleed_px + int(100 * scale)), subtitle, fill="#ffffff", font=font_sub, anchor="mt")
+
+        # Front Artwork
+        front_art = cover_config.get("front_image")
+        if not front_art:
+            for p in pages:
+                for el in p.get("elements", []):
+                    if el.get("type") in ("main_image", "ref_image") and el.get("image_src"):
+                        front_art = el.get("image_src")
+                        break
+                if front_art:
+                    break
+
+        if front_art and isinstance(front_art, str):
+            try:
+                if "," in front_art:
+                    header, encoded = front_art.split(",", 1)
+                    art_img = Image.open(io.BytesIO(base64.b64decode(encoded)))
+                elif Path(front_art).exists():
+                    art_img = Image.open(front_art)
+                else:
+                    art_img = None
+
+                if art_img:
+                    art_size = int(trim_w_px * 0.70)
+                    art_img = art_img.convert("RGB")
+                    art_img.thumbnail((art_size, art_size), Image.Resampling.LANCZOS)
+                    art_card_x = front_x + ((trim_w_px - art_size) // 2)
+                    art_card_y = (h_px // 2) - (art_size // 2) - int(10 * scale)
+
+                    draw.rounded_rectangle(
+                        [art_card_x - int(8 * scale), art_card_y - int(8 * scale),
+                         art_card_x + art_size + int(8 * scale), art_card_y + art_size + int(8 * scale)],
+                        radius=int(14 * scale),
+                        fill="#ffffff"
+                    )
+                    paste_x = art_card_x + ((art_size - art_img.width) // 2)
+                    paste_y = art_card_y + ((art_size - art_img.height) // 2)
+                    img.paste(art_img, (paste_x, paste_y))
+            except Exception as e:
+                print(f"Error drawing Pillow cover art: {e}")
+
+        # Front Author
+        draw.text((front_x + (trim_w_px // 2), h_px - bleed_px - int(45 * scale)), f"By {author_name}", fill="#e2e8f0", font=font_sub, anchor="mb")
+
+        # Back Cover Elements
+        back_heading = cover_config.get("back_heading", "WHY YOUR CHILD WILL LOVE THIS BOOK")
+        draw.text((back_x + (trim_w_px // 2), bleed_px + int(60 * scale)), back_heading, fill=accent_hex, font=font_back_h, anchor="mt")
+
+        features = cover_config.get("back_features") or cover_config.get("features") or [
+            f"• {page_count}+ High-Quality Hand-Drawn Illustrations",
+            "• Single-Sided Pages (No Marker Bleed-Through)",
+            "• Large Format Perfect for Little Hands",
+            "• Builds Fine Motor Skills & Pencil Control",
+            "• Wonderful Screen-Free Gift for Kids"
+        ]
+
+        feat_y = bleed_px + int(120 * scale)
+        for feat in features[:6]:
+            safe_feat = feat
+            for symbol in ["✨", "🛡️", "🐾", "🎯", "🎁", "🧠", "⭐", "🚀", "🎉"]:
+                safe_feat = safe_feat.replace(symbol, "•")
+            safe_feat = safe_feat.strip()
+            if not safe_feat.startswith("•"):
+                safe_feat = f"• {safe_feat}"
+            draw.text((back_x + int(45 * scale), feat_y), safe_feat, fill="#ffffff", font=font_text)
+            feat_y += int(28 * scale)
+
+        # Barcode Box (Bottom Right of Back Cover)
+        bc_w = int(2.0 * 300)
+        bc_h = int(1.2 * 300)
+        bc_x = back_x + trim_w_px - bc_w - int(30 * scale)
+        bc_y = h_px - bleed_px - bc_h - int(25 * scale)
+
+        draw.rounded_rectangle([bc_x, bc_y, bc_x + bc_w, bc_y + bc_h], radius=int(4 * scale), fill="#f8fafc", outline="#cbd5e1", width=int(1 * scale))
+        draw.text((bc_x + (bc_w // 2), bc_y + (bc_h // 2)), "[ Amazon KDP Barcode Zone ]", fill="#94a3b8", font=font_small, anchor="mm")
+
+        img.save(str(output_path), format="PNG", dpi=(300, 300))
+        if temp_pdf.exists():
+            try:
+                temp_pdf.unlink()
+            except Exception:
+                pass
         return output_path

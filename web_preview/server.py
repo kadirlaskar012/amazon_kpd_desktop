@@ -517,6 +517,41 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
                 return
 
+        elif req_path == "/api/projects/export_cover_image":
+            # Generate 300 DPI Amazon KDP Full Wrap Cover Image (PNG)
+            project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "My_Project")).resolve()
+            exports_dir = project_dir / "exports"
+            exports_dir.mkdir(parents=True, exist_ok=True)
+
+            def _clean_kdp_filename(name_str):
+                raw = (name_str or "KDP_Book").replace(" ", "_").replace("\u2013", "-").replace("\u2014", "-")
+                clean = "".join(c if (c.isalnum() or c in "._-") else "_" for c in raw)
+                return clean.strip("._-") or "KDP_Book"
+
+            proj_name = _clean_kdp_filename(req_data.get("name", "KDP_Book"))
+            out_img = exports_dir / f"{proj_name}_KDP_Cover_Full_Wrap.png"
+            cover_config = req_data.get("cover_config", {})
+
+            try:
+                KDPCoverExporter.generate_cover_image(req_data, out_img, cover_config=cover_config)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                resp = {
+                    "status": "success",
+                    "image_path": str(out_img),
+                    "filename": out_img.name,
+                    "download_url": f"/api/exports/{urllib.parse.quote(out_img.name)}?path={urllib.parse.quote(str(out_img))}"
+                }
+                self.wfile.write(json.dumps(resp).encode("utf-8"))
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                return
+
         elif req_path == "/api/projects/export_publishing_bundle":
             # Generate Complete Amazon KDP Publishing Package (Interior PDF + Cover PDF + Metadata Guide ZIP)
             project_dir = Path(req_data.get("project_dir", DEFAULT_PROJECTS_DIR / "My_Project")).resolve()
@@ -531,6 +566,7 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             proj_name = _clean_kdp_filename(req_data.get("name", "KDP_Book"))
             out_interior_pdf = exports_dir / f"{proj_name}_Interior_Print_Ready.pdf"
             out_cover_pdf = exports_dir / f"{proj_name}_Cover_Full_Wrap.pdf"
+            out_cover_img = exports_dir / f"{proj_name}_Cover_Full_Wrap.png"
             out_guide_txt = exports_dir / f"{proj_name}_KDP_Publishing_Guide_and_Metadata.txt"
             out_zip = exports_dir / f"{proj_name}_KDP_Publishing_Bundle.zip"
 
@@ -553,11 +589,16 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 print(f"Bundle Interior PDF Generation Warning: {e}")
 
-            # 2. Generate Cover PDF
+            # 2. Generate Cover PDF & Cover High-Res Image
             try:
                 KDPCoverExporter.generate_cover_pdf(req_data, out_cover_pdf, cover_config=cover_config)
             except Exception as e:
                 print(f"Bundle Cover PDF Generation Warning: {e}")
+
+            try:
+                KDPCoverExporter.generate_cover_image(req_data, out_cover_img, cover_config=cover_config)
+            except Exception as e:
+                print(f"Bundle Cover Image Generation Warning: {e}")
 
             # 3. Generate Metadata & Upload Guide TXT
             meta = req_data.get("metadata", {})
@@ -729,6 +770,8 @@ VERDICT: 100% KDP Upload Safe. Ready for Amazon KDP Paperback Submission!
                     zipf.write(out_interior_pdf, arcname=out_interior_pdf.name)
                 if out_cover_pdf.exists():
                     zipf.write(out_cover_pdf, arcname=out_cover_pdf.name)
+                if out_cover_img.exists():
+                    zipf.write(out_cover_img, arcname=out_cover_img.name)
                 if out_guide_txt.exists():
                     zipf.write(out_guide_txt, arcname=out_guide_txt.name)
                 if out_preflight_txt.exists():
@@ -1123,14 +1166,21 @@ VERDICT: 100% KDP Upload Safe. Ready for Amazon KDP Paperback Submission!
             author = req_data.get("author", "Creative Kids Studio")
             page_count = int(req_data.get("page_count", 24))
             trim_size = req_data.get("trim_size", "8.5x11")
-            ai = AIKDPAssistant()
+            subjects = req_data.get("subjects", [])
+            features = req_data.get("features", [])
+            model = req_data.get("model")
+            provider = req_data.get("provider")
+
+            ai = AIKDPAssistant(model=model, provider=provider)
             meta = ai.generate_kdp_metadata(
                 topic_or_niche=topic,
                 book_type=book_type,
                 target_age=target_age,
                 author_name=author,
                 page_count=page_count,
-                trim_size=trim_size
+                trim_size=trim_size,
+                subjects=subjects,
+                features=features
             )
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -1145,14 +1195,21 @@ VERDICT: 100% KDP Upload Safe. Ready for Amazon KDP Paperback Submission!
             author = req_data.get("author", "Creative Kids Studio")
             page_count = int(req_data.get("page_count", 24))
             trim_size = req_data.get("trim_size", "8.5x11")
-            ai = AIKDPAssistant()
+            subjects = req_data.get("subjects", [])
+            features = req_data.get("features", [])
+            model = req_data.get("model")
+            provider = req_data.get("provider")
+
+            ai = AIKDPAssistant(model=model, provider=provider)
             cover_meta = ai.generate_ai_cover_metadata(
                 topic=topic,
                 book_type=book_type,
                 target_age=target_age,
                 author=author,
                 page_count=page_count,
-                trim_size=trim_size
+                trim_size=trim_size,
+                subjects=subjects,
+                features=features
             )
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
