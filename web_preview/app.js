@@ -1074,6 +1074,50 @@ function switchFrontMatterTab(tabId) {
   if (pane) pane.classList.add("active");
 }
 
+function syncFrontMatterTabVisibility() {
+  const tabs = [
+    { cbId: "exp-fm-disclaimer", btnId: "btn-fmtab-disclaimer", tabId: "disclaimer" },
+    { cbId: "exp-fm-contents", btnId: "btn-fmtab-contents", tabId: "contents" },
+    { cbId: "exp-fm-belongs", btnId: "btn-fmtab-belongs", tabId: "belongs" },
+    { cbId: "exp-fm-color-test", btnId: "btn-fmtab-color", tabId: "color" },
+    { cbId: "exp-fm-custom", btnId: "btn-fmtab-custom", tabId: "custom" }
+  ];
+
+  let firstVisibleTab = null;
+  let activeTabStillVisible = false;
+
+  tabs.forEach(t => {
+    const cb = document.getElementById(t.cbId);
+    const btn = document.getElementById(t.btnId);
+    const isChecked = cb ? cb.checked : false;
+
+    if (btn) {
+      if (isChecked) {
+        btn.style.display = "";
+        if (!firstVisibleTab) firstVisibleTab = t.tabId;
+        if (btn.classList.contains("active")) {
+          activeTabStillVisible = true;
+        }
+      } else {
+        btn.style.display = "none";
+        btn.classList.remove("active");
+        const pane = document.getElementById(`fmtab-${t.tabId}`);
+        if (pane) pane.classList.remove("active");
+      }
+    }
+  });
+
+  const editorContainer = document.getElementById("export-fm-text-editor");
+  if (!firstVisibleTab) {
+    if (editorContainer) editorContainer.style.display = "none";
+  } else {
+    if (editorContainer) editorContainer.style.display = "";
+    if (!activeTabStillVisible) {
+      switchFrontMatterTab(firstVisibleTab);
+    }
+  }
+}
+
 function resetFrontMatterTextsToDefault() {
   const author = currentProject.author || "Creative Kids Studio";
   const name = currentProject.name || "COLORING BOOK";
@@ -1260,6 +1304,7 @@ function openExportPdfModal() {
 let exportModalUpdateTimer = null;
 let lastExportModalUpdateTime = 0;
 function updateExportModalPreview() {
+  syncFrontMatterTabVisibility();
   const now = performance.now();
   if (now - lastExportModalUpdateTime < 75) {
     if (exportModalUpdateTimer) cancelAnimationFrame(exportModalUpdateTimer);
@@ -1317,13 +1362,20 @@ function renderExportModalPreview() {
     exportPages.push({ page_type: "blank_verso", title: "Blank Back Page", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
   }
   if (incContents) {
-    if (exportPages.length % 2 !== 0) {
-      exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
-    }
-    const tocTitle = document.getElementById("exp-fm-text-toc-heading")?.value || "Table of Contents";
-    exportPages.push({ page_type: "front_matter_contents", title: tocTitle, badge: `Page ${exportPages.length + 1} • Contents` });
-    if (singleSided) {
-      exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+    const totalItems = contentPages.length;
+    const numTocPages = Math.max(1, Math.ceil(totalItems / 22));
+    const baseTocTitle = document.getElementById("exp-fm-text-toc-heading")?.value || "Table of Contents";
+
+    for (let tIdx = 0; tIdx < numTocPages; tIdx++) {
+      if (exportPages.length % 2 !== 0) {
+        exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+      }
+      const tTitle = numTocPages > 1 ? `${baseTocTitle} (Part ${tIdx + 1})` : baseTocTitle;
+      const tBadge = numTocPages > 1 ? `Page ${exportPages.length + 1} • Contents (${tIdx + 1}/${numTocPages})` : `Page ${exportPages.length + 1} • Contents`;
+      exportPages.push({ page_type: "front_matter_contents", title: tTitle, badge: tBadge });
+      if (singleSided) {
+        exportPages.push({ page_type: "blank_verso", title: "Blank Verso", badge: `Page ${exportPages.length + 1} • Blank Back (Left)` });
+      }
     }
   }
   if (incColorTest) {
@@ -1366,10 +1418,13 @@ function renderExportModalPreview() {
   const fmCount = exportPages.length;
 
   contentPages.forEach((p, idx) => {
+    const origIdx = (currentProject.pages || []).indexOf(p);
     const drawPageNum = fmCount + 1 + (idx * (singleSided ? 2 : 1));
     const labelType = bType === "sudoku" ? "Puzzle" : (bType === "maze" ? "Maze" : (bType === "word_search" ? "Word Search" : "Page"));
     exportPages.push({
       ...p,
+      original_page_idx: origIdx >= 0 ? origIdx : idx,
+      is_deletable: true,
       doc_page_number: drawPageNum,
       badge: `Page ${drawPageNum} • ${labelType} ${idx + 1} (Right)`
     });
@@ -1490,8 +1545,15 @@ function renderExportModalPreview() {
         thumbImg = `<span style="font-size:24px;">🎨</span>`;
       }
 
+      const delBtnHtml = p.is_deletable ? `
+        <button type="button" class="btn-del-exp-page" title="Delete this page from book" onclick="deletePageFromExportModal(${p.original_page_idx}, event)">
+          ✕
+        </button>
+      ` : "";
+
       html += `
         <div class="export-page-card">
+          ${delBtnHtml}
           <div class="export-page-badge recto">${p.badge || `Page ${docPageNum}`}</div>
           <div class="export-page-thumb">${thumbImg}</div>
           <div class="export-page-title">${p.title || `Page ${docPageNum}`}</div>
@@ -1499,6 +1561,15 @@ function renderExportModalPreview() {
       `;
     }
   });
+
+  // Append "+ Add Drawing Page" card at the end of the preview grid
+  html += `
+    <div class="export-page-card add-page-card" onclick="addPageFromExportModal()" title="Add a new blank drawing page to book">
+      <div style="font-size: 28px; line-height: 1; margin-bottom: 6px; color: var(--primary);">➕</div>
+      <div style="font-weight: 600; font-size: 12px; color: var(--primary);">Add Drawing Page</div>
+      <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">Inserts into book</div>
+    </div>
+  `;
 
   container.innerHTML = html;
   if (totalLabel) totalLabel.innerText = `${exportPages.length} Total PDF Pages`;
@@ -1554,6 +1625,88 @@ function executePdfExport(openInBrowser = true) {
   .catch(err => {
     showToast("❌ Error: " + err.message, "error");
   });
+}
+
+function previewPdfBeforeExport() {
+  const singleSided = document.getElementById("exp-opt-single-sided") ? document.getElementById("exp-opt-single-sided").checked : true;
+  const blankNote = document.getElementById("exp-opt-blank-note") ? document.getElementById("exp-opt-blank-note").checked : false;
+  const includePageNumbers = document.getElementById("exp-opt-page-numbers") ? document.getElementById("exp-opt-page-numbers").checked : false;
+
+  const fmOptions = getFrontMatterFormData();
+  currentProject.front_matter_config = fmOptions;
+  saveProject(false);
+
+  const prevBtn = document.getElementById("btn-preview-pdf-instant");
+  if (prevBtn) {
+    prevBtn.disabled = true;
+    prevBtn.innerHTML = `⏳ Compiling Preview...`;
+  }
+
+  showToast("🔍 Compiling 300 DPI PDF Preview in new tab...", "info");
+
+  const payload = {
+    ...currentProject,
+    single_sided: singleSided,
+    blank_page_note: blankNote,
+    include_page_numbers: includePageNumbers,
+    front_matter_options: fmOptions
+  };
+
+  fetch("/api/projects/export_pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (prevBtn) {
+      prevBtn.disabled = false;
+      prevBtn.innerHTML = `👁️ Preview 300 DPI PDF`;
+    }
+    if (data.status === "success" && data.download_url) {
+      showToast(`✨ Opening 300 DPI Preview: ${data.filename}!`, "success");
+      // Open in browser tab without closing modal so user can inspect and make more edits
+      window.open(data.download_url, "_blank");
+    } else {
+      showToast("❌ PDF Preview failed: " + (data.error || "Unknown error"), "error");
+    }
+  })
+  .catch(err => {
+    if (prevBtn) {
+      prevBtn.disabled = false;
+      prevBtn.innerHTML = `👁️ Preview 300 DPI PDF`;
+    }
+    showToast("❌ Preview Error: " + err.message, "error");
+  });
+}
+
+async function addPageFromExportModal() {
+  await addNewPage();
+  updateExportModalPreview();
+  showToast("➕ New drawing page added to book!", "success");
+}
+
+function deletePageFromExportModal(pageIdx, event) {
+  if (event) event.stopPropagation();
+  if (currentProject.is_locked) {
+    showToast("🔒 Project is locked!", "warning");
+    return;
+  }
+  const idx = Number(pageIdx);
+  if (isNaN(idx) || idx < 0 || idx >= (currentProject.pages || []).length) {
+    showToast("Page not found", "warning");
+    return;
+  }
+  if (currentProject.pages.length <= 1) {
+    showToast("A book must contain at least one page.", "info");
+    return;
+  }
+  const pageTitle = currentProject.pages[idx]?.title || `Page ${idx + 1}`;
+  if (!confirm(`Delete page ${idx + 1} ("${pageTitle}") from book?`)) {
+    return;
+  }
+  deletePageAtIndex(idx, event);
+  updateExportModalPreview();
 }
 
 function formatProjectForKDP() {
@@ -8551,7 +8704,7 @@ function updatePublishPricingView(listPrice) {
 // ===================================================
 // AI Engine Toolbar & Model Selection
 // ===================================================
-let activeAiModel = "gemini-2.0-flash";
+let activeAiModel = "gemini-3.6-flash";
 
 let hasConnectedGeminiKey = false;
 
@@ -8570,7 +8723,7 @@ function initAiEngineBar() {
           select.appendChild(opt);
         });
       }
-      activeAiModel = data.model || "gemini-2.0-flash";
+      activeAiModel = data.model || "gemini-3.6-flash";
       hasConnectedGeminiKey = Boolean(data.has_key);
 
       const keyInput = document.getElementById("pub-gemini-key-input");
@@ -8582,7 +8735,7 @@ function initAiEngineBar() {
         updateAiStatusBadge("connected", activeAiModel);
         updateAiNoticeBanner(
           "live",
-          "✨ Live Gemini 2.0 AI Connected",
+          "✨ Live Gemini AI Connected",
           "Real-time Amazon search grounding & bestselling market intelligence active."
         );
       } else {

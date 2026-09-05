@@ -15,11 +15,20 @@ from typing import Dict, List, Any, Optional
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "kdp_ai_config.json")
 
 SUPPORTED_MODELS = [
-    {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash (Recommended - Latest & Fastest)", "is_default": True},
-    {"id": "gemini-2.0-flash-lite", "name": "Gemini 2.0 Flash-Lite (Ultra Fast)", "is_default": False},
-    {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro (Deep Reasoning)", "is_default": False},
-    {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash (Legacy)", "is_default": False},
+    {"id": "gemini-3.6-flash", "name": "Gemini 3.6 Flash (Recommended - Latest & Fastest)", "is_default": True},
+    {"id": "gemini-3.5-flash-lite", "name": "Gemini 3.5 Flash-Lite (Ultra Fast)", "is_default": False},
+    {"id": "gemini-3.7-flash", "name": "Gemini 3.7 Flash (High Intelligence)", "is_default": False},
+    {"id": "gemini-flash-latest", "name": "Gemini Flash Latest (Auto-Updating)", "is_default": False},
+    {"id": "gemini-pro-latest", "name": "Gemini Pro Latest (Deep Reasoning)", "is_default": False},
 ]
+
+DEPRECATED_MODEL_MAP = {
+    "gemini-2.0-flash": "gemini-3.6-flash",
+    "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
+    "gemini-1.5-flash": "gemini-3.6-flash",
+    "gemini-1.5-pro": "gemini-pro-latest",
+    "gemini-2.5-flash": "gemini-3.6-flash",
+}
 
 
 class AIKDPAssistant:
@@ -27,7 +36,7 @@ class AIKDPAssistant:
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
-        self.model = model or "gemini-2.0-flash"
+        self.model = model or "gemini-3.6-flash"
         self.last_call_error: Optional[str] = None
         self.last_source: str = "offline_template"
         
@@ -42,6 +51,10 @@ class AIKDPAssistant:
             except Exception:
                 pass
 
+        # Automatically migrate deprecated model names
+        if self.model in DEPRECATED_MODEL_MAP:
+            self.model = DEPRECATED_MODEL_MAP[self.model]
+
     def verify_api_key(self, api_key: Optional[str] = None, model: Optional[str] = None) -> Dict[str, Any]:
         """Directly verify if the provided or stored Gemini API key is active, valid and working."""
         key = (api_key or self.api_key or "").strip()
@@ -53,14 +66,16 @@ class AIKDPAssistant:
                 "message": "Please enter a valid Google Gemini API key."
             }
 
-        target_model = model or self.model or "gemini-2.0-flash"
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model}:generateContent?key={key}"
-        payload = {
-            "contents": [{"parts": [{"text": "Reply with 'ok'"}]}],
-            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 5}
-        }
+        target_model = model or self.model or "gemini-3.6-flash"
+        if target_model in DEPRECATED_MODEL_MAP:
+            target_model = DEPRECATED_MODEL_MAP[target_model]
 
-        try:
+        def _try_model(mod_name: str):
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{mod_name}:generateContent?key={key}"
+            payload = {
+                "contents": [{"parts": [{"text": "Reply with 'ok'"}]}],
+                "generationConfig": {"temperature": 0.1, "maxOutputTokens": 5}
+            }
             data_bytes = json.dumps(payload).encode("utf-8")
             req = urllib.request.Request(
                 url,
@@ -68,7 +83,7 @@ class AIKDPAssistant:
                 headers={"Content-Type": "application/json"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=12) as resp:
                 if resp.status == 200:
                     res_body = json.loads(resp.read().decode("utf-8"))
                     candidates = res_body.get("candidates", [])
@@ -76,9 +91,15 @@ class AIKDPAssistant:
                         return {
                             "valid": True,
                             "status": "connected",
-                            "model": target_model,
-                            "message": f"Successfully connected to Google {target_model}!"
+                            "model": mod_name,
+                            "message": f"Successfully connected to Google {mod_name}!"
                         }
+            return None
+
+        try:
+            res = _try_model(target_model)
+            if res:
+                return res
         except urllib.error.HTTPError as he:
             err_msg = f"HTTP {he.code}: {he.reason}"
             try:
@@ -87,6 +108,19 @@ class AIKDPAssistant:
                     err_msg = err_body["error"]["message"]
             except Exception:
                 pass
+
+            # If the model is deprecated / unavailable, automatically try fallback to gemini-3.6-flash or gemini-flash-latest
+            if "no longer available" in err_msg.lower() or "not found" in err_msg.lower() or he.code == 404:
+                for alt_model in ["gemini-3.6-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"]:
+                    if alt_model != target_model:
+                        try:
+                            alt_res = _try_model(alt_model)
+                            if alt_res:
+                                self.model = alt_model
+                                return alt_res
+                        except Exception:
+                            continue
+
             return {
                 "valid": False,
                 "status": "api_error",
@@ -115,7 +149,7 @@ class AIKDPAssistant:
             "message": "Could not verify API key response."
         }
 
-    def save_config(self, key: str, model: str = "gemini-2.0-flash") -> Dict[str, Any]:
+    def save_config(self, key: str, model: str = "gemini-3.6-flash") -> Dict[str, Any]:
         """Save Gemini API Key and selected model to local studio config, with real connection test."""
         clean_key = key.strip()
         self.api_key = clean_key
@@ -164,12 +198,15 @@ class AIKDPAssistant:
         }
 
     def _call_gemini(self, prompt: str, model: Optional[str] = None, use_search: bool = True) -> Optional[str]:
-        """Call Gemini API via standard urllib with Gemini 2.0 Flash support & search grounding."""
+        """Call Gemini API via standard urllib with Gemini 3.6 Flash support & search grounding."""
         if not self.api_key or len(self.api_key) < 6:
             self.last_call_error = "No Google Gemini API key configured."
             return None
 
-        target_model = model or self.model or "gemini-2.0-flash"
+        target_model = model or self.model or "gemini-3.6-flash"
+        if target_model in DEPRECATED_MODEL_MAP:
+            target_model = DEPRECATED_MODEL_MAP[target_model]
+
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model}:generateContent?key={self.api_key}"
         
         payload: Dict[str, Any] = {
@@ -186,8 +223,8 @@ class AIKDPAssistant:
             }
         }
 
-        # Enable Google Search Grounding for Gemini 2.0 models when live research is desired
-        if use_search and "gemini-2.0" in target_model:
+        # Enable Google Search Grounding for Gemini models when live research is desired
+        if use_search:
             payload["tools"] = [{"googleSearch": {}}]
 
         try:
@@ -198,7 +235,7 @@ class AIKDPAssistant:
                 headers={"Content-Type": "application/json"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=16) as response:
+            with urllib.request.urlopen(req, timeout=18) as response:
                 res_data = json.loads(response.read().decode("utf-8"))
                 candidates = res_data.get("candidates", [])
                 if candidates:
@@ -227,26 +264,27 @@ class AIKDPAssistant:
             self.last_call_error = f"Gemini API Request Failed: {str(e)}"
             print(f"Gemini API request failed: {e}")
 
-        # If primary target model failed, attempt fallback to gemini-1.5-flash
-        if target_model != "gemini-1.5-flash":
-            try:
-                fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
-                simple_payload = {
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
-                }
-                data_bytes = json.dumps(simple_payload).encode("utf-8")
-                req = urllib.request.Request(fallback_url, data=data_bytes, headers={"Content-Type": "application/json"}, method="POST")
-                with urllib.request.urlopen(req, timeout=12) as resp:
-                    res_data = json.loads(resp.read().decode("utf-8"))
-                    candidates = res_data.get("candidates", [])
-                    if candidates:
-                        text_parts = candidates[0].get("content", {}).get("parts", [])
-                        if text_parts:
-                            self.last_call_error = None
-                            return text_parts[0].get("text", "")
-            except Exception as fe:
-                self.last_call_error = f"Gemini Fallback Error: {str(fe)}"
+        # If primary target model failed, attempt fallback to gemini-flash-latest or gemini-3.6-flash
+        for fallback_model in ["gemini-flash-latest", "gemini-3.6-flash", "gemini-3.5-flash-lite"]:
+            if target_model != fallback_model:
+                try:
+                    fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/{fallback_model}:generateContent?key={self.api_key}"
+                    simple_payload = {
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
+                    }
+                    data_bytes = json.dumps(simple_payload).encode("utf-8")
+                    req = urllib.request.Request(fallback_url, data=data_bytes, headers={"Content-Type": "application/json"}, method="POST")
+                    with urllib.request.urlopen(req, timeout=14) as resp:
+                        res_data = json.loads(resp.read().decode("utf-8"))
+                        candidates = res_data.get("candidates", [])
+                        if candidates:
+                            text_parts = candidates[0].get("content", {}).get("parts", [])
+                            if text_parts:
+                                self.last_call_error = None
+                                return text_parts[0].get("text", "")
+                except Exception as fe:
+                    self.last_call_error = f"Gemini Fallback Error: {str(fe)}"
 
         return None
 

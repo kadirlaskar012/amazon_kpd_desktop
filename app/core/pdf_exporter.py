@@ -239,11 +239,15 @@ class KDPPdfExporter:
             sim_page += 1  # Belongs to
             sim_page += 1  # Blank after belongs to
         if inc_contents:
-            if sim_page % 2 == 0:
-                sim_page += 1
-            sim_page += 1  # TOC
-            if single_sided:
-                sim_page += 1  # Blank after TOC
+            ITEMS_PER_TOC_PAGE = 22
+            total_items = max(1, len(content_pages))
+            num_toc_pages = (total_items + ITEMS_PER_TOC_PAGE - 1) // ITEMS_PER_TOC_PAGE
+            for _ in range(num_toc_pages):
+                if sim_page % 2 == 0:
+                    sim_page += 1
+                sim_page += 1  # TOC Page
+                if single_sided:
+                    sim_page += 1  # Blank after TOC
         if inc_color_test:
             if sim_page % 2 == 0:
                 sim_page += 1
@@ -406,91 +410,104 @@ class KDPPdfExporter:
             # Automatic blank page AFTER Belongs To (Left page)
             render_blank_page()
 
-        # --- 3. TABLE OF CONTENTS (AUTO ITEM LIST) ---
+        # --- 3. TABLE OF CONTENTS (AUTO ITEM LIST - DYNAMIC MULTI-PAGE) ---
         if inc_contents:
-            if c.getPageNumber() % 2 == 0:
-                render_blank_page()
+            ITEMS_PER_TOC_PAGE = 22
+            total_items = len(content_pages)
+            num_toc_pages = max(1, (total_items + ITEMS_PER_TOC_PAGE - 1) // ITEMS_PER_TOC_PAGE) if total_items > 0 else 1
 
-            c.setFillColor(colors.white)
-            c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
+            for toc_p_idx in range(num_toc_pages):
+                start_item_idx = toc_p_idx * ITEMS_PER_TOC_PAGE
+                end_item_idx = min(total_items, (toc_p_idx + 1) * ITEMS_PER_TOC_PAGE)
 
-            # Outer border
-            c.setStrokeColor(colors.HexColor("#0f172a"))
-            c.setLineWidth(1.5)
-            c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
-            c.setStrokeColor(colors.HexColor("#cbd5e1"))
-            c.setLineWidth(0.75)
-            c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
+                if c.getPageNumber() % 2 == 0:
+                    render_blank_page()
 
-            # Header
-            c.setFont("Helvetica-Bold", 18)
-            c.setFillColor(colors.HexColor("#0f172a"))
-            c.drawCentredString(page_w / 2.0, page_h - 90 - bleed_pt, custom_toc_heading)
+                c.setFillColor(colors.white)
+                c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
 
-            c.setFont("Helvetica", 10)
-            c.setFillColor(colors.HexColor("#64748b"))
-            c.drawCentredString(page_w / 2.0, page_h - 115 - bleed_pt, custom_toc_subtitle)
+                # Outer border
+                c.setStrokeColor(colors.HexColor("#0f172a"))
+                c.setLineWidth(1.5)
+                c.roundRect(35 + bleed_pt, 35 + bleed_pt, trim_w - 70, trim_h - 70, radius=8, fill=0, stroke=1)
+                c.setStrokeColor(colors.HexColor("#cbd5e1"))
+                c.setLineWidth(0.75)
+                c.roundRect(39 + bleed_pt, 39 + bleed_pt, trim_w - 78, trim_h - 78, radius=6, fill=0, stroke=1)
 
-            c.setStrokeColor(colors.HexColor("#e2e8f0"))
-            c.setLineWidth(1.0)
-            c.line(page_w / 2.0 - 60, page_h - 135 - bleed_pt, page_w / 2.0 + 60, page_h - 135 - bleed_pt)
+                # Header
+                page_heading = custom_toc_heading if toc_p_idx == 0 else f"{custom_toc_heading} (CONTINUED)"
+                c.setFont("Helvetica-Bold", 18)
+                c.setFillColor(colors.HexColor("#0f172a"))
+                c.drawCentredString(page_w / 2.0, page_h - 90 - bleed_pt, page_heading)
 
-            # Item List
-            start_y = page_h - 170 - bleed_pt
-            max_items_to_print = min(22, len(content_pages))
-            
-            left_margin = 65 + bleed_pt
-            right_margin = page_w - 65 - bleed_pt
-
-            for idx in range(max_items_to_print):
-                cp = content_pages[idx]
-                item_title = cp.get("title") or f"Illustration {idx + 1}"
-                
-                # Check for explicit title element
-                for el in cp.get("elements", []):
-                    if el.get("type") == "title" and el.get("text"):
-                        item_title = el.get("text").title()
-                        break
-
-                calc_page_num = start_content_page_num + (idx * 2) if single_sided else start_content_page_num + idx
-                item_y = start_y - (idx * 22)
-
-                # Draw Left Text
-                c.setFont("Helvetica-Bold", 9.5)
-                c.setFillColor(colors.HexColor("#1e293b"))
-                left_str = f"{idx + 1}.  {item_title}"
-                c.drawString(left_margin, item_y, left_str)
-
-                # Draw Right Text
-                c.setFont("Helvetica-Bold", 9.5)
-                c.setFillColor(colors.HexColor("#475569"))
-                right_str = f"Page {calc_page_num}"
-                c.drawRightString(right_margin, item_y, right_str)
-
-                # Crisp Dot Leader between left and right
-                c.setFont("Helvetica", 8)
-                c.setFillColor(colors.HexColor("#94a3b8"))
-                
-                name_w = c.stringWidth(left_str, "Helvetica-Bold", 9.5)
-                page_w_num = c.stringWidth(right_str, "Helvetica-Bold", 9.5)
-                
-                dot_start = left_margin + name_w + 12
-                dot_end = right_margin - page_w_num - 12
-                
-                if dot_end > dot_start:
-                    dot_unit_w = c.stringWidth(" . ", "Helvetica", 8)
-                    num_dots = int((dot_end - dot_start) / dot_unit_w)
-                    if num_dots > 0:
-                        c.drawString(dot_start, item_y, " . " * num_dots)
-
-            if custom_toc_footer:
-                c.setFont("Helvetica-Oblique", 9)
+                # Subtitle
+                page_subtitle = custom_toc_subtitle if num_toc_pages == 1 else f"Illustrations {start_item_idx + 1} to {end_item_idx} of {total_items}"
+                c.setFont("Helvetica", 10)
                 c.setFillColor(colors.HexColor("#64748b"))
-                c.drawCentredString(page_w / 2.0, 50 + bleed_pt, custom_toc_footer)
+                c.drawCentredString(page_w / 2.0, page_h - 115 - bleed_pt, page_subtitle)
 
-            c.showPage()
-            if single_sided:
-                render_blank_page()
+                c.setStrokeColor(colors.HexColor("#e2e8f0"))
+                c.setLineWidth(1.0)
+                c.line(page_w / 2.0 - 60, page_h - 135 - bleed_pt, page_w / 2.0 + 60, page_h - 135 - bleed_pt)
+
+                # Item List
+                start_y = page_h - 170 - bleed_pt
+                left_margin = 65 + bleed_pt
+                right_margin = page_w - 65 - bleed_pt
+
+                for offset, item_idx in enumerate(range(start_item_idx, end_item_idx)):
+                    cp = content_pages[item_idx]
+                    item_title = cp.get("title") or f"Illustration {item_idx + 1}"
+                    
+                    # Check for explicit title element
+                    for el in cp.get("elements", []):
+                        if el.get("type") == "title" and el.get("text"):
+                            item_title = el.get("text").title()
+                            break
+
+                    calc_page_num = start_content_page_num + (item_idx * 2) if single_sided else start_content_page_num + item_idx
+                    item_y = start_y - (offset * 22)
+
+                    # Draw Left Text
+                    c.setFont("Helvetica-Bold", 9.5)
+                    c.setFillColor(colors.HexColor("#1e293b"))
+                    left_str = f"{item_idx + 1}.  {item_title}"
+                    c.drawString(left_margin, item_y, left_str)
+
+                    # Draw Right Text
+                    c.setFont("Helvetica-Bold", 9.5)
+                    c.setFillColor(colors.HexColor("#475569"))
+                    right_str = f"Page {calc_page_num}"
+                    c.drawRightString(right_margin, item_y, right_str)
+
+                    # Crisp Dot Leader between left and right
+                    c.setFont("Helvetica", 8)
+                    c.setFillColor(colors.HexColor("#94a3b8"))
+                    
+                    name_w = c.stringWidth(left_str, "Helvetica-Bold", 9.5)
+                    page_w_num = c.stringWidth(right_str, "Helvetica-Bold", 9.5)
+                    
+                    dot_start = left_margin + name_w + 12
+                    dot_end = right_margin - page_w_num - 12
+                    
+                    if dot_end > dot_start:
+                        dot_unit_w = c.stringWidth(" . ", "Helvetica", 8)
+                        num_dots = int((dot_end - dot_start) / dot_unit_w)
+                        if num_dots > 0:
+                            c.drawString(dot_start, item_y, " . " * num_dots)
+
+                if toc_p_idx == num_toc_pages - 1 and custom_toc_footer:
+                    c.setFont("Helvetica-Oblique", 9)
+                    c.setFillColor(colors.HexColor("#64748b"))
+                    c.drawCentredString(page_w / 2.0, 50 + bleed_pt, custom_toc_footer)
+                elif num_toc_pages > 1:
+                    c.setFont("Helvetica-Oblique", 8.5)
+                    c.setFillColor(colors.HexColor("#94a3b8"))
+                    c.drawCentredString(page_w / 2.0, 50 + bleed_pt, f"Table of Contents • Page {toc_p_idx + 1} of {num_toc_pages}")
+
+                c.showPage()
+                if single_sided:
+                    render_blank_page()
 
         # --- 4. COLOR TEST PALETTE ---
         if inc_color_test:

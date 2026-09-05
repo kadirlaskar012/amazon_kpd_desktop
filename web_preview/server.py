@@ -295,7 +295,7 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({
                 "has_key": has_real_key,
                 "key_preview": f"...{saved_key[-4:]}" if has_real_key and len(saved_key) > 4 else "",
-                "model": cfg.get("model", "gemini-2.0-flash"),
+                "model": cfg.get("model", "gemini-3.6-flash"),
                 "models": cfg.get("models", [])
             }).encode("utf-8"))
             return
@@ -978,7 +978,7 @@ VERDICT: 100% KDP Upload Safe. Ready for Amazon KDP Paperback Submission!
         # ==========================================
         elif req_path == "/api/ai/test_key":
             key = req_data.get("api_key")
-            model = req_data.get("model", "gemini-2.0-flash")
+            model = req_data.get("model", "gemini-3.6-flash")
             ai = AIKDPAssistant()
             res = ai.verify_api_key(api_key=key, model=model)
             self.send_response(200)
@@ -989,7 +989,7 @@ VERDICT: 100% KDP Upload Safe. Ready for Amazon KDP Paperback Submission!
 
         elif req_path == "/api/ai/save_key":
             key = req_data.get("api_key", "")
-            model = req_data.get("model", "gemini-2.0-flash")
+            model = req_data.get("model", "gemini-3.6-flash")
             ai = AIKDPAssistant()
             saved_res = ai.save_config(key, model)
             self.send_response(200)

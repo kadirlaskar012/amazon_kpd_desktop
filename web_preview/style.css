@@ -6431,3 +6431,58 @@ kbd {
     font-size: 11px;
   }
 }
+
+/* Export Modal Interactive Card Actions & Add Page */
+.export-page-card {
+  position: relative;
+}
+
+.btn-del-exp-page {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: all 0.18s ease;
+  z-index: 5;
+  padding: 0;
+}
+
+.export-page-card:hover .btn-del-exp-page {
+  opacity: 1;
+  transform: scale(1.1);
+  background: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+.export-page-card.add-page-card {
+  border: 2px dashed var(--border);
+  background: rgba(99, 102, 241, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  min-height: 140px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.export-page-card.add-page-card:hover {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
