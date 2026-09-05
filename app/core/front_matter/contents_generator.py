@@ -125,12 +125,16 @@ class ContentsGenerator:
                     "alignment": "left"
                 })
         else:
-            # Dual Column Layout for books with 15+ pages
-            col1 = content_items[:max_rows_per_col]
-            col2 = content_items[max_rows_per_col:max_rows_per_col * 2]
+            # Dynamic Dual Column Layout: Fits ALL items strictly onto 1 single page
+            num_rows = (len(content_items) + 1) // 2
+            dyn_row_h = max(12, min(24, int(450 / max(1, num_rows))))
+            dyn_font_sz = 8.5 if num_rows > 22 else (9.5 if num_rows > 14 else 10)
+
+            col1 = content_items[:num_rows]
+            col2 = content_items[num_rows:]
 
             for i, (title, page_no) in enumerate(col1):
-                current_y = start_y + (i * row_height)
+                current_y = start_y + (i * dyn_row_h)
                 line = f"{i + 1}. {title}" + (f" (p.{page_no})" if config.show_page_numbers else "")
                 elements.append({
                     "id": f"contents_item_c1_{i + 1}",
@@ -138,16 +142,16 @@ class ContentsGenerator:
                     "x": 50,
                     "y": current_y,
                     "w": 200,
-                    "h": 22,
+                    "h": dyn_row_h,
                     "text": line,
-                    "font_size": 10,
+                    "font_size": dyn_font_sz,
                     "color": "#1e293b",
                     "alignment": "left"
                 })
 
             for i, (title, page_no) in enumerate(col2):
-                idx = i + max_rows_per_col
-                current_y = start_y + (i * row_height)
+                idx = i + num_rows
+                current_y = start_y + (i * dyn_row_h)
                 line = f"{idx + 1}. {title}" + (f" (p.{page_no})" if config.show_page_numbers else "")
                 elements.append({
                     "id": f"contents_item_c2_{idx + 1}",
@@ -155,9 +159,9 @@ class ContentsGenerator:
                     "x": 260,
                     "y": current_y,
                     "w": 200,
-                    "h": 22,
+                    "h": dyn_row_h,
                     "text": line,
-                    "font_size": 10,
+                    "font_size": dyn_font_sz,
                     "color": "#1e293b",
                     "alignment": "left"
                 })

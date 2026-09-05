@@ -277,9 +277,11 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
                 if not mime_type:
                     mime_type = "application/zip" if export_file.suffix.lower() == ".zip" else "application/octet-stream"
                 disposition = "attachment" if export_file.suffix.lower() == ".zip" else "inline"
+                safe_ascii_name = export_file.name.encode('ascii', 'ignore').decode('ascii') or "kdp_document.pdf"
+                quoted_name = urllib.parse.quote(export_file.name)
                 self.send_response(200)
                 self.send_header("Content-Type", mime_type)
-                self.send_header("Content-Disposition", f"{disposition}; filename=\"{export_file.name}\"")
+                self.send_header("Content-Disposition", f"{disposition}; filename=\"{safe_ascii_name}\"; filename*=UTF-8''{quoted_name}")
                 self.send_header("Content-Length", str(export_file.stat().st_size))
                 self.end_headers()
                 with open(export_file, "rb") as f:
@@ -438,7 +440,12 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             exports_dir = project_dir / "exports"
             exports_dir.mkdir(parents=True, exist_ok=True)
 
-            proj_name = req_data.get("name", "KDP_Book").replace(" ", "_")
+            def _clean_kdp_filename(name_str):
+                raw = (name_str or "KDP_Book").replace(" ", "_").replace("\u2013", "-").replace("\u2014", "-")
+                clean = "".join(c if (c.isalnum() or c in "._-") else "_" for c in raw)
+                return clean.strip("._-") or "KDP_Book"
+
+            proj_name = _clean_kdp_filename(req_data.get("name", "KDP_Book"))
             out_pdf = exports_dir / f"{proj_name}_KDP_Print_Ready.pdf"
 
             single_sided = req_data.get("single_sided", True)
@@ -479,7 +486,12 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             exports_dir = project_dir / "exports"
             exports_dir.mkdir(parents=True, exist_ok=True)
 
-            proj_name = req_data.get("name", "KDP_Book").replace(" ", "_")
+            def _clean_kdp_filename(name_str):
+                raw = (name_str or "KDP_Book").replace(" ", "_").replace("\u2013", "-").replace("\u2014", "-")
+                clean = "".join(c if (c.isalnum() or c in "._-") else "_" for c in raw)
+                return clean.strip("._-") or "KDP_Book"
+
+            proj_name = _clean_kdp_filename(req_data.get("name", "KDP_Book"))
             out_pdf = exports_dir / f"{proj_name}_KDP_Cover_Full_Wrap.pdf"
             cover_config = req_data.get("cover_config", {})
 
@@ -509,7 +521,12 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             exports_dir = project_dir / "exports"
             exports_dir.mkdir(parents=True, exist_ok=True)
 
-            proj_name = req_data.get("name", "KDP_Book").replace(" ", "_")
+            def _clean_kdp_filename(name_str):
+                raw = (name_str or "KDP_Book").replace(" ", "_").replace("\u2013", "-").replace("\u2014", "-")
+                clean = "".join(c if (c.isalnum() or c in "._-") else "_" for c in raw)
+                return clean.strip("._-") or "KDP_Book"
+
+            proj_name = _clean_kdp_filename(req_data.get("name", "KDP_Book"))
             out_interior_pdf = exports_dir / f"{proj_name}_Interior_Print_Ready.pdf"
             out_cover_pdf = exports_dir / f"{proj_name}_Cover_Full_Wrap.pdf"
             out_guide_txt = exports_dir / f"{proj_name}_KDP_Publishing_Guide_and_Metadata.txt"

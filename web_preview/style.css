@@ -6537,7 +6537,7 @@ kbd {
 .upscaler-preview-panel {
   display: flex;
   flex-direction: column;
-  background: var(--bg-surface-subtle, rgba(0,0,0,0.02));
+  background: var(--bg-surface-subtle, rgba(0, 0, 0, 0.02));
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 14px;
@@ -6598,7 +6598,7 @@ body.dark-mode .upscaler-page-viewport {
   background: rgba(255, 255, 255, 0.9);
   padding: 1px 5px;
   border-radius: 3px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   letter-spacing: 0.3px;
 }
 
