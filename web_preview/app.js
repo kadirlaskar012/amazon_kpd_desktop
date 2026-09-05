@@ -8971,48 +8971,57 @@ function updatePublishPricingView(listPrice) {
 }
 
 // ===================================================
-// AI Engine Toolbar & Model Selection
+// AI Engine Toolbar & Multi-Provider Architecture
 // ===================================================
-let activeAiModel = "gemini-3.6-flash";
-
+let activeAiModel = "gemini-3.5-flash-lite";
+let activeAiProvider = "google_gemini";
 let hasConnectedGeminiKey = false;
+let aiProvidersList = [];
 
 function initAiEngineBar() {
   fetch("/api/ai/get_key")
     .then(r => r.json())
     .then(data => {
-      const select = document.getElementById("pub-ai-model-select");
-      if (select && data.models) {
-        select.innerHTML = "";
-        data.models.forEach(m => {
-          const opt = document.createElement("option");
-          opt.value = m.id;
-          opt.innerText = m.name;
-          if (m.id === data.model) opt.selected = true;
-          select.appendChild(opt);
-        });
-      }
-      activeAiModel = data.model || "gemini-3.6-flash";
+      activeAiProvider = data.provider || "google_gemini";
+      activeAiModel = data.model || "gemini-3.5-flash-lite";
       hasConnectedGeminiKey = Boolean(data.has_key);
+      aiProvidersList = data.providers || [];
 
-      const keyInput = document.getElementById("pub-gemini-key-input");
-      if (keyInput && data.key_preview) {
-        keyInput.placeholder = `Saved key (${data.key_preview}) - paste new to replace`;
+      // Update Provider Select
+      const provSelect = document.getElementById("pub-ai-provider-select");
+      if (provSelect) {
+        provSelect.value = activeAiProvider;
       }
 
-      if (hasConnectedGeminiKey) {
-        updateAiStatusBadge("connected", activeAiModel);
-        updateAiNoticeBanner(
-          "live",
-          "✨ Live Gemini AI Connected",
-          "Real-time Amazon search grounding & bestselling market intelligence active."
-        );
-      } else {
-        updateAiStatusBadge("offline");
+      // Populate Models for Active Provider
+      populateAiModelsDropdowns(activeAiProvider, activeAiModel);
+
+      // Key input preview
+      const keyInput = document.getElementById("pub-gemini-key-input");
+      if (keyInput) {
+        updateApiKeyInputUI(activeAiProvider, data.key_preview);
+      }
+
+      if (activeAiProvider === "offline") {
+        updateAiStatusBadge("offline", "offline-heuristics", "offline");
         updateAiNoticeBanner(
           "offline",
-          "No Gemini API Key Connected (Offline Template Mode)",
-          "Studio is running on smart offline templates. Click '🔑 API Key' to connect your free Gemini API key for live Amazon analysis."
+          "Smart Built-In Heuristics Active (100% Offline)",
+          "Studio is operating with built-in high-converting Amazon KDP templates. No API key needed."
+        );
+      } else if (hasConnectedGeminiKey) {
+        updateAiStatusBadge("connected", activeAiModel, activeAiProvider);
+        updateAiNoticeBanner(
+          "live",
+          `✨ Live ${getProviderDisplayName(activeAiProvider)} Connected`,
+          `Fast AI intelligence active (${activeAiModel}). Generates Bestselling Titles, 7 Keywords & Cover Copy in real time.`
+        );
+      } else {
+        updateAiStatusBadge("offline", activeAiModel, activeAiProvider);
+        updateAiNoticeBanner(
+          "offline",
+          `No ${getProviderDisplayName(activeAiProvider)} Key Connected`,
+          `Studio is running in fallback template mode. Click '🔑 AI Provider & Key' to connect your free API key.`
         );
       }
     })
@@ -9021,28 +9030,136 @@ function initAiEngineBar() {
       updateAiStatusBadge("offline");
       updateAiNoticeBanner(
         "offline",
-        "No Gemini API Key Connected (Offline Template Mode)",
+        "Offline Mode Active",
         "Studio is running on smart offline templates."
       );
     });
 }
 
-function updateAiStatusBadge(status, modelName) {
+function getProviderDisplayName(providerId) {
+  if (providerId === "groq") return "Groq Cloud (Llama 3.3)";
+  if (providerId === "openrouter") return "OpenRouter";
+  if (providerId === "openai") return "OpenAI";
+  if (providerId === "offline") return "Offline Engine";
+  return "Google Gemini";
+}
+
+function populateAiModelsDropdowns(providerId, selectedModelId) {
+  const barSelect = document.getElementById("pub-ai-model-select");
+  const drawerSelect = document.getElementById("pub-ai-drawer-model-select");
+
+  const providerObj = (aiProvidersList && aiProvidersList.length)
+    ? aiProvidersList.find(p => p.id === providerId)
+    : null;
+  const models = providerObj ? providerObj.models : [
+    { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash-Lite (Recommended - Ultra Fast ~1.2s)" },
+    { id: "gemini-flash-latest", name: "Gemini Flash Latest (Auto-Updating)" },
+    { id: "gemini-3.6-flash", name: "Gemini 3.6 Flash (Experimental)" }
+  ];
+
+  [barSelect, drawerSelect].forEach(select => {
+    if (!select) return;
+    select.innerHTML = "";
+    models.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.innerText = m.name;
+      if (m.id === selectedModelId) opt.selected = true;
+      select.appendChild(opt);
+    });
+  });
+}
+
+function updateApiKeyInputUI(providerId, keyPreview) {
+  const keyInput = document.getElementById("pub-gemini-key-input");
+  const keyLabel = document.getElementById("pub-api-key-label");
+  const linkEl = document.getElementById("pub-api-link");
+  if (!keyInput) return;
+
+  if (providerId === "groq") {
+    if (keyLabel) keyLabel.innerText = "Groq API Key:";
+    keyInput.placeholder = keyPreview ? `Saved Groq key (${keyPreview})` : "Paste Groq API Key (gsk_...)";
+    if (linkEl) { linkEl.href = "https://console.groq.com/keys"; linkEl.innerText = "Groq Console"; }
+  } else if (providerId === "openrouter") {
+    if (keyLabel) keyLabel.innerText = "OpenRouter Key:";
+    keyInput.placeholder = keyPreview ? `Saved OpenRouter key (${keyPreview})` : "Paste OpenRouter API Key (sk-or-...)";
+    if (linkEl) { linkEl.href = "https://openrouter.ai/keys"; linkEl.innerText = "OpenRouter Keys"; }
+  } else if (providerId === "openai") {
+    if (keyLabel) keyLabel.innerText = "OpenAI Key:";
+    keyInput.placeholder = keyPreview ? `Saved OpenAI key (${keyPreview})` : "Paste OpenAI API Key (sk-...)";
+    if (linkEl) { linkEl.href = "https://platform.openai.com/api-keys"; linkEl.innerText = "OpenAI Platform"; }
+  } else if (providerId === "offline") {
+    if (keyLabel) keyLabel.innerText = "Offline Mode:";
+    keyInput.placeholder = "No API key needed for offline mode";
+    keyInput.disabled = true;
+  } else {
+    if (keyLabel) keyLabel.innerText = "Gemini API Key:";
+    keyInput.placeholder = keyPreview ? `Saved Gemini key (${keyPreview})` : "Paste Google Gemini API Key (AIzaSy... / AQ...)";
+    keyInput.disabled = false;
+    if (linkEl) { linkEl.href = "https://aistudio.google.com/app/apikey"; linkEl.innerText = "Google AI Studio"; }
+  }
+  if (providerId !== "offline") keyInput.disabled = false;
+}
+
+function onAiProviderChange(providerId) {
+  activeAiProvider = providerId;
+  const pObj = aiProvidersList.find(p => p.id === providerId);
+  const defModel = pObj ? pObj.default_model : "gemini-3.5-flash-lite";
+  activeAiModel = defModel;
+
+  populateAiModelsDropdowns(providerId, defModel);
+  updateApiKeyInputUI(providerId);
+
+  const feedback = document.getElementById("pub-key-test-feedback");
+  if (feedback) feedback.style.display = "none";
+
+  if (providerId === "offline") {
+    clearGeminiKeyFromModal();
+  }
+}
+
+function onDrawerModelChange(modelId) {
+  onAiModelChange(modelId);
+  const barSelect = document.getElementById("pub-ai-model-select");
+  if (barSelect) barSelect.value = modelId;
+}
+
+function onApiKeyInput(val) {
+  const k = val.trim();
+  const provSelect = document.getElementById("pub-ai-provider-select");
+  if (!provSelect) return;
+
+  let detected = null;
+  if (k.startsWith("gsk_")) detected = "groq";
+  else if (k.startsWith("sk-or-")) detected = "openrouter";
+  else if (k.startsWith("sk-")) detected = "openai";
+  else if (k.startsWith("AIza") || k.startsWith("AQ.")) detected = "google_gemini";
+
+  if (detected && detected !== activeAiProvider) {
+    provSelect.value = detected;
+    onAiProviderChange(detected);
+  }
+}
+
+function updateAiStatusBadge(status, modelName, providerId) {
   const badge = document.getElementById("pub-ai-status-tag");
   if (!badge) return;
 
+  const prov = providerId || activeAiProvider || "google_gemini";
+  const pName = getProviderDisplayName(prov);
+
   if (status === "connected") {
-    badge.innerText = `🟢 Gemini 2.0 Connected (Live AI)`;
+    badge.innerText = `🟢 ${pName} Connected`;
     badge.className = "ai-status-tag active";
-    badge.title = "Connected to Google Gemini AI Engine with Google Search Grounding";
+    badge.title = `Connected to ${pName} (${modelName || activeAiModel})`;
   } else if (status === "error") {
-    badge.innerText = "🔴 Gemini API Error";
+    badge.innerText = `🔴 ${pName} Error`;
     badge.className = "ai-status-tag error";
-    badge.title = "Gemini API failed or returned an error. Click '🔑 API Key' to inspect or reconfigure.";
+    badge.title = `${pName} returned an error. Click to inspect.`;
   } else {
     badge.innerText = "⚪ Offline Template Mode";
     badge.className = "ai-status-tag offline";
-    badge.title = "No API Key Connected - Built-in smart templates active";
+    badge.title = "Offline Template Mode active";
   }
 }
 
@@ -9061,16 +9178,21 @@ function updateAiNoticeBanner(type, title, desc) {
 
 function onAiModelChange(modelId) {
   activeAiModel = modelId;
+  const drawerSelect = document.getElementById("pub-ai-drawer-model-select");
+  if (drawerSelect && drawerSelect.value !== modelId) drawerSelect.value = modelId;
+  const barSelect = document.getElementById("pub-ai-model-select");
+  if (barSelect && barSelect.value !== modelId) barSelect.value = modelId;
+
   fetch("/api/ai/save_key", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: modelId })
+    body: JSON.stringify({ model: modelId, provider: activeAiProvider })
   })
   .then(r => r.json())
   .then(() => {
     showToast(`⚡ AI Engine switched to ${modelId}`, "info");
     if (hasConnectedGeminiKey) {
-      updateAiStatusBadge("connected", modelId);
+      updateAiStatusBadge("connected", modelId, activeAiProvider);
     }
   })
   .catch(() => {});
@@ -9091,7 +9213,14 @@ function testGeminiKeyFromModal() {
 
   if (feedback) feedback.style.display = "block";
 
-  if (!key) {
+  if (activeAiProvider === "offline") {
+    feedback.style.background = "rgba(16, 185, 129, 0.15)";
+    feedback.style.color = "#10b981";
+    feedback.innerText = "✅ Smart Offline Engine is built-in and ready to use!";
+    return;
+  }
+
+  if (!key && !hasConnectedGeminiKey) {
     if (feedback) {
       feedback.style.background = "rgba(245, 158, 11, 0.15)";
       feedback.style.color = "#f59e0b";
@@ -9104,13 +9233,13 @@ function testGeminiKeyFromModal() {
   if (feedback) {
     feedback.style.background = "rgba(99, 102, 241, 0.15)";
     feedback.style.color = "var(--primary)";
-    feedback.innerText = "⏳ Testing connection with Google Gemini API...";
+    feedback.innerText = `⏳ Testing connection with ${getProviderDisplayName(activeAiProvider)}...`;
   }
 
   fetch("/api/ai/test_key", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ api_key: key, model: activeAiModel })
+    body: JSON.stringify({ api_key: key, model: activeAiModel, provider: activeAiProvider })
   })
   .then(r => r.json())
   .then(res => {
@@ -9118,7 +9247,15 @@ function testGeminiKeyFromModal() {
     if (res.valid) {
       feedback.style.background = "rgba(16, 185, 129, 0.15)";
       feedback.style.color = "#10b981";
-      feedback.innerText = `✅ Success! API Key is active & verified with Google Gemini!`;
+      feedback.innerText = `✅ Success! Connected & verified with ${getProviderDisplayName(activeAiProvider)} (${res.model || activeAiModel}) in ${res.latency_s || 1.1}s!`;
+      if (res.model) activeAiModel = res.model;
+      hasConnectedGeminiKey = (activeAiProvider !== "offline");
+      updateAiStatusBadge("connected", activeAiModel, activeAiProvider);
+      updateAiNoticeBanner(
+        "live",
+        `✨ Live ${getProviderDisplayName(activeAiProvider)} Connected`,
+        `Fast AI intelligence active (${activeAiModel}). Generates Bestselling Titles, 7 Keywords & Cover Copy in real time.`
+      );
     } else {
       feedback.style.background = "rgba(239, 68, 68, 0.15)";
       feedback.style.color = "#ef4444";
@@ -9141,8 +9278,8 @@ function saveGeminiKeyFromModal() {
   const saveBtn = document.getElementById("btn-save-gemini-key");
   const key = input ? input.value.trim() : "";
 
-  if (!key) {
-    showToast("⚠️ Please enter a Google Gemini API Key or click Disconnect for Offline Mode", "warning");
+  if (activeAiProvider !== "offline" && !key) {
+    showToast("⚠️ Please enter an API Key or select Offline Mode", "warning");
     return;
   }
 
@@ -9151,13 +9288,13 @@ function saveGeminiKeyFromModal() {
     feedback.style.display = "block";
     feedback.style.background = "rgba(99, 102, 241, 0.15)";
     feedback.style.color = "var(--primary)";
-    feedback.innerText = "⏳ Saving and verifying API Key with Google...";
+    feedback.innerText = `⏳ Saving & verifying with ${getProviderDisplayName(activeAiProvider)}...`;
   }
 
   fetch("/api/ai/save_key", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ api_key: key, model: activeAiModel })
+    body: JSON.stringify({ api_key: key, model: activeAiModel, provider: activeAiProvider })
   })
   .then(r => r.json())
   .then(res => {
@@ -9165,10 +9302,14 @@ function saveGeminiKeyFromModal() {
     const isVerified = Boolean(res.verification && res.verification.valid);
 
     if (isVerified) {
-      hasConnectedGeminiKey = true;
-      showToast("🎉 Google Gemini API Key verified & connected successfully!", "success");
-      updateAiStatusBadge("connected", activeAiModel);
-      updateAiNoticeBanner("live", "✨ Live Gemini 2.0 AI Connected", "Real-time Amazon search grounding & bestselling market intelligence active.");
+      hasConnectedGeminiKey = (activeAiProvider !== "offline");
+      showToast(`🎉 ${getProviderDisplayName(activeAiProvider)} connected successfully!`, "success");
+      updateAiStatusBadge(hasConnectedGeminiKey ? "connected" : "offline", activeAiModel, activeAiProvider);
+      updateAiNoticeBanner(
+        hasConnectedGeminiKey ? "live" : "offline",
+        hasConnectedGeminiKey ? `✨ Live ${getProviderDisplayName(activeAiProvider)} Connected` : "Smart Built-in Templates Active",
+        hasConnectedGeminiKey ? `Real-time Amazon search analysis active (${activeAiModel}).` : "Operating in offline template mode."
+      );
       if (feedback) {
         feedback.style.background = "rgba(16, 185, 129, 0.15)";
         feedback.style.color = "#10b981";
@@ -9177,13 +9318,13 @@ function saveGeminiKeyFromModal() {
       setTimeout(() => {
         toggleAiApiKeyDrawer();
         triggerFullAiMarketAnalysis();
-      }, 1000);
+      }, 900);
     } else {
       hasConnectedGeminiKey = false;
       const errMsg = res.verification ? (res.verification.error || res.verification.message) : "Invalid key";
-      showToast(`⚠️ Gemini API Key could not be verified: ${errMsg}`, "danger");
-      updateAiStatusBadge("error");
-      updateAiNoticeBanner("error", "Gemini API Key Invalid / Error", `${errMsg}. Studio is in fallback mode until resolved.`);
+      showToast(`⚠️ AI Key could not be verified: ${errMsg}`, "danger");
+      updateAiStatusBadge("error", activeAiModel, activeAiProvider);
+      updateAiNoticeBanner("error", "AI Connection Error", `${errMsg}. Studio is in fallback mode.`);
       if (feedback) {
         feedback.style.background = "rgba(239, 68, 68, 0.15)";
         feedback.style.color = "#ef4444";
@@ -9193,7 +9334,7 @@ function saveGeminiKeyFromModal() {
   })
   .catch(err => {
     if (saveBtn) saveBtn.disabled = false;
-    showToast(`⚠️ Error saving API Key: ${err.message}`, "danger");
+    showToast(`⚠️ Error saving AI Key: ${err.message}`, "danger");
   });
 }
 
@@ -9202,20 +9343,23 @@ function clearGeminiKeyFromModal() {
   const feedback = document.getElementById("pub-key-test-feedback");
   if (input) {
     input.value = "";
-    input.placeholder = "Paste Google Gemini API Key (AIzaSy...)";
+    input.placeholder = "Paste API Key...";
   }
 
   fetch("/api/ai/save_key", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ api_key: "", model: activeAiModel })
+    body: JSON.stringify({ api_key: "", model: activeAiModel, provider: "offline" })
   })
   .then(r => r.json())
   .then(() => {
     hasConnectedGeminiKey = false;
-    showToast("⚪ API Key disconnected. Studio switched to Offline Template Mode.", "info");
-    updateAiStatusBadge("offline");
-    updateAiNoticeBanner("offline", "No Gemini API Key Connected (Offline Template Mode)", "Studio is running on smart offline templates.");
+    activeAiProvider = "offline";
+    const provSelect = document.getElementById("pub-ai-provider-select");
+    if (provSelect) provSelect.value = "offline";
+    showToast("⚪ Switched to Offline Smart Template Mode.", "info");
+    updateAiStatusBadge("offline", "offline-heuristics", "offline");
+    updateAiNoticeBanner("offline", "Smart Offline Template Mode Active", "Studio is running on smart offline templates.");
     if (feedback) {
       feedback.style.display = "block";
       feedback.style.background = "rgba(148, 163, 184, 0.15)";
@@ -9238,7 +9382,7 @@ function triggerFullAiMarketAnalysis() {
   if (txt) txt.innerText = hasConnectedGeminiKey ? "AI Searching Amazon & Analyzing Niche..." : "Generating Smart Template Data...";
 
   if (hasConnectedGeminiKey) {
-    showToast("🔍 Running Deep Amazon Search & Market Analysis with Gemini 2.0...", "info");
+    showToast(`🔍 Running Deep Amazon Search & Market Analysis with ${getProviderDisplayName(activeAiProvider)}...`, "info");
   } else {
     showToast("ℹ️ Offline Mode: Generating smart built-in template for your book...", "info");
   }
@@ -9287,21 +9431,21 @@ function triggerFullAiMarketAnalysis() {
       currentPublishMetadata = metaData.metadata;
       renderPublishMetadata(metaData.metadata);
 
-      const isLiveAi = (metaData.metadata.ai_source === "gemini_live");
+      const isLiveAi = Boolean(metaData.metadata.ai_source && metaData.metadata.ai_source !== "offline_template");
       const hasError = (metaData.metadata.ai_status === "api_error");
 
       if (isLiveAi) {
-        showToast("🎉 Amazon Market Intelligence & Full Wrap Cover Auto-Filled by Gemini 2.0!", "success");
-        updateAiStatusBadge("connected", activeAiModel);
-        updateAiNoticeBanner("live", "✨ Live Gemini 2.0 AI Active", "Bestseller metadata & pricing grounded with live Amazon search.");
+        showToast(`🎉 Amazon Market Intelligence Auto-Filled by ${getProviderDisplayName(activeAiProvider)}!`, "success");
+        updateAiStatusBadge("connected", activeAiModel, activeAiProvider);
+        updateAiNoticeBanner("live", `✨ Live ${getProviderDisplayName(activeAiProvider)} Active`, metaData.metadata.ai_notice || "Bestseller metadata & pricing generated live.");
       } else if (hasError) {
-        showToast(`⚠️ Gemini API Notice: ${metaData.metadata.ai_error || 'Offline fallback used'}`, "warning");
-        updateAiStatusBadge("error");
-        updateAiNoticeBanner("error", "Gemini API Call Failed", `${metaData.metadata.ai_error || 'API Error'}. Displaying offline template data.`);
+        showToast(`⚠️ AI Notice: ${metaData.metadata.ai_error || 'Offline fallback used'}`, "warning");
+        updateAiStatusBadge("error", activeAiModel, activeAiProvider);
+        updateAiNoticeBanner("error", "AI Call Notice", `${metaData.metadata.ai_error || 'Notice'}. Displaying offline template data.`);
       } else {
         showToast("ℹ️ Offline Smart Template Loaded Successfully!", "info");
-        updateAiStatusBadge("offline");
-        updateAiNoticeBanner("offline", "Offline Template Mode Active", "Displaying smart offline template. Connect a Gemini API key for live Amazon scraping.");
+        updateAiStatusBadge("offline", "offline-heuristics", "offline");
+        updateAiNoticeBanner("offline", "Offline Template Mode Active", "Displaying smart offline template. Connect an AI key for live analysis.");
       }
 
       // If competitor analysis present, update advice

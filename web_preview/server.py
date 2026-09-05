@@ -298,7 +298,9 @@ class StudioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({
                 "has_key": has_real_key,
                 "key_preview": f"...{saved_key[-4:]}" if has_real_key and len(saved_key) > 4 else "",
-                "model": cfg.get("model", "gemini-3.6-flash"),
+                "provider": cfg.get("provider", "google_gemini"),
+                "providers": cfg.get("providers", []),
+                "model": cfg.get("model", "gemini-3.5-flash-lite"),
                 "models": cfg.get("models", [])
             }).encode("utf-8"))
             return
@@ -1081,9 +1083,10 @@ VERDICT: 100% KDP Upload Safe. Ready for Amazon KDP Paperback Submission!
         # ==========================================
         elif req_path == "/api/ai/test_key":
             key = req_data.get("api_key")
-            model = req_data.get("model", "gemini-3.6-flash")
-            ai = AIKDPAssistant()
-            res = ai.verify_api_key(api_key=key, model=model)
+            model = req_data.get("model")
+            provider = req_data.get("provider")
+            ai = AIKDPAssistant(provider=provider, model=model)
+            res = ai.verify_api_key(api_key=key, model=model, provider=provider)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -1092,9 +1095,10 @@ VERDICT: 100% KDP Upload Safe. Ready for Amazon KDP Paperback Submission!
 
         elif req_path == "/api/ai/save_key":
             key = req_data.get("api_key", "")
-            model = req_data.get("model", "gemini-3.6-flash")
-            ai = AIKDPAssistant()
-            saved_res = ai.save_config(key, model)
+            model = req_data.get("model")
+            provider = req_data.get("provider")
+            ai = AIKDPAssistant(provider=provider, model=model)
+            saved_res = ai.save_config(key, model=model, provider=provider)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
